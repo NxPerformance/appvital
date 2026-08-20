@@ -1,0 +1,172 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Design system base
+   Background: deep purple
+   Foreground: warm light
+   Primary/accent: golden highlight
+*/
+
+@layer base {
+  :root {
+    --background: 270 50% 15%;
+    --background-strong: 270 52% 10%;
+    --foreground: 45 100% 95%;
+    
+    --card: 270 45% 20%;
+    --card-foreground: 45 100% 95%;
+    
+    --popover: 270 45% 20%;
+    --popover-foreground: 45 100% 95%;
+    
+    --primary: 45 100% 70%;
+    --primary-strong: 40 100% 60%;
+    --primary-foreground: 270 50% 15%;
+    
+    --secondary: 270 40% 25%;
+    --secondary-foreground: 45 100% 95%;
+    
+    --muted: 270 35% 22%;
+    --muted-foreground: 45 30% 75%;
+    
+    --accent: 45 100% 70%;
+    --accent-foreground: 270 50% 15%;
+    
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 45 100% 95%;
+    
+    --border: 270 35% 30%;
+    --input: 270 35% 22%;
+    --ring: 45 100% 70%;
+    
+    --radius: 1rem;
+    
+    --sidebar-background: 272 48% 14%;
+    --sidebar-foreground: 45 100% 95%;
+    --sidebar-primary: 45 100% 70%;
+    --sidebar-primary-foreground: 270 50% 15%;
+    --sidebar-accent: 270 40% 25%;
+    --sidebar-accent-foreground: 45 100% 95%;
+    --sidebar-border: 270 35% 30%;
+    --sidebar-ring: 45 100% 70%;
+    
+    --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-strong)));
+    --gradient-card: linear-gradient(180deg, hsl(var(--card)), hsl(var(--background)));
+    --shadow-glow: 0 0 40px hsl(var(--primary) / 0.3);
+    --shadow-elegant: 0 10px 30px -10px hsl(var(--background-strong) / 0.5);
+    
+    /* Safe area variables - universal para todos os dispositivos */
+    --safe-area-top: env(safe-area-inset-top, 0px);
+    --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-area-left: env(safe-area-inset-left, 0px);
+    --safe-area-right: env(safe-area-inset-right, 0px);
+  }
+
+  .dark {
+    --background: 270 50% 15%;
+    --background-strong: 270 52% 10%;
+    --foreground: 45 100% 95%;
+    
+    --card: 270 45% 20%;
+    --card-foreground: 45 100% 95%;
+    
+    --popover: 270 45% 20%;
+    --popover-foreground: 45 100% 95%;
+    
+    --primary: 45 100% 70%;
+    --primary-strong: 40 100% 60%;
+    --primary-foreground: 270 50% 15%;
+    
+    --secondary: 270 40% 25%;
+    --secondary-foreground: 45 100% 95%;
+    
+    --muted: 270 35% 22%;
+    --muted-foreground: 45 30% 75%;
+    
+    --accent: 45 100% 70%;
+    --accent-foreground: 270 50% 15%;
+    
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 45 100% 95%;
+    
+    --border: 270 35% 30%;
+    --input: 270 35% 22%;
+    --ring: 45 100% 70%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: "Sora", "Segoe UI", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    background-image:
+      radial-gradient(circle at top left, hsl(var(--primary) / 0.08), transparent 20%),
+      radial-gradient(circle at top right, hsl(320 60% 30% / 0.22), transparent 24%),
+      linear-gradient(180deg, hsl(var(--background)), hsl(var(--background-strong)));
+  }
+}
+
+/* Mobile app-like styles */
+html, body, #root {
+  height: 100%;
+  overflow: hidden;
+}
+
+html.auth-scroll-page,
+html.auth-scroll-page body,
+html.auth-scroll-page #root,
+body.auth-scroll-page,
+body.auth-scroll-page #root {
+  min-height: 100%;
+  height: auto;
+  overflow-y: auto;
+}
+
+.app-container {
+  height: 100%;
+  display: flex;
+  overflow: hidden;
+  background: transparent;
+}
+
+.app-content {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  /* O topo fica encostado no app para não criar a faixa visual de status bar. */
+  padding-top: 0;
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+}
+
+.glass-panel {
+  background: hsl(var(--card) / 0.92);
+  backdrop-filter: blur(24px);
+  box-shadow: var(--shadow-elegant);
+}
+
+.gold-highlight {
+  background-image: var(--gradient-primary);
+  color: hsl(var(--primary-foreground));
+  box-shadow: var(--shadow-glow);
+}
+
+/* Bottom nav safe area */
+.bottom-nav {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Hide scrollbar but keep functionality */
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

@@ -1,0 +1,594 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  USER
+  ADMIN
+  PERSONAL_TRAINER
+}
+
+enum TrainerClientStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum BodyProgressPhotoPose {
+  FRONT
+  SIDE
+  BACK
+  CUSTOM
+}
+
+enum TrainerApplicationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum AppointmentStatus {
+  PENDING
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+}
+
+enum AppointmentType {
+  CONSULTA_ONLINE
+  CONSULTA_PRESENCIAL
+  BIOIMPEDANCIA
+}
+
+enum ProductStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum BillingCycle {
+  ONE_TIME
+  MONTHLY
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  CANCELLED
+  EXPIRED
+  REFUNDED
+}
+
+enum PaymentMethod {
+  PIX
+  CREDIT_CARD
+}
+
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  PAID
+  FAILED
+  CANCELLED
+  REFUNDED
+}
+
+enum PaymentProvider {
+  MANUAL
+  MERCADO_PAGO
+  STRIPE
+  PAGARME
+  ASAAS
+}
+
+enum WearableProvider {
+  APPLE_HEALTH
+  GOOGLE_FIT
+  GARMIN
+  FITBIT
+}
+
+enum WearableConnectionStatus {
+  CONNECTED
+  DISCONNECTED
+  NEEDS_REAUTH
+}
+
+enum WearableNotificationType {
+  HEART_RATE
+  RECOVERY
+  SLEEP
+  SYNC
+  CONSENT
+}
+
+enum WearableNotificationSeverity {
+  INFO
+  SUCCESS
+  WARNING
+  CRITICAL
+}
+
+model User {
+  id                  String               @id @default(uuid()) @db.Uuid
+  email               String               @unique
+  passwordHash        String
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  profile             Profile?
+  roles               UserRoleAssignment[]
+  achievements        UserAchievement[]
+  appointments        Appointment[]
+  workouts            Workout[]
+  cardioWorkouts      CardioWorkout[]
+  injectables         Injectable[]
+  bioimpedanceRecords BioimpedanceRecord[]
+  orders              Order[]
+  payments            Payment[]
+  auditLogsAsActor    AuditLog[]           @relation("AuditActor")
+  auditLogsAsTarget   AuditLog[]           @relation("AuditTarget")
+  bodyProgressPhotos  BodyProgressPhoto[]
+  trainerClients      TrainerClient[]      @relation("TrainerRelationTrainer")
+  assignedTrainers    TrainerClient[]      @relation("TrainerRelationClient")
+  trainerApplication  TrainerApplication?
+  wearableConnections WearableConnection[]
+  wearableReadings    WearableReading[]
+  wearableNotifications WearableNotification[]
+  wearableOAuthStates WearableOAuthState[]
+}
+
+model Profile {
+  userId    String    @id @db.Uuid
+  fullName  String
+  phone     String?
+  age       Int
+  heightCm  Int
+  weightKg  Decimal   @db.Decimal(10, 2)
+  isPremium Boolean   @default(false)
+  accountType String   @default("client")
+  selectedPlan String?
+  initialPaymentMethod String?
+  termsAcceptedAt DateTime?
+  notificationPreferences Json?
+  entryDate DateTime?
+  avatarUrl String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([fullName])
+}
+
+model UserRoleAssignment {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  role      UserRole
+  createdAt DateTime @default(now())
+  createdBy String?  @db.Uuid
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, role])
+  @@index([userId])
+}
+
+model Achievement {
+  id          String            @id @default(uuid()) @db.Uuid
+  name        String            @unique
+  description String
+  icon        String?
+  sortOrder   Int               @default(1)
+  createdAt   DateTime          @default(now())
+  users       UserAchievement[]
+}
+
+model UserAchievement {
+  id            String      @id @default(uuid()) @db.Uuid
+  userId        String      @db.Uuid
+  achievementId String      @db.Uuid
+  unlockedAt    DateTime    @default(now())
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievement   Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, achievementId])
+}
+
+model Appointment {
+  id            String            @id @default(uuid()) @db.Uuid
+  userId        String            @db.Uuid
+  type          AppointmentType
+  status        AppointmentStatus @default(PENDING)
+  scheduledDate DateTime?
+  scheduledTime String?
+  adminNotes    String?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  user          User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+  @@index([scheduledDate])
+}
+
+model Workout {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String   @db.Uuid
+  date        DateTime @default(now())
+  objective   String
+  durationMin Int?
+  calories    Int?
+  workoutType String   @default("academia")
+  exercises   Json
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, date])
+}
+
+model CardioWorkout {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String   @db.Uuid
+  date        DateTime @default(now())
+  workoutType String
+  durationMin Decimal? @db.Decimal(10, 2)
+  distanceKm  Decimal? @db.Decimal(10, 2)
+  calories    Int?
+  avgPace     String?
+  avgSpeed    Decimal? @db.Decimal(10, 2)
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, date])
+}
+
+model Injectable {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String   @db.Uuid
+  medication String
+  dose       String
+  date       DateTime
+  time       String
+  location   String
+  notes      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, date])
+}
+
+model BioimpedanceRecord {
+  id                     String   @id @default(uuid()) @db.Uuid
+  userId                 String   @db.Uuid
+  date                   DateTime
+  weightKg               Decimal? @db.Decimal(10, 2)
+  bodyFatPercent         Decimal? @db.Decimal(10, 2)
+  musclePercent          Decimal? @db.Decimal(10, 2)
+  waterPercent           Decimal? @db.Decimal(10, 2)
+  visceralFat            Decimal? @db.Decimal(10, 2)
+  subcutaneousFatPercent Decimal? @db.Decimal(10, 2)
+  fatFreeMassKg          Decimal? @db.Decimal(10, 2)
+  proteinPercent         Decimal? @db.Decimal(10, 2)
+  boneMassKg             Decimal? @db.Decimal(10, 2)
+  muscleMassKg           Decimal? @db.Decimal(10, 2)
+  bmi                    Decimal? @db.Decimal(10, 2)
+  fatWeightKg            Decimal? @db.Decimal(10, 2)
+  waistHipRatio          Decimal? @db.Decimal(10, 2)
+  bmrKcal                Int?
+  idealWeightKg          Decimal? @db.Decimal(10, 2)
+  weightControlTip       Decimal? @db.Decimal(10, 2)
+  fatControlTip          Decimal? @db.Decimal(10, 2)
+  muscleControlTip       Decimal? @db.Decimal(10, 2)
+  dailyCalories          Int?
+  waistCm                Decimal? @db.Decimal(10, 2)
+  hipCm                  Decimal? @db.Decimal(10, 2)
+  armCm                  Decimal? @db.Decimal(10, 2)
+  thighCm                Decimal? @db.Decimal(10, 2)
+  shoulderImbalanceCm    Decimal? @db.Decimal(10, 2)
+  spineCurvatureCm       Decimal? @db.Decimal(10, 2)
+  headTiltDegrees        Decimal? @db.Decimal(10, 2)
+  trunkCurvatureDegrees  Decimal? @db.Decimal(10, 2)
+  pelvisTiltDegrees      Decimal? @db.Decimal(10, 2)
+  headForwardDegrees     Decimal? @db.Decimal(10, 2)
+  notes                  String?
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+  user                   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, date])
+}
+
+model TrainerClient {
+  id         String              @id @default(uuid()) @db.Uuid
+  trainerId  String              @db.Uuid
+  clientId   String              @db.Uuid
+  status     TrainerClientStatus @default(ACTIVE)
+  notes      String?
+  goals      String?
+  trainingPlan String?
+  createdAt  DateTime            @default(now())
+  updatedAt  DateTime            @updatedAt
+  trainer    User                @relation("TrainerRelationTrainer", fields: [trainerId], references: [id], onDelete: Cascade)
+  client     User                @relation("TrainerRelationClient", fields: [clientId], references: [id], onDelete: Cascade)
+  logs       TrainerClientLog[]
+
+  @@unique([trainerId, clientId])
+  @@index([trainerId, status])
+  @@index([clientId, status])
+}
+
+model TrainerClientLog {
+  id               String        @id @default(uuid()) @db.Uuid
+  trainerClientId  String        @db.Uuid
+  trainerId        String        @db.Uuid
+  clientId         String        @db.Uuid
+  title            String
+  content          String
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  trainerClient    TrainerClient @relation(fields: [trainerClientId], references: [id], onDelete: Cascade)
+
+  @@index([trainerClientId, createdAt])
+  @@index([trainerId, clientId, createdAt])
+}
+
+model BodyProgressPhoto {
+  id        String               @id @default(uuid()) @db.Uuid
+  userId    String               @db.Uuid
+  imageUrl  String
+  pose      BodyProgressPhotoPose
+  label     String?
+  notes     String?
+  takenAt   DateTime
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
+  user      User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, takenAt])
+  @@index([pose])
+}
+
+model TrainerApplication {
+  id              String                   @id @default(uuid()) @db.Uuid
+  userId          String                   @unique @db.Uuid
+  status          TrainerApplicationStatus @default(PENDING)
+  fullName        String
+  cref            String
+  crefState       String
+  specialties     String?
+  experienceYears Int?
+  instagramHandle String?
+  proofNotes      String?
+  selfPhotoUrl    String?
+  documentPhotoUrl String?
+  reviewedAt      DateTime?
+  reviewedBy      String?                  @db.Uuid
+  rejectionReason String?
+  createdAt       DateTime                 @default(now())
+  updatedAt       DateTime                 @updatedAt
+  user            User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([status, createdAt])
+}
+
+model Product {
+  id            String        @id @default(uuid()) @db.Uuid
+  slug          String        @unique
+  name          String
+  description   String?
+  priceCents    Int
+  currency      String        @default("BRL")
+  status        ProductStatus @default(ACTIVE)
+  billingCycle  BillingCycle  @default(ONE_TIME)
+  grantsPremium Boolean       @default(false)
+  metadata      Json?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  orderItems    OrderItem[]
+
+  @@index([status])
+}
+
+model Order {
+  id            String      @id @default(uuid()) @db.Uuid
+  userId        String      @db.Uuid
+  status        OrderStatus @default(PENDING)
+  subtotalCents Int
+  discountCents Int         @default(0)
+  totalCents    Int
+  currency      String      @default("BRL")
+  paidAt        DateTime?
+  cancelledAt   DateTime?
+  expiresAt     DateTime?
+  customerEmail String
+  customerName  String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items         OrderItem[]
+  payments      Payment[]
+
+  @@index([userId, createdAt])
+  @@index([status])
+}
+
+model OrderItem {
+  id             String  @id @default(uuid()) @db.Uuid
+  orderId        String  @db.Uuid
+  productId      String  @db.Uuid
+  quantity       Int     @default(1)
+  unitPriceCents Int
+  totalCents     Int
+  productName    String
+  grantsPremium  Boolean @default(false)
+  order          Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product        Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@index([orderId])
+  @@index([productId])
+}
+
+model Payment {
+  id                   String          @id @default(uuid()) @db.Uuid
+  orderId              String          @db.Uuid
+  userId               String          @db.Uuid
+  provider             PaymentProvider
+  method               PaymentMethod
+  status               PaymentStatus   @default(PENDING)
+  amountCents          Int
+  currency             String          @default("BRL")
+  providerPaymentId    String?
+  providerPreferenceId String?
+  checkoutUrl          String?
+  pixQrCode            String?
+  pixCopyPaste         String?
+  failureReason        String?
+  rawProviderPayload   Json?
+  expiresAt            DateTime?
+  paidAt               DateTime?
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
+  order                Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  user                 User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@index([userId, createdAt])
+  @@index([provider, providerPaymentId])
+  @@index([status])
+}
+
+model PaymentWebhookEvent {
+  id              String          @id @default(uuid()) @db.Uuid
+  provider        PaymentProvider
+  providerEventId String?
+  eventType       String
+  paymentId       String?
+  payload         Json
+  processedAt     DateTime?
+  createdAt       DateTime        @default(now())
+
+  @@unique([provider, providerEventId])
+  @@index([provider])
+  @@index([createdAt])
+}
+
+model PaymentGatewaySetting {
+  id                     String          @id @default(uuid()) @db.Uuid
+  provider               PaymentProvider @unique
+  isActive               Boolean         @default(true)
+  publishableKey         String?
+  secretKeyEncrypted     String?
+  webhookSecretEncrypted String?
+  createdAt              DateTime        @default(now())
+  updatedAt              DateTime        @updatedAt
+
+  @@index([isActive])
+}
+
+model WearableConnection {
+  id                   String                     @id @default(uuid()) @db.Uuid
+  userId               String                     @db.Uuid
+  provider             WearableProvider
+  status               WearableConnectionStatus   @default(CONNECTED)
+  deviceName           String?
+  externalAccountLabel String?
+  accessTokenEncrypted String?
+  refreshTokenEncrypted String?
+  tokenExpiresAt       DateTime?
+  scopes               Json?
+  consentVersion       String                     @default("v1")
+  connectedAt          DateTime                   @default(now())
+  lastSyncAt           DateTime?
+  disconnectedAt       DateTime?
+  createdAt            DateTime                   @default(now())
+  updatedAt            DateTime                   @updatedAt
+  user                 User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  readings             WearableReading[]
+
+  @@unique([userId, provider])
+  @@index([userId, status])
+  @@index([provider])
+}
+
+model WearableReading {
+  id                  String              @id @default(uuid()) @db.Uuid
+  userId              String              @db.Uuid
+  connectionId        String?             @db.Uuid
+  provider            WearableProvider
+  recordedAt          DateTime
+  heartRateBpm        Int?
+  restingHeartRateBpm Int?
+  hrvMs               Int?
+  spo2Percent         Decimal?            @db.Decimal(5, 2)
+  activeCalories      Int?
+  steps               Int?
+  sleepMinutes        Int?
+  recoveryScore       Int?
+  stressScore         Int?
+  batteryPercent      Int?
+  rawSummary          Json?
+  createdAt           DateTime            @default(now())
+  user                User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  connection          WearableConnection? @relation(fields: [connectionId], references: [id], onDelete: SetNull)
+
+  @@index([userId, recordedAt])
+  @@index([connectionId])
+  @@index([provider, recordedAt])
+}
+
+model WearableNotification {
+  id        String                         @id @default(uuid()) @db.Uuid
+  userId    String                         @db.Uuid
+  type      WearableNotificationType
+  severity  WearableNotificationSeverity   @default(INFO)
+  title     String
+  message   String
+  isRead    Boolean                        @default(false)
+  readAt    DateTime?
+  metadata  Json?
+  createdAt DateTime                       @default(now())
+  user      User                           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead, createdAt])
+  @@index([type])
+  @@index([severity])
+}
+
+model WearableOAuthState {
+  id           String           @id @default(uuid()) @db.Uuid
+  userId       String           @db.Uuid
+  provider     WearableProvider
+  state        String           @unique
+  codeVerifier String
+  redirectPath String?
+  expiresAt    DateTime
+  usedAt       DateTime?
+  createdAt    DateTime         @default(now())
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, provider, expiresAt])
+  @@index([expiresAt])
+}
+
+model AuditLog {
+  id           String   @id @default(uuid()) @db.Uuid
+  actorUserId  String?  @db.Uuid
+  targetUserId String?  @db.Uuid
+  action       String
+  entityType   String
+  entityId     String?
+  details      Json
+  createdAt    DateTime @default(now())
+  actor        User?    @relation("AuditActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+  target       User?    @relation("AuditTarget", fields: [targetUserId], references: [id], onDelete: SetNull)
+
+  @@index([actorUserId])
+  @@index([targetUserId])
+  @@index([entityType])
+  @@index([createdAt])
+}
