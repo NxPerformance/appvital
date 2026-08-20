@@ -33,9 +33,6 @@ backend/uploads
 .cache
 coverage
 
-# Local builder metadata
-.lovable
-
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

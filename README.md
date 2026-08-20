@@ -3,7 +3,7 @@
 Projeto dividido em:
 
 - `frontend`: app React/Vite na raiz deste repositório
-- `backend`: API Node/Express com Prisma em [backend/README.md](/Users/wrstore/Documents/vital-app-main/backend/README.md:1)
+- `backend`: API Node/Express com Prisma em [backend/README.md](backend/README.md)
 
 ## Stack atual
 
@@ -52,8 +52,7 @@ Ordem recomendada:
 ## Observações
 
 - O frontend já foi migrado para consumir a API própria.
-- A antiga integração com Supabase foi removida da aplicação.
-- Depois de rodar `npm install` novamente na raiz, a dependência antiga do Supabase sai do lockfile também.
-- Para deploy na Hostinger VPS, use também [docs/hostinger-vps.md](/Users/wrstore/Documents/vital-app-main/docs/hostinger-vps.md:1).
-- Para deploy pelo painel com Compose, use [docs/dokploy-vps.md](/Users/wrstore/Documents/vital-app-main/docs/dokploy-vps.md:1).
-- Para conectar um gateway de pagamento, use [docs/payments-readiness.md](/Users/wrstore/Documents/vital-app-main/docs/payments-readiness.md:1).
+- A antiga integração com Supabase foi removida da aplicação (a pasta `supabase/` também foi removida do repositório).
+- Para deploy na Hostinger VPS, use também [docs/hostinger-vps.md](docs/hostinger-vps.md).
+- Para deploy pelo painel com Compose, use [docs/dokploy-vps.md](docs/dokploy-vps.md).
+- Para conectar um gateway de pagamento, use [docs/payments-readiness.md](docs/payments-readiness.md).
