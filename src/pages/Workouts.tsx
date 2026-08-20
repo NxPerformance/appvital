@@ -69,7 +69,7 @@ export default function Workouts() {
 
   return (
     <div className="min-h-full bg-[hsl(var(--background))]">
-      <div className="mx-auto flex min-h-full w-full max-w-[430px] flex-col gap-5 px-5 pb-28 pt-6">
+      <div className="mx-auto flex min-h-full w-full max-w-[430px] flex-col gap-5 px-5 pb-28 pt-6 md:max-w-[1180px] md:px-7 md:pb-8 md:pt-7">
         <header className="flex items-center gap-4">
           <Link
             to="/profile"

@@ -578,7 +578,7 @@ export default function WorkoutForm() {
   if (exercisePickerOpen) {
     return (
       <div className="min-h-full bg-[hsl(var(--background))]">
-        <div className="mx-auto flex min-h-full w-full max-w-[430px] flex-col gap-4 px-5 pb-40 pt-6">
+        <div className="mx-auto flex min-h-full w-full max-w-[430px] flex-col gap-4 px-5 pb-40 pt-6 md:max-w-[1180px] md:px-7">
           <header className="grid grid-cols-[42px_1fr_64px] items-center gap-3">
             <button
               type="button"
@@ -688,7 +688,7 @@ export default function WorkoutForm() {
 
   return (
     <div className="min-h-full bg-[hsl(var(--background))]">
-      <div className="mx-auto flex min-h-full w-full max-w-[430px] flex-col pb-[9.5rem]">
+      <div className="mx-auto flex min-h-full w-full max-w-[430px] flex-col pb-[9.5rem] md:max-w-[1180px]">
         <div className="border-b border-white/10 bg-[linear-gradient(135deg,hsl(var(--card))_0%,hsl(var(--background-strong))_100%)] px-5 pb-4 pt-3">
           <div className="mb-2 flex items-center justify-between text-xs text-muted-foreground">
             <span>10:25</span>
@@ -891,7 +891,7 @@ export default function WorkoutForm() {
         </main>
       </div>
 
-      <footer className="fixed bottom-0 left-1/2 z-50 w-full max-w-[430px] -translate-x-1/2 border-t border-white/10 bg-[hsl(var(--background-strong)/0.98)] px-5 pb-[calc(env(safe-area-inset-bottom,0px)+1rem)] pt-3 backdrop-blur">
+      <footer className="fixed bottom-0 left-1/2 z-50 w-full max-w-[430px] -translate-x-1/2 border-t border-white/10 bg-[hsl(var(--background-strong)/0.98)] px-5 pb-[calc(env(safe-area-inset-bottom,0px)+1rem)] pt-3 backdrop-blur md:max-w-[1180px] md:px-7">
         <button
           type="button"
           onClick={finishWorkout}

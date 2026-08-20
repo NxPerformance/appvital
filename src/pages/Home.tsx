@@ -417,7 +417,7 @@ export default function Home() {
   if (profileError) {
     return (
       <div className="min-h-full bg-[hsl(var(--background))]">
-        <div className="mx-auto flex min-h-full w-full max-w-[430px] flex-col px-5 pb-28 pt-6">
+        <div className="mx-auto flex min-h-full w-full max-w-[430px] flex-col px-5 pb-28 pt-6 md:max-w-[1180px] md:px-7 md:pb-8 md:pt-7">
           <div className="mt-24 rounded-[1.25rem] border border-white/10 bg-card p-5 text-center shadow-elegant">
             <p className="text-lg font-black text-foreground">Não foi possível carregar a tela inicial</p>
             <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
@@ -511,7 +511,7 @@ export default function Home() {
 
   return (
     <div className="min-h-full bg-[hsl(var(--background))]">
-      <div className="mx-auto flex min-h-full w-full max-w-[430px] flex-col gap-4 px-5 pb-28 pt-6">
+      <div className="mx-auto flex min-h-full w-full max-w-[430px] flex-col gap-4 px-5 pb-28 pt-6 md:max-w-[1180px] md:px-7 md:pb-8 md:pt-7">
         <header className="flex items-start justify-between gap-4">
           <div className="min-w-0">
             <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Vitalissy</p>
