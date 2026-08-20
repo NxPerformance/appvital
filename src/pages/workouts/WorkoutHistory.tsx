@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { ArrowLeft, Calendar, Clock, Flame, Eye, Trash2, Pencil, Dumbbell, Plus, Home, PersonStanding, Footprints, Bike, Zap, MapPin, Activity } from 'lucide-react';
+import { ArrowLeft, Calendar, Clock, Flame, Eye, Trash2, Pencil, Dumbbell, Plus, Home, PersonStanding } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ptBR } from 'date-fns/locale';
@@ -8,7 +8,7 @@ import { formatDuration } from '@/lib/formatDuration';
 import { api } from '@/lib/api';
 import { formatDateSafe, parseDateValue } from '@/lib/dateUtils';
 import { formatWorkoutFocusObjective, getSelectedWorkoutFocusLabels, workoutFocusOptions } from '@/lib/workoutFocus';
-import { fetchCardioWorkouts, fetchStrengthWorkouts } from '@/lib/workoutApi';
+import { fetchStrengthWorkouts } from '@/lib/workoutApi';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -48,27 +48,11 @@ interface Workout {
   workout_type?: string;
 }
 
-interface CardioWorkout {
-  id: string;
-  date: string;
-  workout_type: string;
-  duration_min: number | null;
-  distance_km: number | null;
-  calories: number | null;
-  notes: string | null;
-  created_at: string;
-}
-
-type FilterType = 'todos' | 'musculacao' | 'cardio';
-
 const workoutTypeIcons: Record<string, React.ElementType> = {
   academia: Dumbbell,
   'em-casa': Home,
   crossfit: Flame,
   calistenia: PersonStanding,
-  corrida: Footprints,
-  ciclismo: Bike,
-  hiit: Zap,
 };
 
 const workoutTypeLabels: Record<string, string> = {
@@ -76,18 +60,6 @@ const workoutTypeLabels: Record<string, string> = {
   'em-casa': 'Em Casa',
   crossfit: 'CrossFit',
   calistenia: 'Calistenia',
-  corrida: 'Corrida',
-  ciclismo: 'Ciclismo',
-  hiit: 'HIIT',
-};
-
-// For "Outras" activities, get icon and label dynamically
-const getCardioIcon = (workoutType: string): React.ElementType => {
-  return workoutTypeIcons[workoutType] || Activity;
-};
-
-const getCardioLabel = (workoutType: string): string => {
-  return workoutTypeLabels[workoutType] || workoutType;
 };
 
 const formatDate = (dateString: string): string => {
@@ -111,12 +83,9 @@ const getSortableDate = (primary: unknown, fallback: unknown) =>
 export default function WorkoutHistory() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const [filter, setFilter] = useState<FilterType>('todos');
   const [selectedWorkout, setSelectedWorkout] = useState<Workout | null>(null);
   const [editingWorkout, setEditingWorkout] = useState<Workout | null>(null);
   const [deleteWorkout, setDeleteWorkout] = useState<Workout | null>(null);
-  const [selectedCardio, setSelectedCardio] = useState<CardioWorkout | null>(null);
-  const [deleteCardio, setDeleteCardio] = useState<CardioWorkout | null>(null);
 
   // Edit form state
   const [editObjective, setEditObjective] = useState('');
@@ -147,33 +116,13 @@ export default function WorkoutHistory() {
     enabled: !!user
   });
 
-  const { data: cardioWorkouts } = useQuery({
-    queryKey: ['cardio_workouts', user?.id],
-    queryFn: async () => {
-      if (!user) return [];
-      return fetchCardioWorkouts() as Promise<CardioWorkout[]>;
-    },
-    enabled: !!user
-  });
+  const sortedWorkouts = useMemo(() => {
+    return [...(workouts ?? [])].sort((a, b) =>
+      getSortableDate(b.created_at, b.date).getTime() - getSortableDate(a.created_at, a.date).getTime()
+    );
+  }, [workouts]);
 
-  // Filter workouts based on selected filter
-  const filteredWorkouts = useMemo(() => (workouts ?? []).filter(w => {
-    if (filter === 'todos') return true;
-    if (filter === 'musculacao') return true; // All workouts in workouts table are musculação
-    return false;
-  }), [filter, workouts]);
-
-  const filteredCardio = useMemo(() => (cardioWorkouts ?? []).filter(w => {
-    if (filter === 'todos') return true;
-    if (filter === 'cardio') return true;
-    return false;
-  }), [cardioWorkouts, filter]);
-
-  const totalCount = (filter === 'todos' 
-    ? (workouts?.length || 0) + (cardioWorkouts?.length || 0)
-    : filter === 'musculacao' 
-      ? (workouts?.length || 0)
-      : (cardioWorkouts?.length || 0));
+  const totalCount = workouts?.length || 0;
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -183,20 +132,6 @@ export default function WorkoutHistory() {
       queryClient.invalidateQueries({ queryKey: ['workouts'] });
       toast.success('Treino excluído com sucesso');
       setDeleteWorkout(null);
-    },
-    onError: (error: any) => {
-      toast.error('Erro ao excluir: ' + error.message);
-    }
-  });
-
-  const deleteCardioMutation = useMutation({
-    mutationFn: async (id: string) => {
-      await api.delete(`/workouts/cardio/${id}`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['cardio_workouts'] });
-      toast.success('Treino cardio excluído com sucesso');
-      setDeleteCardio(null);
     },
     onError: (error: any) => {
       toast.error('Erro ao excluir: ' + error.message);
@@ -287,25 +222,6 @@ export default function WorkoutHistory() {
     setEditExercises(updated);
   };
 
-  // Combine and sort all workouts by date
-  const combinedWorkouts = useMemo(() => {
-    const musculacao = (filteredWorkouts || []).map(w => ({
-      ...w,
-      itemType: 'musculacao' as const,
-      sortDate: getSortableDate(w.created_at, w.date)
-    }));
-    
-    const cardio = (filteredCardio || []).map(c => ({
-      ...c,
-      itemType: 'cardio' as const,
-      sortDate: getSortableDate(c.created_at, c.date)
-    }));
-    
-    return [...musculacao, ...cardio].sort((a, b) => 
-      b.sortDate.getTime() - a.sortDate.getTime()
-    );
-  }, [filteredWorkouts, filteredCardio]);
-
   return (
     <div className="p-4 pb-24 space-y-6">
       {/* Header */}
@@ -319,48 +235,6 @@ export default function WorkoutHistory() {
             {totalCount} treinos registrados
           </p>
         </div>
-      </div>
-
-      {/* Filters */}
-      <div className="flex gap-2">
-        <Button
-          variant={filter === 'todos' ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => setFilter('todos')}
-          className={cn(
-            filter === 'todos' 
-              ? 'bg-accent text-accent-foreground' 
-              : 'border-border'
-          )}
-        >
-          Todos
-        </Button>
-        <Button
-          variant={filter === 'musculacao' ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => setFilter('musculacao')}
-          className={cn(
-            filter === 'musculacao' 
-              ? 'bg-accent text-accent-foreground' 
-              : 'border-border'
-          )}
-        >
-          <Dumbbell className="w-4 h-4 mr-1" />
-          Musculação
-        </Button>
-        <Button
-          variant={filter === 'cardio' ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => setFilter('cardio')}
-          className={cn(
-            filter === 'cardio' 
-              ? 'bg-accent text-accent-foreground' 
-              : 'border-border'
-          )}
-        >
-          <Footprints className="w-4 h-4 mr-1" />
-          Cardio
-        </Button>
       </div>
 
       {/* Workout List */}
@@ -385,143 +259,74 @@ export default function WorkoutHistory() {
         </div>
       ) : (
         <div className="space-y-3">
-          {combinedWorkouts.map((item) => {
-            if (item.itemType === 'musculacao') {
-              const workout = item as typeof item & Workout;
-              const TypeIcon = workoutTypeIcons[workout.workout_type || 'academia'] || Dumbbell;
-              return (
-                <div key={`workout-${workout.id}`} className="bg-card rounded-xl p-4">
-                  <div className="flex items-start gap-3 mb-3">
-                    <div className="w-10 h-10 bg-accent/20 rounded-full flex items-center justify-center shrink-0 mt-1">
-                      <TypeIcon className="w-5 h-5 text-accent" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-lg truncate">{workout.objective}</h3>
-                      <div className="flex items-center gap-2 text-muted-foreground text-sm flex-wrap">
-                        <Calendar className="w-4 h-4 shrink-0" />
-                        <span>{formatDate(workout.date)}</span>
-                        <span className="text-xs bg-accent/20 text-accent px-2 py-0.5 rounded-full">
-                          {workoutTypeLabels[workout.workout_type || 'academia'] || 'Academia'}
-                        </span>
-                      </div>
-                    </div>
+          {sortedWorkouts.map((workout) => {
+            const TypeIcon = workoutTypeIcons[workout.workout_type || 'academia'] || Dumbbell;
+            return (
+              <div key={workout.id} className="bg-card rounded-xl p-4">
+                <div className="flex items-start gap-3 mb-3">
+                  <div className="w-10 h-10 bg-accent/20 rounded-full flex items-center justify-center shrink-0 mt-1">
+                    <TypeIcon className="w-5 h-5 text-accent" />
                   </div>
-
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-3 text-sm flex-wrap">
-                      {workout.duration_min && (
-                        <div className="flex items-center gap-1 text-muted-foreground">
-                          <Clock className="w-4 h-4 text-accent" />
-                          <span>{formatDuration(workout.duration_min)}</span>
-                        </div>
-                      )}
-                      {workout.calories && (
-                        <div className="flex items-center gap-1 text-muted-foreground">
-                          <Flame className="w-4 h-4 text-accent" />
-                          <span>{workout.calories} kcal</span>
-                        </div>
-                      )}
-                      <div className="text-muted-foreground">
-                        {workout.exercises.length} exerc.
-                      </div>
-                    </div>
-                    <div className="flex gap-1 shrink-0">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => openEditModal(workout)}
-                        className="text-muted-foreground hover:text-accent h-8 w-8 p-0"
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setDeleteWorkout(workout)}
-                        className="text-muted-foreground hover:text-destructive h-8 w-8 p-0"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setSelectedWorkout(workout)}
-                        className="border-accent text-accent hover:bg-accent hover:text-accent-foreground h-8 px-2"
-                      >
-                        <Eye className="w-4 h-4" />
-                        <span className="hidden sm:inline ml-1">Detalhes</span>
-                      </Button>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold text-lg truncate">{workout.objective}</h3>
+                    <div className="flex items-center gap-2 text-muted-foreground text-sm flex-wrap">
+                      <Calendar className="w-4 h-4 shrink-0" />
+                      <span>{formatDate(workout.date)}</span>
+                      <span className="text-xs bg-accent/20 text-accent px-2 py-0.5 rounded-full">
+                        {workoutTypeLabels[workout.workout_type || 'academia'] || 'Academia'}
+                      </span>
                     </div>
                   </div>
                 </div>
-              );
-            } else {
-              const cardio = item as typeof item & CardioWorkout;
-              const TypeIcon = getCardioIcon(cardio.workout_type);
-              return (
-                <div key={`cardio-${cardio.id}`} className="bg-card rounded-xl p-4">
-                  <div className="flex items-start gap-3 mb-3">
-                    <div className="w-10 h-10 bg-accent/20 rounded-full flex items-center justify-center shrink-0 mt-1">
-                      <TypeIcon className="w-5 h-5 text-accent" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-lg truncate">
-                        {getCardioLabel(cardio.workout_type)}
-                      </h3>
-                      <div className="flex items-center gap-2 text-muted-foreground text-sm flex-wrap">
-                        <Calendar className="w-4 h-4 shrink-0" />
-                        <span>{formatDate(cardio.date)}</span>
-                        <span className="text-xs bg-accent/20 text-accent px-2 py-0.5 rounded-full">
-                          Cardio
-                        </span>
+
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-3 text-sm flex-wrap">
+                    {workout.duration_min && (
+                      <div className="flex items-center gap-1 text-muted-foreground">
+                        <Clock className="w-4 h-4 text-accent" />
+                        <span>{formatDuration(workout.duration_min)}</span>
                       </div>
+                    )}
+                    {workout.calories && (
+                      <div className="flex items-center gap-1 text-muted-foreground">
+                        <Flame className="w-4 h-4 text-accent" />
+                        <span>{workout.calories} kcal</span>
+                      </div>
+                    )}
+                    <div className="text-muted-foreground">
+                      {workout.exercises.length} exerc.
                     </div>
                   </div>
-
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-3 text-sm flex-wrap">
-                      {cardio.duration_min && (
-                        <div className="flex items-center gap-1 text-muted-foreground">
-                          <Clock className="w-4 h-4 text-accent" />
-                          <span>{formatDuration(cardio.duration_min)}</span>
-                        </div>
-                      )}
-                      {cardio.distance_km && (
-                        <div className="flex items-center gap-1 text-muted-foreground">
-                          <MapPin className="w-4 h-4 text-accent" />
-                          <span>{Number(cardio.distance_km).toFixed(2)} km</span>
-                        </div>
-                      )}
-                      {cardio.calories && (
-                        <div className="flex items-center gap-1 text-muted-foreground">
-                          <Flame className="w-4 h-4 text-accent" />
-                          <span>{cardio.calories} kcal</span>
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex gap-1 shrink-0">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setDeleteCardio(cardio)}
-                        className="text-muted-foreground hover:text-destructive h-8 w-8 p-0"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setSelectedCardio(cardio)}
-                        className="border-accent text-accent hover:bg-accent hover:text-accent-foreground h-8 px-2"
-                      >
-                        <Eye className="w-4 h-4" />
-                        <span className="hidden sm:inline ml-1">Detalhes</span>
-                      </Button>
-                    </div>
+                  <div className="flex gap-1 shrink-0">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => openEditModal(workout)}
+                      className="text-muted-foreground hover:text-accent h-8 w-8 p-0"
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setDeleteWorkout(workout)}
+                      className="text-muted-foreground hover:text-destructive h-8 w-8 p-0"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setSelectedWorkout(workout)}
+                      className="border-accent text-accent hover:bg-accent hover:text-accent-foreground h-8 px-2"
+                    >
+                      <Eye className="w-4 h-4" />
+                      <span className="hidden sm:inline ml-1">Detalhes</span>
+                    </Button>
                   </div>
                 </div>
-              );
-            }
+              </div>
+            );
           })}
         </div>
       )}
@@ -532,7 +337,7 @@ export default function WorkoutHistory() {
           <DialogHeader>
             <DialogTitle className="text-xl">{selectedWorkout?.objective}</DialogTitle>
           </DialogHeader>
-          
+
           {selectedWorkout && (
             <div className="space-y-4">
               <div className="flex items-center gap-4 text-sm text-muted-foreground">
@@ -587,7 +392,7 @@ export default function WorkoutHistory() {
           <DialogHeader>
             <DialogTitle className="text-xl">Editar Treino</DialogTitle>
           </DialogHeader>
-          
+
           <div className="space-y-4">
             <div className="space-y-2">
               <Label>Foco do treino</Label>
@@ -778,90 +583,6 @@ export default function WorkoutHistory() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      {/* Delete Cardio Confirmation */}
-      <AlertDialog open={!!deleteCardio} onOpenChange={() => setDeleteCardio(null)}>
-        <AlertDialogContent className="bg-card border-border">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Excluir treino cardio?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta ação não pode ser desfeita. O treino "{workoutTypeLabels[deleteCardio?.workout_type || ''] || 'Cardio'}" será permanentemente excluído.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="border-border">Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => deleteCardio && deleteCardioMutation.mutate(deleteCardio.id)}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {deleteCardioMutation.isPending ? 'Excluindo...' : 'Excluir'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Cardio Details Modal */}
-      <Dialog open={!!selectedCardio} onOpenChange={() => setSelectedCardio(null)}>
-        <DialogContent className="bg-card border-border max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="text-xl">
-              {workoutTypeLabels[selectedCardio?.workout_type || ''] || 'Cardio'}
-            </DialogTitle>
-          </DialogHeader>
-          
-          {selectedCardio && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                <div className="flex items-center gap-1">
-                  <Calendar className="w-4 h-4" />
-                  {formatDate(selectedCardio.date)}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                {selectedCardio.duration_min && (
-                  <div className="bg-background rounded-lg p-3">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Clock className="w-4 h-4 text-accent" />
-                      <span className="text-sm text-muted-foreground">Duração</span>
-                    </div>
-                    <p className="text-lg font-semibold">{formatDuration(selectedCardio.duration_min)}</p>
-                  </div>
-                )}
-                {selectedCardio.distance_km && (
-                  <div className="bg-background rounded-lg p-3">
-                    <div className="flex items-center gap-2 mb-1">
-                      <MapPin className="w-4 h-4 text-accent" />
-                      <span className="text-sm text-muted-foreground">Distância</span>
-                    </div>
-                    <p className="text-lg font-semibold">{Number(selectedCardio.distance_km).toFixed(2)} km</p>
-                  </div>
-                )}
-                {selectedCardio.calories && (
-                  <div className="bg-background rounded-lg p-3">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Flame className="w-4 h-4 text-accent" />
-                      <span className="text-sm text-muted-foreground">Calorias</span>
-                    </div>
-                    <p className="text-lg font-semibold">{selectedCardio.calories} kcal</p>
-                  </div>
-                )}
-              </div>
-
-              {selectedCardio.notes && (
-                <div className="bg-background rounded-lg p-3">
-                  <h4 className="font-semibold mb-2">Observações</h4>
-                  <p className="text-sm text-muted-foreground">{selectedCardio.notes}</p>
-                </div>
-              )}
-
-              <div className="text-xs text-muted-foreground pt-2 border-t border-border">
-                Criado em: {formatTimestamp(selectedCardio.created_at)}
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

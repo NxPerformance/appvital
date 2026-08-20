@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { ArrowLeft, BarChart3, Crown, Flame, Footprints, TimerReset, TrendingUp } from "lucide-react";
+import { ArrowLeft, BarChart3, Flame, TimerReset, TrendingUp } from "lucide-react";
 import { Link } from "react-router-dom";
 import { ptBR } from "date-fns/locale";
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
@@ -12,13 +12,6 @@ import { useReports, type ReportPeriod } from "@/hooks/useReports";
 
 function formatNumber(value: number) {
   return new Intl.NumberFormat("pt-BR").format(value);
-}
-
-function formatDistance(value: number) {
-  return new Intl.NumberFormat("pt-BR", {
-    minimumFractionDigits: value % 1 === 0 ? 0 : 1,
-    maximumFractionDigits: 1,
-  }).format(value);
 }
 
 function formatTimelineLabel(label: string, period: ReportPeriod) {
@@ -163,7 +156,7 @@ export default function WorkoutDashboard() {
           </section>
         ) : (
           <>
-            <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <section className="grid gap-4 md:grid-cols-3">
               <div className="gold-highlight rounded-[2rem] px-6 py-6 shadow-glow">
                 <div className="flex items-center justify-between gap-4">
                   <div>
@@ -191,16 +184,6 @@ export default function WorkoutDashboard() {
                     <p className="mt-2 text-4xl font-semibold">{formatNumber(report.totals.active_minutes)}</p>
                   </div>
                   <TimerReset className="h-8 w-8 text-primary" />
-                </div>
-              </div>
-
-              <div className="rounded-[2rem] border border-white/5 bg-[hsl(var(--card))] p-6 shadow-elegant">
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Distância</p>
-                    <p className="mt-2 text-4xl font-semibold">{formatDistance(report.totals.distance_km)} km</p>
-                  </div>
-                  <Footprints className="h-8 w-8 text-primary" />
                 </div>
               </div>
             </section>
@@ -241,10 +224,6 @@ export default function WorkoutDashboard() {
                   <div className="rounded-[1.5rem] bg-[hsl(var(--secondary))] p-4">
                     <p className="text-sm text-muted-foreground">Musculação</p>
                     <p className="mt-1 text-3xl font-semibold">{report.totals.strength_workouts}</p>
-                  </div>
-                  <div className="rounded-[1.5rem] bg-[hsl(var(--secondary))] p-4">
-                    <p className="text-sm text-muted-foreground">Cardio</p>
-                    <p className="mt-1 text-3xl font-semibold">{report.totals.cardio_workouts}</p>
                   </div>
                   <div className="rounded-[1.5rem] bg-[hsl(var(--secondary))] p-4">
                     <p className="text-sm text-muted-foreground">Fotos de evolução</p>

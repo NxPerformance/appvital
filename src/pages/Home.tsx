@@ -43,11 +43,11 @@ import {
 import { useAchievements } from "@/hooks/useAchievements";
 import { useProfile } from "@/hooks/useProfile";
 import { useMyTrainerAssignment } from "@/hooks/useTrainer";
-import { fetchCardioWorkouts, fetchStrengthWorkouts, type CardioWorkoutApi, type StrengthWorkoutApi } from "@/lib/workoutApi";
+import { fetchStrengthWorkouts, type StrengthWorkoutApi } from "@/lib/workoutApi";
 import { buildWorkoutStartFromTrainerPlan, type WorkoutStartState } from "@/lib/workoutStart";
 import { cn } from "@/lib/utils";
 
-type WorkoutEntry = StrengthWorkoutApi | CardioWorkoutApi;
+type WorkoutEntry = StrengthWorkoutApi;
 type PeriodKey = "week" | "month" | "year" | "custom";
 
 interface PeriodSummary {
@@ -316,14 +316,11 @@ export default function Home() {
 
     const loadDashboardData = async () => {
       try {
-        const [strengthWorkouts, cardioWorkouts] = await Promise.all([
-          fetchStrengthWorkouts(),
-          fetchCardioWorkouts(),
-        ]);
+        const strengthWorkouts = await fetchStrengthWorkouts();
 
         if (!active) return;
 
-        const combined = [...strengthWorkouts, ...cardioWorkouts];
+        const combined = strengthWorkouts;
         const now = new Date();
         const dayStart = new Date(now);
         dayStart.setHours(0, 0, 0, 0);

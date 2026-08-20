@@ -21,12 +21,6 @@ const Workouts = lazy(() => import("@/pages/Workouts"));
 const WorkoutForm = lazy(() => import("@/pages/workouts/WorkoutForm"));
 const WorkoutHistory = lazy(() => import("@/pages/workouts/WorkoutHistory"));
 const WorkoutDashboard = lazy(() => import("@/pages/workouts/WorkoutDashboard"));
-const PopularWorkouts = lazy(() => import("@/pages/workouts/PopularWorkouts"));
-const WeburnVideos = lazy(() => import("@/pages/workouts/WeburnVideos"));
-const CardioRunning = lazy(() => import("@/pages/workouts/CardioRunning"));
-const CardioCycling = lazy(() => import("@/pages/workouts/CardioCycling"));
-const CardioOther = lazy(() => import("@/pages/workouts/CardioOther"));
-const CardioHIIT = lazy(() => import("@/pages/workouts/CardioHIIT"));
 const Injectables = lazy(() => import("@/pages/Injectables"));
 const NewInjectable = lazy(() => import("@/pages/injectables/NewInjectable"));
 const Premium = lazy(() => import("@/pages/Premium"));
@@ -36,7 +30,6 @@ const Settings = lazy(() => import("@/pages/Settings"));
 const Profile = lazy(() => import("@/pages/Profile"));
 const TrainerDashboard = lazy(() => import("@/pages/TrainerDashboard"));
 const BodyProgress = lazy(() => import("@/pages/BodyProgress"));
-const Bioimpedancia = lazy(() => import("@/pages/Bioimpedancia"));
 const Wearables = lazy(() => import("@/pages/Wearables"));
 const AdminDashboard = lazy(() => import("@/pages/admin/AdminDashboard"));
 const AdminUsers = lazy(() => import("@/pages/admin/AdminUsers"));
@@ -82,18 +75,6 @@ const router = createBrowserRouter([
     path: "/termos-de-uso",
     element: lazyElement(Terms),
   },
-  ...(import.meta.env.DEV
-    ? [
-        {
-          path: "/demo/workoutx",
-          element: lazyElement(PopularWorkouts),
-        },
-        {
-          path: "/demo/weburn",
-          element: lazyElement(WeburnVideos),
-        },
-      ]
-    : []),
   {
     path: "/auth/login",
     element: <Navigate to="/login" replace />,
@@ -109,14 +90,7 @@ const router = createBrowserRouter([
     children: [
       { index: true, element: lazyElement(Home) },
       { path: "workouts", element: lazyElement(Workouts) },
-      { path: "workouts/popular", element: lazyElement(WeburnVideos) },
-      { path: "workouts/examples", element: lazyElement(PopularWorkouts) },
-      { path: "workouts/weburn", element: lazyElement(WeburnVideos) },
       { path: "workouts/musculacao/:type", element: lazyElement(WorkoutForm) },
-      { path: "workouts/cardio/corrida", element: lazyElement(CardioRunning) },
-      { path: "workouts/cardio/ciclismo", element: lazyElement(CardioCycling) },
-      { path: "workouts/cardio/outras", element: lazyElement(CardioOther) },
-      { path: "workouts/cardio/hiit", element: lazyElement(CardioHIIT) },
       { path: "workouts/history", element: lazyElement(WorkoutHistory) },
       { path: "workouts/dashboard", element: lazyElement(WorkoutDashboard) },
       { path: "injectables", element: lazyElement(Injectables) },
@@ -128,7 +102,6 @@ const router = createBrowserRouter([
       { path: "settings", element: lazyElement(Settings) },
       { path: "profile", element: lazyElement(Profile) },
       { path: "body-progress", element: lazyElement(BodyProgress) },
-      { path: "bioimpedancia", element: lazyElement(Bioimpedancia) },
       { path: "wearables", element: lazyElement(Wearables) },
     ],
   },

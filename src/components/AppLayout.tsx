@@ -1,15 +1,11 @@
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import {
-  BarChart3,
   BadgeCheck,
   Crown,
-  Dumbbell,
   Heart,
   HeartPulse,
-  Watch,
   LogOut,
-  Settings,
-  Trophy,
+  Syringe,
   TrendingUp,
   UserCircle2,
 } from "lucide-react";
@@ -22,14 +18,10 @@ import { cn } from "@/lib/utils";
 
 const patientNavItems = [
   { to: "/", icon: Heart, label: "Início" },
-  { to: "/workouts", icon: Dumbbell, label: "Treinos" },
+  { to: "/injectables", icon: Syringe, label: "Injetáveis" },
   { to: "/body-progress", icon: TrendingUp, label: "Evolução" },
   { to: "/appointments", icon: HeartPulse, label: "Saúde" },
-  { to: "/workouts/dashboard", icon: BarChart3, label: "Estatísticas" },
-  { to: "/wearables", icon: Watch, label: "Relógio" },
-  { to: "/premium", icon: Trophy, label: "Conquistas" },
   { to: "/profile", icon: UserCircle2, label: "Perfil" },
-  { to: "/settings", icon: Settings, label: "Configurações" },
 ];
 
 export function AppLayout() {
@@ -59,7 +51,6 @@ export function AppLayout() {
 
   const isNavItemActive = (to: string) => {
     if (to === "/") return location.pathname === "/";
-    if (to === "/workouts") return location.pathname.startsWith("/workouts") && !location.pathname.startsWith("/workouts/dashboard");
     return location.pathname === to || location.pathname.startsWith(`${to}/`);
   };
 

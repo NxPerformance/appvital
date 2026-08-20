@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from './useAuth';
 import { startOfWeek, endOfWeek, format } from 'date-fns';
-import { fetchCardioWorkouts, fetchStrengthWorkouts } from '@/lib/workoutApi';
+import { fetchStrengthWorkouts } from '@/lib/workoutApi';
 
 interface WeeklyProgress {
   completed: number;
@@ -33,16 +33,12 @@ export function useWeeklyProgress(): WeeklyProgress {
         const startDate = format(weekStart, 'yyyy-MM-dd');
         const endDate = format(weekEnd, 'yyyy-MM-dd');
 
-        const [workouts, cardioWorkouts] = await Promise.all([
-          fetchStrengthWorkouts(),
-          fetchCardioWorkouts(),
-        ]);
+        const workouts = await fetchStrengthWorkouts();
 
-        // Combine and get unique dates
-        const allDates = [
-          ...(workouts || []).map(w => w.date),
-          ...(cardioWorkouts || []).map(w => w.date),
-        ].filter((date) => date >= startDate && date <= endDate);
+        // Get unique dates
+        const allDates = (workouts || [])
+          .map(w => w.date)
+          .filter((date) => date >= startDate && date <= endDate);
 
         const uniqueDates = [...new Set(allDates)];
         setWorkoutDates(uniqueDates);
