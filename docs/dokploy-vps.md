@@ -32,10 +32,12 @@ CORS_ORIGIN=http://SEU_IP_DA_VPS
 APP_URL=http://SEU_IP_DA_VPS
 FRONTEND_PORT=80
 
-PAYMENT_PROVIDER=stripe
-PAYMENT_WEBHOOK_SECRET=troque-quando-configurar-o-gateway
-STRIPE_SECRET_KEY=COLOQUE_A_CHAVE_SECRETA_DA_STRIPE_NO_EASYPANEL
-STRIPE_WEBHOOK_SECRET=COLOQUE_O_SEGREDO_DO_WEBHOOK_DA_STRIPE_NO_EASYPANEL
+# Pagamentos ainda nao estao implementados (stub) - essas variaveis nao sao lidas
+# pelo backend hoje, deixe em branco ou remova. Ver docs/payments-readiness.md.
+PAYMENT_PROVIDER=
+PAYMENT_WEBHOOK_SECRET=
+STRIPE_SECRET_KEY=
+STRIPE_WEBHOOK_SECRET=
 PAYMENT_SUCCESS_PATH=/premium?payment=success
 PAYMENT_CANCEL_PATH=/premium?payment=cancelled
 ```
@@ -71,9 +73,11 @@ npm run start
 
 Isso cria as tabelas e cadastra:
 
-- admin: `erykdeveloper@gmail.com`
-- senha inicial: `Admin123456`
+- admin: `admin@vitalissy.dev`
+- senha inicial: `VitalissyDev2026!`
 - produto: `Vitalissy Premium`, `R$ 19,90`
+
+Troque o e-mail/senha do admin (ou crie um novo admin e revogue este) assim que possível — essas credenciais de seed são conhecidas publicamente no código.
 
 ## Testes rapidos
 

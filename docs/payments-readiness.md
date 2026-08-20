@@ -1,5 +1,7 @@
 # Pagamentos
 
+> **Status atual (backend reconstruído):** pagamentos são um stub. `GET /api/payments/products` funciona de verdade (lê do banco). `POST /api/payments/checkout` retorna `503` com "em breve" — não há adapter de gateway, nem rota de webhook, nem `payment-gateway.service.ts` implementados ainda. A integração real vai usar a conta Stripe já conectada separadamente. O restante deste documento descreve o **desenho alvo** (como era antes / como deve voltar a ser), não o estado atual do código.
+
 Esta base deixa a plataforma pronta para conectar um gateway de terceiros com PIX e cartao sem expor dados sensiveis no Vitalissy.
 
 ## Fluxo

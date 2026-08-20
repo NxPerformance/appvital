@@ -9,7 +9,7 @@ Projeto dividido em:
 
 - Frontend: Vite, React, TypeScript, shadcn-ui, Tailwind
 - Backend: Node, Express, Prisma, PostgreSQL, JWT
-- Pagamentos: base pronta para checkout externo com PIX e cartao
+- Pagamentos: stub por enquanto (`GET /api/payments/products` funciona, checkout retorna "em breve"). Integração real com Stripe é um próximo passo.
 
 ## Rodando localmente
 
