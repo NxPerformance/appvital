@@ -464,6 +464,24 @@ export function PhotosTab() {
               </div>
             )}
           </div>
+
+          <div className="rounded-[2rem] border border-white/5 bg-[hsl(var(--card))] p-6 shadow-elegant">
+            <h2 className="text-lg font-semibold">Dicas para fotos melhores</h2>
+            <ul className="mt-4 space-y-3 text-sm leading-relaxed text-muted-foreground">
+              <li className="flex gap-3">
+                <span className="mt-0.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
+                Use sempre o mesmo local, roupa e iluminação para facilitar a comparação.
+              </li>
+              <li className="flex gap-3">
+                <span className="mt-0.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
+                Fotografe no mesmo horário do dia, de preferência em jejum.
+              </li>
+              <li className="flex gap-3">
+                <span className="mt-0.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
+                Registre frente, lado e costas para acompanhar a evolução completa.
+              </li>
+            </ul>
+          </div>
         </div>
       </section>
 
