@@ -23,6 +23,13 @@
   - [ ] Escada de titulação (protocolo de aumento gradual de dose)
   - [ ] Diário de efeitos colaterais por aplicação
   - [ ] Controle de estoque da caneta/medicamento
+- [ ] **Análise do app concorrente Ozempro** — ver `docs/ozempro-analysis.md` para o plano completo do que copiar/adaptar/descartar. Itens de maior prioridade que ainda não estão na lista acima:
+  - [ ] Linha do Tempo de peso (inicial → atual → meta, com data estimada)
+  - [ ] IMC atual vs. meta com régua visual de risco
+  - [ ] Botão "+" flutuante global (atalhos: Registrar Aplicação, Registrar Peso)
+  - [ ] Régua de datas arrastável sincronizando peso + foto de progresso
+  - [ ] Gerar Relatório do Tratamento em PDF (histórico de doses/peso/efeitos colaterais)
+  - [ ] Checar compliance LGPD: telas de Política de Privacidade, Termos, Exportar meus dados, Excluir conta
 - [ ] Landing page da Dra. Gabriela (projeto separado, ainda não iniciado — foi removida deste repo por engano e será refeita à parte).
 
 ## Já concluído nesta sessão
