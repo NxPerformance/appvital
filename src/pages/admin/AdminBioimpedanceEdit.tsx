@@ -466,14 +466,20 @@ export default function AdminBioimpedanceEdit() {
         </CardContent>
       </Card>
 
-      <Button type="submit" className="w-full" disabled={updateMutation.isPending}>
-        {updateMutation.isPending ? (
-          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-        ) : (
-          <Save className="w-4 h-4 mr-2" />
-        )}
-        Salvar Alterações
-      </Button>
+      <div className="fixed inset-x-0 bottom-0 z-50 border-t border-white/10 bg-background/95 px-4 pb-[calc(env(safe-area-inset-bottom,0px)+1rem)] pt-3 backdrop-blur">
+        <Button
+          type="submit"
+          className="mx-auto flex w-full max-w-2xl"
+          disabled={updateMutation.isPending}
+        >
+          {updateMutation.isPending ? (
+            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+          ) : (
+            <Save className="w-4 h-4 mr-2" />
+          )}
+          Salvar Alterações
+        </Button>
+      </div>
     </form>
   );
 }
