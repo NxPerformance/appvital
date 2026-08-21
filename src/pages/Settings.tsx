@@ -80,6 +80,7 @@ export default function Settings() {
     age: '',
     height_cm: '',
     weight_kg: '',
+    weight_goal_kg: '',
   });
 
   // Auto-edit when coming from BMI card
@@ -91,6 +92,7 @@ export default function Settings() {
         age: String(profile.age),
         height_cm: String(profile.height_cm),
         weight_kg: String(profile.weight_kg),
+        weight_goal_kg: profile.weight_goal_kg != null ? String(profile.weight_goal_kg) : '',
       });
       setEditing(true);
       setHighlightBMI(true);
@@ -122,6 +124,7 @@ export default function Settings() {
         age: String(profile.age),
         height_cm: String(profile.height_cm),
         weight_kg: String(profile.weight_kg),
+        weight_goal_kg: profile.weight_goal_kg != null ? String(profile.weight_goal_kg) : '',
       });
     }
     setEditing(true);
@@ -140,6 +143,7 @@ export default function Settings() {
         age: Number(formData.age),
         height_cm: Number(formData.height_cm),
         weight_kg: parseDecimalInput(formData.weight_kg),
+        weight_goal_kg: formData.weight_goal_kg.trim() ? parseDecimalInput(formData.weight_goal_kg) : null,
       });
 
       if (error) throw new Error(error);
@@ -320,6 +324,20 @@ export default function Settings() {
                 />
               </div>
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="weight_goal_kg">Meta de peso (kg)</Label>
+              <Input
+                id="weight_goal_kg"
+                type="text"
+                inputMode="decimal"
+                maxLength={6}
+                placeholder="Opcional"
+                value={formData.weight_goal_kg}
+                onKeyDown={handleDecimalKeyDown}
+                onChange={(e) => setFormData((prev) => ({ ...prev, weight_goal_kg: sanitizeDecimal(e.target.value) }))}
+                className="h-14 rounded-xl border-white/5 bg-secondary/70 text-base focus-visible:ring-offset-0"
+              />
+            </div>
             <div className="flex gap-3">
               <Button
                 variant="outline"
@@ -347,6 +365,7 @@ export default function Settings() {
             <DetailRow label="Idade" value={profile?.age ? `${profile.age} anos` : null} />
             <DetailRow label="Altura" value={profile?.height_cm ? `${profile.height_cm} cm` : null} />
             <DetailRow label="Peso" value={profile?.weight_kg ? `${profile.weight_kg} kg` : null} />
+            <DetailRow label="Meta de peso" value={profile?.weight_goal_kg != null ? `${profile.weight_goal_kg} kg` : null} />
           </div>
         )}
       </section>

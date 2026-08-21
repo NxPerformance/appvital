@@ -24,8 +24,8 @@
   - [ ] Diário de efeitos colaterais por aplicação
   - [ ] Controle de estoque da caneta/medicamento
 - [ ] **Análise do app concorrente Ozempro** — ver `docs/ozempro-analysis.md` para o plano completo do que copiar/adaptar/descartar. Itens de maior prioridade que ainda não estão na lista acima:
-  - [ ] Linha do Tempo de peso (inicial → atual → meta, com data estimada)
-  - [ ] IMC atual vs. meta com régua visual de risco
+  - [x] Linha do Tempo de peso (inicial → atual → meta, com data estimada) — implementado em `BioimpedanciaTab.tsx`, precisa de `weight_goal_kg` cadastrado em Ajustes
+  - [x] IMC atual vs. meta com régua visual de risco — implementado em `BioimpedanciaTab.tsx`
   - [ ] Botão "+" flutuante global (atalhos: Registrar Aplicação, Registrar Peso)
   - [ ] Régua de datas arrastável sincronizando peso + foto de progresso
   - [ ] Gerar Relatório do Tratamento em PDF (histórico de doses/peso/efeitos colaterais)

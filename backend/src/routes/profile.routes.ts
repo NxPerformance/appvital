@@ -33,6 +33,7 @@ const updateSchema = z.object({
   age: z.coerce.number().int().positive().optional(),
   height_cm: z.coerce.number().int().positive().optional(),
   weight_kg: z.coerce.number().positive().optional(),
+  weight_goal_kg: z.coerce.number().positive().nullable().optional(),
   notification_preferences: z.record(z.boolean()).optional(),
 });
 
@@ -72,6 +73,7 @@ profileRouter.patch(
         age: data.age,
         heightCm: data.height_cm,
         weightKg: data.weight_kg,
+        weightGoalKg: data.weight_goal_kg,
         notificationPreferences,
       },
     });

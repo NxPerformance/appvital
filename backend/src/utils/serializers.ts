@@ -35,6 +35,7 @@ export function serializeProfile(
     age: profile.age,
     height_cm: profile.heightCm,
     weight_kg: Number(profile.weightKg),
+    weight_goal_kg: profile.weightGoalKg != null ? Number(profile.weightGoalKg) : null,
     is_premium: profile.isPremium,
     account_type: profile.accountType,
     selected_plan: profile.selectedPlan,

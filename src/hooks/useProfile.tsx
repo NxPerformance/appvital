@@ -10,6 +10,7 @@ export interface Profile {
   age: number;
   height_cm: number;
   weight_kg: number;
+  weight_goal_kg: number | null;
   is_premium: boolean;
   account_type?: 'client' | 'personal';
   selected_plan?: 'essential' | 'premium' | null;
@@ -64,6 +65,7 @@ export function useProfile() {
         age: updates.age,
         height_cm: updates.height_cm,
         weight_kg: updates.weight_kg,
+        weight_goal_kg: updates.weight_goal_kg,
         notification_preferences: updates.notification_preferences,
       };
       await api.patch('/profile/me', payload);
