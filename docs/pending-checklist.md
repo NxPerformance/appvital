@@ -12,6 +12,7 @@
 - [ ] **Tela Admin → Configurações de Pagamento** vai quebrar (404) — rotas de `payment-gateway-settings` foram puladas de propósito enquanto pagamento é stub.
 - [ ] Decidir se a branch `claude/dev-server-setup-d37utr` vira a nova `main` (produção) — hoje a Vercel "Production" ainda aponta pra `main` antiga, só o Preview desta branch tem as mudanças novas.
 - [ ] Resolver DNS de `app.vitalissy.com.br` (ou escolher domínio definitivo) e apontar pra VPS/Vercel de fato.
+- [ ] **Integração Anovator (balança de bioimpedância)**: código pronto (`POST /api/bioimpedance/admin/anovator-lookup`, upload de laudo em PDF), mas falta a clínica se cadastrar no time comercial da Anovator (anovator.com/admin) para obter `apiKey`/`gymId` reais e configurar `ANOVATOR_API_KEY`/`ANOVATOR_GYM_ID` no backend. Até lá, a integração responde 501 "não configurada" e o admin continua preenchendo a bioimpedância manualmente (com apoio do PDF do laudo), exatamente como antes.
 
 ## Produto / frontend
 

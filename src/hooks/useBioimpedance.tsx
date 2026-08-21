@@ -42,6 +42,7 @@ export interface BioimpedanceRecord {
   pelvis_tilt_degrees: number | null;
   head_forward_degrees: number | null;
   notes: string | null;
+  source_pdf_url: string | null;
 }
 
 export function useBioimpedance() {
@@ -97,6 +98,7 @@ export function useBioimpedance() {
           pelvis_tilt_degrees: record.pelvisTiltDegrees ? Number(record.pelvisTiltDegrees) : null,
           head_forward_degrees: record.headForwardDegrees ? Number(record.headForwardDegrees) : null,
           notes: record.notes,
+          source_pdf_url: record.sourcePdfUrl ?? null,
         })));
       } catch (fetchError) {
         setError(fetchError instanceof Error ? fetchError.message : 'Erro ao carregar bioimpedância');

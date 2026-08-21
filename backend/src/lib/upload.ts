@@ -20,6 +20,8 @@ export function extFromMime(mimetype: string): string {
       return ".webp";
     case "image/gif":
       return ".gif";
+    case "application/pdf":
+      return ".pdf";
     default:
       return "";
   }
@@ -27,6 +29,7 @@ export function extFromMime(mimetype: string): string {
 
 const IMAGE_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 const TRAINER_DOC_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+const PDF_MIME_TYPES = new Set(["application/pdf"]);
 
 function imageFileFilter(allowed: Set<string>, errorMessage: string) {
   return (_req: unknown, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
@@ -71,6 +74,17 @@ export const trainerApplicationUpload = multer({
   }),
   limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: imageFileFilter(TRAINER_DOC_MIME_TYPES, "Envie imagens JPG, PNG ou WebP para a comprovacao do personal"),
+});
+
+export const bioimpedanceReportUpload = multer({
+  storage: multer.diskStorage({
+    destination: (_req, _file, cb) => cb(null, ensureUploadSubdir("bioimpedance-reports")),
+    filename: (_req, file, cb) => {
+      cb(null, `${crypto.randomUUID()}${extFromMime(file.mimetype)}`);
+    },
+  }),
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: imageFileFilter(PDF_MIME_TYPES, "Tipo de arquivo nao permitido"),
 });
 
 export function deleteUploadedFileSafe(relativeOrAbsolutePath: string | null | undefined) {

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Save, Trash2, Loader2 } from 'lucide-react';
+import { ArrowLeft, Save, Trash2, Loader2, FileText, ExternalLink } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,6 +11,12 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useBioimpedanceRecord, useUpdateBioimpedance, useDeleteBioimpedance } from '@/hooks/useAdmin';
 import { parseLocaleInteger, parseLocaleNumber } from '@/lib/inputValidation';
 import { toast } from '@/hooks/use-toast';
+
+function resolveUploadUrl(url: string) {
+  if (url.startsWith('http://') || url.startsWith('https://')) return url;
+  const base = (import.meta.env.VITE_API_URL || 'http://localhost:3001/api').replace(/\/api\/?$/, '');
+  return `${base}${url}`;
+}
 
 interface FormData {
   date: string;
@@ -53,6 +59,7 @@ export default function AdminBioimpedanceEdit() {
   const updateMutation = useUpdateBioimpedance();
   const deleteMutation = useDeleteBioimpedance();
 
+  const [reportFile, setReportFile] = useState<File | null>(null);
   const [formData, setFormData] = useState<FormData>({
     date: '',
     weight_kg: '',
@@ -170,7 +177,7 @@ export default function AdminBioimpedanceEdit() {
     };
 
     try {
-      await updateMutation.mutateAsync(updates);
+      await updateMutation.mutateAsync({ ...updates, reportFile: reportFile ?? undefined });
       toast({ title: 'Sucesso', description: 'Exame atualizado com sucesso!' });
       navigate(-1);
     } catch (error) {
@@ -252,6 +259,34 @@ export default function AdminBioimpedanceEdit() {
             value={formData.date}
             onChange={(e) => handleChange('date', e.target.value)}
           />
+        </CardContent>
+      </Card>
+
+      {/* PDF Report */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Anexar laudo em PDF (opcional)</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {record.source_pdf_url ? (
+            <a
+              href={resolveUploadUrl(record.source_pdf_url)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+              Ver laudo em PDF
+            </a>
+          ) : null}
+          <div className="flex items-center gap-2">
+            <FileText className="w-4 h-4 text-muted-foreground" />
+            <Input
+              type="file"
+              accept="application/pdf"
+              onChange={(e) => setReportFile(e.target.files?.[0] ?? null)}
+            />
+          </div>
         </CardContent>
       </Card>
 

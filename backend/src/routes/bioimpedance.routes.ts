@@ -6,6 +6,8 @@ import { asyncHandler } from "../utils/async-handler.js";
 import { HttpError } from "../middleware/error-handler.js";
 import { getRouteParam } from "../utils/params.js";
 import { logAudit } from "../services/audit.service.js";
+import { bioimpedanceReportUpload, deleteUploadedFileSafe } from "../lib/upload.js";
+import { fetchAnovatorExam } from "../services/anovator.service.js";
 
 export const bioimpedanceRouter = Router();
 
@@ -56,12 +58,17 @@ const integerShape = Object.fromEntries(
 const baseSchema = z.object({
   date: z.string().min(1),
   notes: z.string().nullable().optional(),
+  anovator_exam_id: z.string().nullable().optional(),
   ...numericShape,
   ...integerShape,
 });
 
 const createSchema = baseSchema.extend({ user_id: z.string().uuid() });
 const updateSchema = baseSchema.partial();
+
+const anovatorLookupSchema = z.object({
+  exam_id: z.string().min(1),
+});
 
 function toPrismaData(data: Record<string, unknown>) {
   const out: Record<string, unknown> = {};
@@ -72,6 +79,7 @@ function toPrismaData(data: Record<string, unknown>) {
     if (snakeKey in data) out[camelKey] = data[snakeKey];
   }
   if ("notes" in data) out.notes = data.notes;
+  if ("anovator_exam_id" in data) out.anovatorExamId = data.anovator_exam_id;
   return out;
 }
 
@@ -113,62 +121,91 @@ bioimpedanceRouter.get(
 );
 
 bioimpedanceRouter.post(
-  "/admin",
+  "/admin/anovator-lookup",
   requireAdmin,
   asyncHandler(async (req, res) => {
-    const data = createSchema.parse(req.body);
+    const { exam_id } = anovatorLookupSchema.parse(req.body);
+    const { data, unavailableFields } = await fetchAnovatorExam(exam_id);
+    res.json({ data, unavailable_fields: unavailableFields });
+  }),
+);
 
-    const record = await prisma.bioimpedanceRecord.create({
-      data: {
-        userId: data.user_id,
-        date: new Date(data.date),
-        ...toPrismaData(data),
-      },
-    });
+bioimpedanceRouter.post(
+  "/admin",
+  requireAdmin,
+  bioimpedanceReportUpload.single("report"),
+  asyncHandler(async (req, res) => {
+    try {
+      const data = createSchema.parse(req.body);
 
-    await logAudit({
-      actorUserId: req.auth!.userId,
-      targetUserId: data.user_id,
-      action: "create_bioimpedance_record",
-      entityType: "BioimpedanceRecord",
-      entityId: record.id,
-      details: data,
-    });
+      const record = await prisma.bioimpedanceRecord.create({
+        data: {
+          userId: data.user_id,
+          date: new Date(data.date),
+          ...toPrismaData(data),
+          sourcePdfUrl: req.file ? `/uploads/bioimpedance-reports/${req.file.filename}` : undefined,
+        },
+      });
 
-    res.status(201).json({ record });
+      await logAudit({
+        actorUserId: req.auth!.userId,
+        targetUserId: data.user_id,
+        action: "create_bioimpedance_record",
+        entityType: "BioimpedanceRecord",
+        entityId: record.id,
+        details: data,
+      });
+
+      res.status(201).json({ record });
+    } catch (err) {
+      if (req.file) deleteUploadedFileSafe(req.file.path);
+      throw err;
+    }
   }),
 );
 
 bioimpedanceRouter.patch(
   "/admin/:id",
   requireAdmin,
+  bioimpedanceReportUpload.single("report"),
   asyncHandler(async (req, res) => {
     const id = getRouteParam(req.params.id, "id");
-    const data = updateSchema.parse(req.body);
 
-    const existing = await prisma.bioimpedanceRecord.findUnique({ where: { id } });
-    if (!existing) {
-      throw new HttpError(404, "Registro nao encontrado");
+    try {
+      const data = updateSchema.parse(req.body);
+
+      const existing = await prisma.bioimpedanceRecord.findUnique({ where: { id } });
+      if (!existing) {
+        throw new HttpError(404, "Registro nao encontrado");
+      }
+
+      const record = await prisma.bioimpedanceRecord.update({
+        where: { id },
+        data: {
+          date: data.date ? new Date(data.date) : undefined,
+          ...toPrismaData(data),
+          sourcePdfUrl: req.file ? `/uploads/bioimpedance-reports/${req.file.filename}` : undefined,
+        },
+      });
+
+      if (req.file && existing.sourcePdfUrl) {
+        deleteUploadedFileSafe(existing.sourcePdfUrl);
+      }
+
+      await logAudit({
+        actorUserId: req.auth!.userId,
+        targetUserId: record.userId,
+        action: "update_bioimpedance_record",
+        entityType: "BioimpedanceRecord",
+        entityId: record.id,
+        details: data,
+      });
+
+      res.json({ record });
+    } catch (err) {
+      if (req.file) deleteUploadedFileSafe(req.file.path);
+      throw err;
     }
-
-    const record = await prisma.bioimpedanceRecord.update({
-      where: { id },
-      data: {
-        date: data.date ? new Date(data.date) : undefined,
-        ...toPrismaData(data),
-      },
-    });
-
-    await logAudit({
-      actorUserId: req.auth!.userId,
-      targetUserId: record.userId,
-      action: "update_bioimpedance_record",
-      entityType: "BioimpedanceRecord",
-      entityId: record.id,
-      details: data,
-    });
-
-    res.json({ record });
   }),
 );
 

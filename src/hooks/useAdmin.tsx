@@ -39,7 +39,21 @@ function mapBioimpedanceRecord(record: any) {
     pelvis_tilt_degrees: record.pelvisTiltDegrees ? Number(record.pelvisTiltDegrees) : null,
     head_forward_degrees: record.headForwardDegrees ? Number(record.headForwardDegrees) : null,
     notes: record.notes,
+    source_pdf_url: record.sourcePdfUrl ?? null,
+    anovator_exam_id: record.anovatorExamId ?? null,
   };
+}
+
+function buildBioimpedanceFormData(record: Record<string, unknown>, reportFile?: File) {
+  const formData = new FormData();
+  for (const [key, value] of Object.entries(record)) {
+    if (value === null || value === undefined) continue;
+    formData.append(key, String(value));
+  }
+  if (reportFile) {
+    formData.append('report', reportFile);
+  }
+  return formData;
 }
 
 export interface AdminProfile {
@@ -209,8 +223,15 @@ export function useInsertBioimpedance() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (record: Record<string, unknown>) => {
-      const response = await api.post<{ record: any }>('/bioimpedance/admin', record);
+    mutationFn: async ({
+      record,
+      reportFile,
+    }: {
+      record: Record<string, unknown>;
+      reportFile?: File;
+    }) => {
+      const body = reportFile ? buildBioimpedanceFormData(record, reportFile) : record;
+      const response = await api.post<{ record: any }>('/bioimpedance/admin', body);
       return mapBioimpedanceRecord(response.record);
     },
     onSuccess: () => {
@@ -224,13 +245,30 @@ export function useUpdateBioimpedance() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, ...record }: { id: string } & Record<string, unknown>) => {
-      const response = await api.patch<{ record: any }>(`/bioimpedance/admin/${id}`, record);
+    mutationFn: async ({
+      id,
+      reportFile,
+      ...record
+    }: { id: string; reportFile?: File } & Record<string, unknown>) => {
+      const body = reportFile ? buildBioimpedanceFormData(record, reportFile) : record;
+      const response = await api.patch<{ record: any }>(`/bioimpedance/admin/${id}`, body);
       return mapBioimpedanceRecord(response.record);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['userBioimpedance'] });
       queryClient.invalidateQueries({ queryKey: ['bioimpedanceRecord'] });
+    },
+  });
+}
+
+export function useAnovatorLookup() {
+  return useMutation({
+    mutationFn: async (examId: string) => {
+      const response = await api.post<{ data: Record<string, unknown>; unavailable_fields: string[] }>(
+        '/bioimpedance/admin/anovator-lookup',
+        { exam_id: examId },
+      );
+      return response;
     },
   });
 }

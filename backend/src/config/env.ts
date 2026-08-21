@@ -19,6 +19,9 @@ const envSchema = z.object({
   GARMIN_CLIENT_SECRET: z.string().optional(),
   APPLE_HEALTH_TEAM_ID: z.string().optional(),
   APPLE_HEALTH_KEY_ID: z.string().optional(),
+  ANOVATOR_API_KEY: z.string().optional(),
+  ANOVATOR_GYM_ID: z.string().optional(),
+  ANOVATOR_BASE_URL: z.string().default("https://www.anovator.com"),
 });
 
 const parsed = envSchema.safeParse(process.env);

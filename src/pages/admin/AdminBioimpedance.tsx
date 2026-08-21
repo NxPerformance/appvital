@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Save, Loader2 } from 'lucide-react';
+import { ArrowLeft, Save, Loader2, Search, FileText } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,9 +8,25 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useAllProfiles, useInsertBioimpedance } from '@/hooks/useAdmin';
+import { useAllProfiles, useInsertBioimpedance, useAnovatorLookup } from '@/hooks/useAdmin';
 import { parseLocaleInteger, parseLocaleNumber } from '@/lib/inputValidation';
 import { toast } from '@/hooks/use-toast';
+import { ApiError } from '@/lib/api';
+
+const UNAVAILABLE_FIELD_LABELS: Record<string, string> = {
+  muscle_mass_kg: 'peso muscular',
+  fat_weight_kg: 'peso da gordura',
+  waist_cm: 'cintura',
+  hip_cm: 'quadril',
+  arm_cm: 'braço',
+  thigh_cm: 'coxa',
+  shoulder_imbalance_cm: 'desnível de ombros',
+  spine_curvature_cm: 'curvatura da coluna',
+  head_tilt_degrees: 'inclinação da cabeça',
+  trunk_curvature_degrees: 'curvatura do tronco',
+  pelvis_tilt_degrees: 'inclinação da pelve',
+  head_forward_degrees: 'projeção da cabeça',
+};
 
 interface FormData {
   user_id: string;
@@ -45,6 +61,7 @@ interface FormData {
   pelvis_tilt_degrees: string;
   head_forward_degrees: string;
   notes: string;
+  anovator_exam_id: string;
 }
 
 const initialFormData: FormData = {
@@ -80,6 +97,7 @@ const initialFormData: FormData = {
   pelvis_tilt_degrees: '',
   head_forward_degrees: '',
   notes: '',
+  anovator_exam_id: '',
 };
 
 export default function AdminBioimpedance() {
@@ -87,8 +105,10 @@ export default function AdminBioimpedance() {
   const { userId } = useParams();
   const { data: profiles, isLoading: profilesLoading } = useAllProfiles();
   const insertMutation = useInsertBioimpedance();
+  const anovatorLookup = useAnovatorLookup();
 
   const [formData, setFormData] = useState<FormData>(initialFormData);
+  const [reportFile, setReportFile] = useState<File | null>(null);
 
   useEffect(() => {
     if (userId) {
@@ -98,6 +118,58 @@ export default function AdminBioimpedance() {
 
   const handleChange = (field: keyof FormData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleAnovatorLookup = async () => {
+    if (!formData.anovator_exam_id) {
+      toast({ title: 'Informe o ID do exame', variant: 'destructive' });
+      return;
+    }
+
+    try {
+      const result = await anovatorLookup.mutateAsync(formData.anovator_exam_id);
+      const filled: string[] = [];
+
+      setFormData((prev) => {
+        const next = { ...prev };
+        for (const [key, value] of Object.entries(result.data)) {
+          if (value === null || value === undefined) continue;
+          if (key === 'date') {
+            next.date = String(value);
+            filled.push(key);
+            continue;
+          }
+          if (key in next) {
+            (next as Record<string, string>)[key] = String(value);
+            filled.push(key);
+          }
+        }
+        return next;
+      });
+
+      const manualLabels = result.unavailable_fields
+        .map((field) => UNAVAILABLE_FIELD_LABELS[field] ?? field)
+        .join(', ');
+
+      toast({
+        title: 'Dados importados da Anovator',
+        description: `${filled.length} campo(s) foram preenchidos automaticamente. Medidas corporais e postura (${manualLabels}) ainda precisam ser preenchidas manualmente.`,
+      });
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 501) {
+        toast({
+          title: 'Integração Anovator não configurada',
+          description: 'Preencha os dados do exame manualmente por enquanto.',
+          variant: 'destructive',
+        });
+      } else {
+        toast({
+          title: 'Erro',
+          description: 'Falha ao buscar dados na Anovator',
+          variant: 'destructive',
+        });
+      }
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -141,10 +213,11 @@ export default function AdminBioimpedance() {
       pelvis_tilt_degrees: parseLocaleNumber(formData.pelvis_tilt_degrees),
       head_forward_degrees: parseLocaleNumber(formData.head_forward_degrees),
       notes: formData.notes || null,
+      anovator_exam_id: formData.anovator_exam_id || null,
     };
 
     try {
-      await insertMutation.mutateAsync(record);
+      await insertMutation.mutateAsync({ record, reportFile: reportFile ?? undefined });
       toast({ title: 'Sucesso', description: 'Exame salvo com sucesso!' });
       navigate('/admin/users');
     } catch (error) {
@@ -202,6 +275,58 @@ export default function AdminBioimpedance() {
               type="date"
               value={formData.date}
               onChange={(e) => handleChange('date', e.target.value)}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Anovator Import */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Importar da Anovator</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label>ID do Exame</Label>
+            <div className="flex gap-2">
+              <Input
+                placeholder="823481034738368"
+                value={formData.anovator_exam_id}
+                onChange={(e) => handleChange('anovator_exam_id', e.target.value)}
+              />
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={handleAnovatorLookup}
+                disabled={anovatorLookup.isPending}
+              >
+                {anovatorLookup.isPending ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Search className="w-4 h-4 mr-2" />
+                )}
+                Buscar dados
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Preenche automaticamente os campos de composição corporal a partir do exame da balança Anovator.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* PDF Report */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Anexar laudo em PDF (opcional)</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          <div className="flex items-center gap-2">
+            <FileText className="w-4 h-4 text-muted-foreground" />
+            <Input
+              type="file"
+              accept="application/pdf"
+              onChange={(e) => setReportFile(e.target.files?.[0] ?? null)}
             />
           </div>
         </CardContent>
