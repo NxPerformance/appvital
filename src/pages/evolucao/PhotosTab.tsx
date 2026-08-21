@@ -296,9 +296,9 @@ export function PhotosTab() {
                 <img src={previewUrl} alt="Prévia da foto" className="aspect-[4/5] w-full object-cover" />
               </div>
             ) : (
-              <div className="flex aspect-[4/5] items-center justify-center rounded-[1.5rem] border border-dashed border-white/10 bg-[hsl(var(--secondary))] text-muted-foreground">
+              <div className="flex h-40 items-center justify-center rounded-[1.5rem] border border-dashed border-white/10 bg-[hsl(var(--secondary))] text-muted-foreground">
                 <div className="text-center">
-                  <ImagePlus className="mx-auto mb-3 h-8 w-8" />
+                  <ImagePlus className="mx-auto mb-2 h-6 w-6" />
                   <p className="text-sm">Escolha uma imagem para visualizar aqui</p>
                 </div>
               </div>
@@ -456,9 +456,9 @@ export function PhotosTab() {
                 ))}
               </div>
             ) : (
-              <div className="flex min-h-[300px] items-center justify-center rounded-[1.75rem] border border-dashed border-white/10 bg-[hsl(var(--secondary))] text-center text-muted-foreground">
+              <div className="flex min-h-[160px] items-center justify-center rounded-[1.75rem] border border-dashed border-white/10 bg-[hsl(var(--secondary))] text-center text-muted-foreground">
                 <div>
-                  <Camera className="mx-auto mb-3 h-8 w-8" />
+                  <Camera className="mx-auto mb-2 h-6 w-6" />
                   <p className="text-sm">Seu comparador vai aparecer aqui assim que a primeira foto for enviada.</p>
                 </div>
               </div>

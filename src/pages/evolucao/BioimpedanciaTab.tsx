@@ -1,4 +1,5 @@
-import { ArrowDown, ArrowUp, CalendarCheck, Droplets, Flame, Scale, TrendingUp } from 'lucide-react';
+import { ArrowDown, ArrowUp, CalendarCheck, CalendarPlus, Droplets, Flame, Scale, TrendingUp } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { EvolutionChart } from '@/components/bioimpedance/EvolutionChart';
 import { MetricRow } from '@/components/bioimpedance/MetricRow';
 import { PostureAnalysis } from '@/components/bioimpedance/PostureAnalysis';
@@ -90,6 +91,52 @@ export function BioimpedanciaTab() {
     return (
       <div className="flex min-h-[300px] items-center justify-center">
         <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-t-2 border-primary" />
+      </div>
+    );
+  }
+
+  if (!hasRecords) {
+    return (
+      <div className="space-y-6">
+        {error ? (
+          <div className="rounded-2xl border border-red-400/20 bg-red-400/10 p-4 text-sm text-red-200">{error}</div>
+        ) : null}
+
+        <section className="relative overflow-hidden rounded-[2rem] bg-gradient-primary px-6 py-8 text-primary-foreground shadow-glow">
+          <span className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-primary-foreground/10" aria-hidden="true" />
+          <div className="relative max-w-lg space-y-3">
+            <p className="text-[11px] font-extrabold uppercase tracking-[0.22em] text-primary-foreground/75">
+              Bioimpedância
+            </p>
+            <h2 className="text-2xl font-black leading-tight md:text-3xl">Nenhum exame registrado ainda</h2>
+            <p className="text-sm leading-relaxed text-primary-foreground/85">
+              A avaliação de bioimpedância é feita pela equipe da Dra. Gabriela em consulta. Agende a sua para começar
+              a acompanhar composição corporal, medidas e postura ao longo do tempo.
+            </p>
+            <Link
+              to="/appointments"
+              className="mt-2 inline-flex h-11 items-center gap-2 rounded-xl bg-primary-foreground px-5 text-sm font-black text-primary"
+            >
+              <CalendarPlus className="h-4 w-4" />
+              Agendar bioimpedância
+            </Link>
+          </div>
+        </section>
+
+        <section className="space-y-3">
+          <h2 className="text-2xl font-semibold">Como se preparar</h2>
+          <div className="grid gap-3 md:grid-cols-3">
+            {prepItems.map((item) => (
+              <div key={item.title} className="rounded-2xl border border-white/5 bg-card/85 p-5 shadow-elegant">
+                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/15 text-primary">
+                  <item.icon className="h-6 w-6" />
+                </div>
+                <h3 className="font-semibold">{item.title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{item.description}</p>
+              </div>
+            ))}
+          </div>
+        </section>
       </div>
     );
   }
