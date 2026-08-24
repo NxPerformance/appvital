@@ -10,9 +10,9 @@ interface AnovatorApiResponse {
 
 // Campos que a API da Anovator nao cobre (medidas corporais e postura) -
 // permanecem apenas de preenchimento manual ate existir outra fonte de dados.
+// (peso muscular, peso da gordura e massa livre de gordura NAO entram aqui:
+// sao calculados a partir do peso e dos percentuais que a API ja devolve.)
 const UNAVAILABLE_FIELDS = [
-  "muscle_mass_kg",
-  "fat_weight_kg",
   "waist_cm",
   "hip_cm",
   "arm_cm",
@@ -71,11 +71,25 @@ export async function fetchAnovatorExam(examId: string) {
 
   const d = body.DATA;
 
+  const weight = typeof d.weight === "number" ? d.weight : null;
+  const fatPercent = typeof d.fat === "number" ? d.fat : null;
+  const musclePercent = typeof d.muscle === "number" ? d.muscle : null;
+
+  const fatWeightKg = weight != null && fatPercent != null ? weight * (fatPercent / 100) : null;
+  const muscleMassKg = weight != null && musclePercent != null ? weight * (musclePercent / 100) : null;
+  const fatFreeMassKg = weight != null && fatWeightKg != null ? weight - fatWeightKg : null;
+
+  const round = (value: number | null) => (value != null ? Number(value.toFixed(2)) : null);
+
   const data = {
     weight_kg: d.weight ?? null,
     body_fat_percent: d.fat ?? null,
     muscle_percent: d.muscle ?? null,
     water_percent: d.water ?? null,
+    // Calculados a partir do peso e dos percentuais - a API nao devolve o valor absoluto.
+    muscle_mass_kg: round(muscleMassKg),
+    fat_weight_kg: round(fatWeightKg),
+    fat_free_mass_kg: round(fatFreeMassKg),
     visceral_fat: d.inFat ?? null,
     subcutaneous_fat_percent: d.subFat ?? null,
     protein_percent: d.protein ?? null,
