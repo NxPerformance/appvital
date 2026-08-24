@@ -37,10 +37,35 @@ export async function fetchAnovatorExam(examId: string) {
     env.ANOVATOR_API_KEY,
   )}&id=${encodeURIComponent(examId)}&gymId=${encodeURIComponent(env.ANOVATOR_GYM_ID)}`;
 
-  const response = await fetch(url);
-  const body = (await response.json()) as AnovatorApiResponse;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10_000);
+
+  let response: Response;
+  try {
+    response = await fetch(url, { signal: controller.signal });
+  } catch (error) {
+    const isTimeout = error instanceof Error && error.name === "AbortError";
+    console.error("[anovator] falha ao conectar:", error);
+    throw new HttpError(
+      502,
+      isTimeout
+        ? "Tempo esgotado ao conectar com a Anovator. Verifique a conexao do servidor ou tente novamente."
+        : "Nao foi possivel conectar com a Anovator.",
+    );
+  } finally {
+    clearTimeout(timeoutId);
+  }
+
+  let body: AnovatorApiResponse;
+  try {
+    body = (await response.json()) as AnovatorApiResponse;
+  } catch (error) {
+    console.error("[anovator] resposta invalida (status", response.status, "):", error);
+    throw new HttpError(502, `Resposta invalida da Anovator (HTTP ${response.status})`);
+  }
 
   if (!body.STATUS || !body.DATA) {
+    console.error("[anovator] resposta com erro:", body);
     throw new HttpError(502, body.INFO || "Erro ao consultar a Anovator");
   }
 
