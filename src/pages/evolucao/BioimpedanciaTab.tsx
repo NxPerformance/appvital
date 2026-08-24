@@ -575,53 +575,12 @@ function formatNumber(value?: number | null, unit = '') {
   return `${value.toFixed(1)}${unit}`;
 }
 
-function MetricCard({
-  label,
-  value,
-  difference,
-  unit,
-  isLowerBetter = false,
-}: {
-  label: string;
-  value?: number | null;
-  difference?: number | null;
-  unit?: string;
-  isLowerBetter?: boolean;
-}) {
-  const hasDifference = difference !== null && difference !== undefined && difference !== 0;
-  const isGood = hasDifference ? (isLowerBetter ? difference < 0 : difference > 0) : null;
-
-  return (
-    <div className="rounded-2xl border border-white/5 bg-card/85 p-4 shadow-elegant">
-      <p className="text-sm text-muted-foreground">{label}</p>
-      <p className="mt-2 text-3xl font-bold">{formatNumber(value, unit)}</p>
-      <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
-        {hasDifference ? (
-          <span
-            className={cn(
-              'inline-flex items-center gap-1 rounded-full px-2 py-1 font-medium',
-              isGood ? 'bg-emerald-400/15 text-emerald-300' : 'bg-red-400/15 text-red-300',
-            )}
-          >
-            {difference > 0 ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
-            {Math.abs(difference)}{unit}
-          </span>
-        ) : (
-          <span className="rounded-full bg-secondary/70 px-2 py-1">Sem comparação</span>
-        )}
-      </div>
-    </div>
-  );
-}
-
 export function BioimpedanciaTab() {
   const {
     records,
     latestRecord,
-    previousRecord,
     loading,
     error,
-    getDifference,
     hasRecords,
     hasComparison,
   } = useBioimpedance();
@@ -710,38 +669,6 @@ export function BioimpedanciaTab() {
         </div>
       ) : null}
 
-      <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        <MetricCard
-          label="IMC"
-          value={latestRecord?.bmi}
-          difference={getDifference(latestRecord?.bmi ?? null, previousRecord?.bmi ?? null)}
-          isLowerBetter
-        />
-        <MetricCard
-          label="Peso atual"
-          value={latestRecord?.weight_kg}
-          difference={getDifference(latestRecord?.weight_kg ?? null, previousRecord?.weight_kg ?? null)}
-          unit="kg"
-          isLowerBetter
-        />
-        <MetricCard
-          label="Gordura corporal"
-          value={latestRecord?.body_fat_percent}
-          difference={getDifference(latestRecord?.body_fat_percent ?? null, previousRecord?.body_fat_percent ?? null)}
-          unit="%"
-          isLowerBetter
-        />
-        <MetricCard
-          label="Massa muscular"
-          value={latestRecord?.muscle_mass_kg ?? latestRecord?.muscle_percent}
-          difference={getDifference(
-            latestRecord?.muscle_mass_kg ?? latestRecord?.muscle_percent ?? null,
-            previousRecord?.muscle_mass_kg ?? previousRecord?.muscle_percent ?? null,
-          )}
-          unit={latestRecord?.muscle_mass_kg ? 'kg' : '%'}
-        />
-      </section>
-
       {(() => {
         const currentWeight = latestRecord?.weight_kg ?? null;
         const goalWeightKg = profile?.weight_goal_kg ?? null;
@@ -766,20 +693,18 @@ export function BioimpedanciaTab() {
         );
       })()}
 
-      {records.length > 1 ? <BestPhaseCard records={records} onSelect={selectExam} /> : null}
-
       <section className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
         <div className="rounded-[2rem] border border-white/5 bg-card/85 p-5 shadow-elegant">
           <div className="mb-5 flex items-center justify-between gap-4">
             <div>
               <h2 className="text-xl font-semibold">Evolução</h2>
               <p className="text-sm text-muted-foreground">
-                {hasRecords ? `${records.length} exame(s) no histórico` : 'Nenhum exame cadastrado ainda'}
+                {hasRecords ? `${records.length} exame(s) no histórico — toque num ponto pra ver o exame` : 'Nenhum exame cadastrado ainda'}
               </p>
             </div>
             <TrendingUp className="h-5 w-5 text-primary" />
           </div>
-          <EvolutionChart records={records} />
+          <EvolutionChart records={records} selectedRecordId={selectedRecord?.id} />
         </div>
 
         <div id="exame-selecionado" className="rounded-[2rem] border border-white/5 bg-card/85 p-5 shadow-elegant">
@@ -831,6 +756,8 @@ export function BioimpedanciaTab() {
           )}
         </div>
       </section>
+
+      {records.length > 1 ? <BestPhaseCard records={records} onSelect={selectExam} /> : null}
 
       {hasRecords && selectedRecord ? (
         <SimpleMetricsCard

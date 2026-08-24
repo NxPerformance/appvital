@@ -6,6 +6,7 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
+  Legend,
   ResponsiveContainer,
 } from 'recharts';
 import { ptBR } from 'date-fns/locale';
@@ -14,6 +15,7 @@ import { formatDateSafe } from '@/lib/dateUtils';
 
 interface EvolutionChartProps {
   records: BioimpedanceRecord[];
+  selectedRecordId?: string | null;
 }
 
 type MetricKey = 'weight_kg' | 'body_fat_percent' | 'muscle_percent';
@@ -31,7 +33,9 @@ const METRICS: MetricConfig[] = [
   { key: 'muscle_percent', label: 'Músculo', color: 'hsl(142, 76%, 36%)', unit: '%' },
 ];
 
-export function EvolutionChart({ records }: EvolutionChartProps) {
+const IDEAL_WEIGHT_COLOR = 'hsl(48, 96%, 53%)';
+
+export function EvolutionChart({ records, selectedRecordId }: EvolutionChartProps) {
   const [selectedMetric, setSelectedMetric] = useState<MetricKey>('weight_kg');
 
   if (records.length === 0) {
@@ -46,14 +50,17 @@ export function EvolutionChart({ records }: EvolutionChartProps) {
   const chartData = [...records]
     .reverse()
     .map((record) => ({
+      id: record.id,
       date: formatDateSafe(record.date, 'dd/MM', { locale: ptBR }),
       fullDate: formatDateSafe(record.date, 'dd/MM/yyyy', { locale: ptBR }),
       weight_kg: record.weight_kg,
+      ideal_weight_kg: record.ideal_weight_kg,
       body_fat_percent: record.body_fat_percent,
       muscle_percent: record.muscle_percent,
     }));
 
   const currentMetric = METRICS.find((m) => m.key === selectedMetric)!;
+  const showIdealWeight = selectedMetric === 'weight_kg' && chartData.some((d) => d.ideal_weight_kg !== null);
 
   return (
     <div className="space-y-3">
@@ -76,17 +83,17 @@ export function EvolutionChart({ records }: EvolutionChartProps) {
       </div>
 
       {/* Chart */}
-      <div className="bg-card rounded-2xl p-4 h-52">
+      <div className="bg-card rounded-2xl p-4 h-64">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={chartData} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-            <XAxis 
-              dataKey="date" 
+            <XAxis
+              dataKey="date"
               tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
               tickLine={false}
               axisLine={{ stroke: 'hsl(var(--border))' }}
             />
-            <YAxis 
+            <YAxis
               tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
               tickLine={false}
               axisLine={{ stroke: 'hsl(var(--border))' }}
@@ -100,15 +107,44 @@ export function EvolutionChart({ records }: EvolutionChartProps) {
                 padding: '8px 12px',
               }}
               labelStyle={{ color: 'hsl(var(--foreground))', fontWeight: 600 }}
-              formatter={(value: number) => [`${value}${currentMetric.unit}`, currentMetric.label]}
+              formatter={(value: number, name: string) => [`${value}${currentMetric.unit}`, name]}
               labelFormatter={(label, payload) => payload[0]?.payload?.fullDate || label}
             />
+            {showIdealWeight ? (
+              <Legend wrapperStyle={{ fontSize: 12 }} formatter={(value) => <span className="text-muted-foreground">{value}</span>} />
+            ) : null}
+            {showIdealWeight ? (
+              <Line
+                type="monotone"
+                dataKey="ideal_weight_kg"
+                name="Peso ideal"
+                stroke={IDEAL_WEIGHT_COLOR}
+                strokeWidth={2}
+                strokeDasharray="5 4"
+                dot={false}
+                connectNulls
+              />
+            ) : null}
             <Line
               type="monotone"
               dataKey={selectedMetric}
+              name={currentMetric.label}
               stroke={currentMetric.color}
               strokeWidth={2}
-              dot={{ fill: currentMetric.color, strokeWidth: 0, r: 4 }}
+              dot={(props: { cx: number; cy: number; payload: { id: string } }) => {
+                const isSelected = props.payload.id === selectedRecordId;
+                return (
+                  <circle
+                    key={props.payload.id}
+                    cx={props.cx}
+                    cy={props.cy}
+                    r={isSelected ? 7 : 4}
+                    fill={currentMetric.color}
+                    stroke={isSelected ? 'hsl(var(--background))' : 'none'}
+                    strokeWidth={isSelected ? 2 : 0}
+                  />
+                );
+              }}
               activeDot={{ r: 6, fill: currentMetric.color }}
             />
           </LineChart>
