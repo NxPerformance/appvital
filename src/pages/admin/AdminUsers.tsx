@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { ArrowLeft, Search, MoreVertical, Crown, Trash2, Shield, BadgeCheck, Hourglass } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { ArrowLeft, Search, MoreVertical, Crown, Trash2, Shield, BadgeCheck, Hourglass, Activity } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
@@ -43,6 +43,7 @@ function getUploadUrl(path: string | null) {
 }
 
 export default function AdminUsers() {
+  const navigate = useNavigate();
   const { data: profiles, isLoading } = useAllProfiles();
   const updatePremium = useUpdateUserPremium();
   const deleteUser = useDeleteUser();
@@ -331,6 +332,12 @@ export default function AdminUsers() {
                       >
                         <BadgeCheck className="w-4 h-4 mr-2" />
                         {profile.is_personal_trainer ? 'Remover Personal' : 'Tornar Personal'}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => navigate(`/admin/users/${profile.id}/history`)}
+                      >
+                        <Activity className="w-4 h-4 mr-2" />
+                        Histórico de Bioimpedância
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         className="text-destructive focus:text-destructive"
