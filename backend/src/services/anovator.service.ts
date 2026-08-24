@@ -8,15 +8,15 @@ interface AnovatorApiResponse {
   DATA?: Record<string, unknown>;
 }
 
-// Campos que a API da Anovator nao cobre (medidas corporais e postura) -
-// permanecem apenas de preenchimento manual ate existir outra fonte de dados.
-// (peso muscular, peso da gordura e massa livre de gordura NAO entram aqui:
-// sao calculados a partir do peso e dos percentuais que a API ja devolve.)
+// Campos que a API da Anovator nao cobre - permanecem apenas de preenchimento
+// manual ate existir outra fonte de dados. Sao todos de avaliacao postural:
+// a API so devolve uma classificacao de risco (nivel 1-5) pra isso, nao o
+// valor exato em cm/graus mostrado no PDF (que e calculado pela Anovator a
+// partir de coordenadas de imagem, sem formula documentada pra nos replicarmos).
+// (peso muscular, peso da gordura, massa livre de gordura e as medidas
+// corporais - cintura/quadril/braco/coxa - NAO entram aqui: vem prontas ou
+// sao calculadas a partir do que a API ja devolve.)
 const UNAVAILABLE_FIELDS = [
-  "waist_cm",
-  "hip_cm",
-  "arm_cm",
-  "thigh_cm",
   "shoulder_imbalance_cm",
   "spine_curvature_cm",
   "head_tilt_degrees",
@@ -104,6 +104,12 @@ export async function fetchAnovatorExam(examId: string) {
     // wc -> relacao cintura-quadril e um mapeamento "melhor esforco" a partir
     // da documentacao; precisa ser confirmado quando houver dados reais.
     waist_hip_ratio: d.wc ?? null,
+    // Bloco "Body dimension data" da API - so vem preenchido em aparelhos com
+    // camera de escaneamento corporal (nem todo modelo devolve esses campos).
+    waist_cm: d.waist ?? null,
+    hip_cm: d.hips ?? null,
+    arm_cm: d.armDim ?? null,
+    thigh_cm: d.thigh_dim ?? null,
     date:
       typeof d.gmtCreate === "number" ? new Date(d.gmtCreate).toISOString().slice(0, 10) : null,
   };
