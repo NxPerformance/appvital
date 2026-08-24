@@ -71,11 +71,6 @@ export async function fetchAnovatorExam(examId: string) {
 
   const d = body.DATA;
 
-  // TODO(temporario): log da resposta crua pra confirmar quais campos de
-  // postura precisa (graus/cm exatos) a Anovator realmente devolve, ja que a
-  // doc so documenta o nivel de risco (1-5). Remover depois de confirmado.
-  console.log("[anovator] resposta crua completa:", JSON.stringify(d, null, 2));
-
   const weight = typeof d.weight === "number" ? d.weight : null;
   const fatPercent = typeof d.fat === "number" ? d.fat : null;
   const musclePercent = typeof d.muscle === "number" ? d.muscle : null;
