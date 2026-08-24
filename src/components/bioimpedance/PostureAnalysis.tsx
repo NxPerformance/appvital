@@ -77,6 +77,18 @@ export function PostureAnalysis({ record }: PostureAnalysisProps) {
     },
   ];
 
+  const availableMetrics = metrics.filter((metric) => metric.value !== null);
+
+  if (availableMetrics.length === 0) {
+    return (
+      <div className="bg-card rounded-2xl p-4">
+        <p className="text-sm text-muted-foreground text-center">
+          Nenhum dado postural disponível para este exame ainda.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-card rounded-2xl overflow-hidden">
       <div className="grid grid-cols-3 gap-2 p-3 bg-muted/50 border-b border-border">
@@ -84,9 +96,9 @@ export function PostureAnalysis({ record }: PostureAnalysisProps) {
         <span className="text-sm font-semibold text-foreground text-center">Valor</span>
         <span className="text-sm font-semibold text-foreground text-right">Nível</span>
       </div>
-      
+
       <div className="divide-y divide-border">
-        {metrics.map((metric, index) => {
+        {availableMetrics.map((metric, index) => {
           const level = getPostureLevel(metric.value, metric.thresholds);
           
           return (

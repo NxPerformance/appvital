@@ -342,7 +342,9 @@ function CompareSection({ records }: { records: BioimpedanceRecord[] }) {
             </tr>
           </thead>
           <tbody className="divide-y divide-white/10">
-            {COMPARE_FIELDS.map((field) => {
+            {COMPARE_FIELDS.filter(
+              (field) => typeof recordA[field.key] === 'number' || typeof recordB[field.key] === 'number',
+            ).map((field) => {
               const valueA = recordA[field.key] as number | null;
               const valueB = recordB[field.key] as number | null;
               const hasDiff = typeof valueA === 'number' && typeof valueB === 'number';
