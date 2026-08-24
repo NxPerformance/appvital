@@ -269,7 +269,11 @@ model BioimpedanceRecord {
   date                   DateTime
   weightKg               Decimal? @db.Decimal(10, 2)
   bodyFatPercent         Decimal? @db.Decimal(10, 2)
+  bodyFatStandardLow     Decimal? @db.Decimal(10, 2)
+  bodyFatStandardHigh    Decimal? @db.Decimal(10, 2)
   musclePercent          Decimal? @db.Decimal(10, 2)
+  muscleStandardLow      Decimal? @db.Decimal(10, 2)
+  muscleStandardHigh     Decimal? @db.Decimal(10, 2)
   waterPercent           Decimal? @db.Decimal(10, 2)
   visceralFat            Decimal? @db.Decimal(10, 2)
   subcutaneousFatPercent Decimal? @db.Decimal(10, 2)

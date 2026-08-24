@@ -22,7 +22,11 @@ interface FormData {
   date: string;
   weight_kg: string;
   body_fat_percent: string;
+  body_fat_standard_low: string;
+  body_fat_standard_high: string;
   muscle_percent: string;
+  muscle_standard_low: string;
+  muscle_standard_high: string;
   water_percent: string;
   visceral_fat: string;
   subcutaneous_fat_percent: string;
@@ -96,7 +100,11 @@ export default function AdminBioimpedanceEdit() {
     date: '',
     weight_kg: '',
     body_fat_percent: '',
+    body_fat_standard_low: '',
+    body_fat_standard_high: '',
     muscle_percent: '',
+    muscle_standard_low: '',
+    muscle_standard_high: '',
     water_percent: '',
     visceral_fat: '',
     subcutaneous_fat_percent: '',
@@ -164,7 +172,11 @@ export default function AdminBioimpedanceEdit() {
         date: record.date || '',
         weight_kg: record.weight_kg?.toString() || '',
         body_fat_percent: record.body_fat_percent?.toString() || '',
+        body_fat_standard_low: record.body_fat_standard_low?.toString() || '',
+        body_fat_standard_high: record.body_fat_standard_high?.toString() || '',
         muscle_percent: record.muscle_percent?.toString() || '',
+        muscle_standard_low: record.muscle_standard_low?.toString() || '',
+        muscle_standard_high: record.muscle_standard_high?.toString() || '',
         water_percent: record.water_percent?.toString() || '',
         visceral_fat: record.visceral_fat?.toString() || '',
         subcutaneous_fat_percent: record.subcutaneous_fat_percent?.toString() || '',
@@ -242,7 +254,11 @@ export default function AdminBioimpedanceEdit() {
       date: formData.date,
       weight_kg: parseLocaleNumber(formData.weight_kg),
       body_fat_percent: parseLocaleNumber(formData.body_fat_percent),
+      body_fat_standard_low: parseLocaleNumber(formData.body_fat_standard_low),
+      body_fat_standard_high: parseLocaleNumber(formData.body_fat_standard_high),
       muscle_percent: parseLocaleNumber(formData.muscle_percent),
+      muscle_standard_low: parseLocaleNumber(formData.muscle_standard_low),
+      muscle_standard_high: parseLocaleNumber(formData.muscle_standard_high),
       water_percent: parseLocaleNumber(formData.water_percent),
       visceral_fat: parseLocaleNumber(formData.visceral_fat),
       subcutaneous_fat_percent: parseLocaleNumber(formData.subcutaneous_fat_percent),

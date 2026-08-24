@@ -72,11 +72,14 @@ export async function fetchAnovatorExam(examId: string) {
   }
 
   const d = body.DATA;
+  const standard = body.standard;
 
-  // TODO(temporario): log do bloco "standard" (faixas saudaveis por metrica)
-  // pra confirmar os nomes de campo antes de usar a faixa de gordura/musculo
-  // no grafico de evolucao. Remover depois de confirmado.
-  console.log("[anovator] bloco standard:", JSON.stringify(body.standard, null, 2));
+  const readStandardBound = (key: string, bound: "fewer" | "more"): number | null => {
+    const entry = standard?.[key];
+    if (!entry || typeof entry !== "object") return null;
+    const value = (entry as Record<string, unknown>)[bound];
+    return typeof value === "number" ? value : null;
+  };
 
   const weight = typeof d.weight === "number" ? d.weight : null;
   const fatPercent = typeof d.fat === "number" ? d.fat : null;
@@ -91,7 +94,13 @@ export async function fetchAnovatorExam(examId: string) {
   const data = {
     weight_kg: d.weight ?? null,
     body_fat_percent: d.fat ?? null,
+    // Faixa saudavel personalizada (bloco "standard" da resposta, fora do DATA)
+    // - mesmo range que a Anovator mostra como "Padrao: X% ~ Y%" no PDF.
+    body_fat_standard_low: readStandardBound("fatStandard", "fewer"),
+    body_fat_standard_high: readStandardBound("fatStandard", "more"),
     muscle_percent: d.muscle ?? null,
+    muscle_standard_low: readStandardBound("muscleStandard", "fewer"),
+    muscle_standard_high: readStandardBound("muscleStandard", "more"),
     water_percent: d.water ?? null,
     // Calculados a partir do peso e dos percentuais - a API nao devolve o valor absoluto.
     muscle_mass_kg: round(muscleMassKg),

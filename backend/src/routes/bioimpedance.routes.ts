@@ -16,7 +16,11 @@ bioimpedanceRouter.use(requireAuth);
 const numericFields = {
   weight_kg: "weightKg",
   body_fat_percent: "bodyFatPercent",
+  body_fat_standard_low: "bodyFatStandardLow",
+  body_fat_standard_high: "bodyFatStandardHigh",
   muscle_percent: "musclePercent",
+  muscle_standard_low: "muscleStandardLow",
+  muscle_standard_high: "muscleStandardHigh",
   water_percent: "waterPercent",
   visceral_fat: "visceralFat",
   subcutaneous_fat_percent: "subcutaneousFatPercent",

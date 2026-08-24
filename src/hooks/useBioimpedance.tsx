@@ -10,7 +10,11 @@ export interface BioimpedanceRecord {
   // Composição Corporal
   weight_kg: number | null;
   body_fat_percent: number | null;
+  body_fat_standard_low: number | null;
+  body_fat_standard_high: number | null;
   muscle_percent: number | null;
+  muscle_standard_low: number | null;
+  muscle_standard_high: number | null;
   water_percent: number | null;
   visceral_fat: number | null;
   subcutaneous_fat_percent: number | null;
@@ -106,7 +110,11 @@ export function useBioimpedance() {
           created_at: record.createdAt,
           weight_kg: record.weightKg ? Number(record.weightKg) : null,
           body_fat_percent: record.bodyFatPercent ? Number(record.bodyFatPercent) : null,
+          body_fat_standard_low: record.bodyFatStandardLow ? Number(record.bodyFatStandardLow) : null,
+          body_fat_standard_high: record.bodyFatStandardHigh ? Number(record.bodyFatStandardHigh) : null,
           muscle_percent: record.musclePercent ? Number(record.musclePercent) : null,
+          muscle_standard_low: record.muscleStandardLow ? Number(record.muscleStandardLow) : null,
+          muscle_standard_high: record.muscleStandardHigh ? Number(record.muscleStandardHigh) : null,
           water_percent: record.waterPercent ? Number(record.waterPercent) : null,
           visceral_fat: record.visceralFat ? Number(record.visceralFat) : null,
           subcutaneous_fat_percent: record.subcutaneousFatPercent ? Number(record.subcutaneousFatPercent) : null,
