@@ -182,6 +182,81 @@ function WeightTimeline({
   );
 }
 
+interface SegmentalRow {
+  label: string;
+  muscleKg: number | null;
+  fatKg: number | null;
+}
+
+function SegmentalAnalysis({ record }: { record: BioimpedanceRecord }) {
+  const rows: SegmentalRow[] = [
+    { label: 'Braço Esquerdo', muscleKg: record.muscle_left_arm_kg, fatKg: record.fat_left_arm_kg },
+    { label: 'Tronco', muscleKg: record.muscle_trunk_kg, fatKg: record.fat_trunk_kg },
+    { label: 'Braço Direito', muscleKg: record.muscle_right_arm_kg, fatKg: record.fat_right_arm_kg },
+    { label: 'Perna Esquerda', muscleKg: record.muscle_left_leg_kg, fatKg: record.fat_left_leg_kg },
+    { label: 'Perna Direita', muscleKg: record.muscle_right_leg_kg, fatKg: record.fat_right_leg_kg },
+  ];
+
+  const availableRows = rows.filter((row) => row.muscleKg !== null || row.fatKg !== null);
+  if (availableRows.length === 0) return null;
+
+  return (
+    <section className="rounded-[2rem] border border-white/5 bg-card/85 p-5 shadow-elegant">
+      <div className="mb-5">
+        <h2 className="text-xl font-semibold">Análise Segmentada</h2>
+        <p className="text-sm text-muted-foreground">
+          Distribuição de músculo e gordura por região do corpo no exame mais recente.
+        </p>
+      </div>
+      <div className="overflow-x-auto rounded-2xl border border-white/5">
+        <table className="w-full min-w-[360px] border-collapse text-sm">
+          <thead>
+            <tr className="bg-secondary/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
+              <th className="p-3 font-medium">Região</th>
+              <th className="p-3 font-medium">Músculo (kg)</th>
+              <th className="p-3 font-medium">Gordura (kg)</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-white/10">
+            {availableRows.map((row) => (
+              <tr key={row.label}>
+                <td className="p-3 text-muted-foreground">{row.label}</td>
+                <td className="p-3">{formatNumber(row.muscleKg)}</td>
+                <td className="p-3">{formatNumber(row.fatKg)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
+
+interface SimpleMetric {
+  label: string;
+  value: number | null;
+  unit: string;
+}
+
+function SimpleMetricsCard({ title, description, metrics }: { title: string; description: string; metrics: SimpleMetric[] }) {
+  const availableMetrics = metrics.filter((metric) => metric.value !== null);
+  if (availableMetrics.length === 0) return null;
+
+  return (
+    <section className="rounded-[2rem] border border-white/5 bg-card/85 p-5 shadow-elegant">
+      <div className="mb-5">
+        <h2 className="text-xl font-semibold">{title}</h2>
+        <p className="text-sm text-muted-foreground">{description}</p>
+      </div>
+      <div className="divide-y divide-white/10">
+        {availableMetrics.map((metric) => (
+          <MetricRow key={metric.label} label={metric.label} value={metric.value} unit={metric.unit} showDifference={false} />
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function resolveUploadUrl(url: string) {
   if (url.startsWith('http://') || url.startsWith('https://')) return url;
   const base = (import.meta.env.VITE_API_URL || 'http://localhost:3001/api').replace(/\/api\/?$/, '');
@@ -218,7 +293,29 @@ const COMPARE_FIELDS: CompareField[] = [
   { key: 'waist_cm', label: 'Cintura', unit: 'cm', isLowerBetter: true },
   { key: 'hip_cm', label: 'Quadril', unit: 'cm' },
   { key: 'arm_cm', label: 'Braço', unit: 'cm' },
-  { key: 'thigh_cm', label: 'Coxa', unit: 'cm' },
+  { key: 'thigh_cm', label: 'Coxa (circunferência)', unit: 'cm' },
+  { key: 'head_length_cm', label: 'Comprimento da Cabeça', unit: 'cm' },
+  { key: 'upper_body_length_cm', label: 'Comprimento do Tronco Superior', unit: 'cm' },
+  { key: 'lower_body_length_cm', label: 'Comprimento do Tronco Inferior', unit: 'cm' },
+  { key: 'calf_length_cm', label: 'Comprimento da Panturrilha', unit: 'cm' },
+  { key: 'thigh_length_cm', label: 'Comprimento da Coxa', unit: 'cm' },
+  { key: 'arm_span_cm', label: 'Envergadura', unit: 'cm' },
+  { key: 'shoulder_width_cm', label: 'Largura dos Ombros', unit: 'cm' },
+  { key: 'shoulder_ear_distance_cm', label: 'Distância Ombro-Orelha', unit: 'cm' },
+  { key: 'foot_length_cm', label: 'Comprimento do Pé', unit: 'cm' },
+  { key: 'muscle_left_arm_kg', label: 'Músculo - Braço Esquerdo', unit: 'kg' },
+  { key: 'muscle_right_arm_kg', label: 'Músculo - Braço Direito', unit: 'kg' },
+  { key: 'fat_left_arm_kg', label: 'Gordura - Braço Esquerdo', unit: 'kg', isLowerBetter: true },
+  { key: 'fat_right_arm_kg', label: 'Gordura - Braço Direito', unit: 'kg', isLowerBetter: true },
+  { key: 'muscle_trunk_kg', label: 'Músculo - Tronco', unit: 'kg' },
+  { key: 'fat_trunk_kg', label: 'Gordura - Tronco', unit: 'kg', isLowerBetter: true },
+  { key: 'muscle_left_leg_kg', label: 'Músculo - Perna Esquerda', unit: 'kg' },
+  { key: 'muscle_right_leg_kg', label: 'Músculo - Perna Direita', unit: 'kg' },
+  { key: 'fat_left_leg_kg', label: 'Gordura - Perna Esquerda', unit: 'kg', isLowerBetter: true },
+  { key: 'fat_right_leg_kg', label: 'Gordura - Perna Direita', unit: 'kg', isLowerBetter: true },
+  { key: 'aerobic_calories_kcal', label: 'Meta de Exercício Aeróbico', unit: '' },
+  { key: 'endurance_calories_kcal', label: 'Meta de Exercício de Resistência', unit: '' },
+  { key: 'anaerobic_calories_kcal', label: 'Meta de Exercício Anaeróbico', unit: '' },
   { key: 'shoulder_imbalance_cm', label: 'Desnível Ombros', unit: 'cm', isLowerBetter: true },
   { key: 'spine_curvature_cm', label: 'Curvatura Coluna', unit: 'cm', isLowerBetter: true },
   { key: 'head_tilt_degrees', label: 'Inclinação Cabeça', unit: '°', isLowerBetter: true },
@@ -634,6 +731,38 @@ export function BioimpedanciaTab() {
           )}
         </div>
       </section>
+
+      {hasRecords && latestRecord ? <SegmentalAnalysis record={latestRecord} /> : null}
+
+      {hasRecords && latestRecord ? (
+        <SimpleMetricsCard
+          title="Medidas Corporais"
+          description="Comprimentos e larguras adicionais capturados pelo scanner corporal, no exame mais recente."
+          metrics={[
+            { label: 'Comprimento da Cabeça', value: latestRecord.head_length_cm, unit: 'cm' },
+            { label: 'Comprimento do Tronco Superior', value: latestRecord.upper_body_length_cm, unit: 'cm' },
+            { label: 'Comprimento do Tronco Inferior', value: latestRecord.lower_body_length_cm, unit: 'cm' },
+            { label: 'Comprimento da Panturrilha', value: latestRecord.calf_length_cm, unit: 'cm' },
+            { label: 'Comprimento da Coxa', value: latestRecord.thigh_length_cm, unit: 'cm' },
+            { label: 'Envergadura', value: latestRecord.arm_span_cm, unit: 'cm' },
+            { label: 'Largura dos Ombros', value: latestRecord.shoulder_width_cm, unit: 'cm' },
+            { label: 'Distância Ombro-Orelha', value: latestRecord.shoulder_ear_distance_cm, unit: 'cm' },
+            { label: 'Comprimento do Pé', value: latestRecord.foot_length_cm, unit: 'cm' },
+          ]}
+        />
+      ) : null}
+
+      {hasRecords && latestRecord ? (
+        <SimpleMetricsCard
+          title="Metas de Exercício"
+          description="Calorias sugeridas por tipo de exercício, calculadas a partir do exame mais recente."
+          metrics={[
+            { label: 'Meta de Exercício Aeróbico', value: latestRecord.aerobic_calories_kcal, unit: 'kcal' },
+            { label: 'Meta de Exercício de Resistência', value: latestRecord.endurance_calories_kcal, unit: 'kcal' },
+            { label: 'Meta de Exercício Anaeróbico', value: latestRecord.anaerobic_calories_kcal, unit: 'kcal' },
+          ]}
+        />
+      ) : null}
 
       {hasRecords ? (
         <section className="rounded-[2rem] border border-white/5 bg-card/85 p-5 shadow-elegant">

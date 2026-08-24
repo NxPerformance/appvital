@@ -41,11 +41,35 @@ const numericFields = {
   trunk_curvature_degrees: "trunkCurvatureDegrees",
   pelvis_tilt_degrees: "pelvisTiltDegrees",
   head_forward_degrees: "headForwardDegrees",
+  // Medidas corporais estendidas (cm)
+  head_length_cm: "headLengthCm",
+  upper_body_length_cm: "upperBodyLengthCm",
+  lower_body_length_cm: "lowerBodyLengthCm",
+  calf_length_cm: "calfLengthCm",
+  thigh_length_cm: "thighLengthCm",
+  arm_span_cm: "armSpanCm",
+  shoulder_width_cm: "shoulderWidthCm",
+  shoulder_ear_distance_cm: "shoulderEarDistanceCm",
+  foot_length_cm: "footLengthCm",
+  // Análise segmentada - músculo/gordura por região (kg)
+  muscle_left_arm_kg: "muscleLeftArmKg",
+  muscle_right_arm_kg: "muscleRightArmKg",
+  fat_left_arm_kg: "fatLeftArmKg",
+  fat_right_arm_kg: "fatRightArmKg",
+  muscle_trunk_kg: "muscleTrunkKg",
+  fat_trunk_kg: "fatTrunkKg",
+  muscle_left_leg_kg: "muscleLeftLegKg",
+  muscle_right_leg_kg: "muscleRightLegKg",
+  fat_left_leg_kg: "fatLeftLegKg",
+  fat_right_leg_kg: "fatRightLegKg",
 } as const;
 
 const integerFields = {
   bmr_kcal: "bmrKcal",
   daily_calories: "dailyCalories",
+  aerobic_calories_kcal: "aerobicCaloriesKcal",
+  endurance_calories_kcal: "enduranceCaloriesKcal",
+  anaerobic_calories_kcal: "anaerobicCaloriesKcal",
 } as const;
 
 const numericShape = Object.fromEntries(

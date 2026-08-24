@@ -115,6 +115,31 @@ export async function fetchAnovatorExam(examId: string) {
     hip_cm: d.hips ?? null,
     arm_cm: d.armDim ?? null,
     thigh_cm: d.thigh_dim ?? null,
+    // Medidas corporais estendidas (cm) - mesmo bloco "Body dimension data" acima.
+    head_length_cm: d.head ?? null,
+    upper_body_length_cm: d.upperBody ?? null,
+    lower_body_length_cm: d.lowerBody ?? null,
+    calf_length_cm: d.shank ?? null,
+    thigh_length_cm: d.thigh ?? null,
+    arm_span_cm: d.armSpan ?? null,
+    shoulder_width_cm: d.shoulder_width ?? null,
+    shoulder_ear_distance_cm: d.occipital_space ?? null,
+    foot_length_cm: d.footLength ?? null,
+    // Análise segmentada - músculo/gordura por região (kg)
+    muscle_left_arm_kg: d.muscleLeftArm ?? null,
+    muscle_right_arm_kg: d.muscleRightArm ?? null,
+    fat_left_arm_kg: d.fatLeftArm ?? null,
+    fat_right_arm_kg: d.fatRightArm ?? null,
+    muscle_trunk_kg: d.muscleTrunk ?? null,
+    fat_trunk_kg: d.fatTrunk ?? null,
+    muscle_left_leg_kg: d.muscleLeftLeg ?? null,
+    muscle_right_leg_kg: d.muscleRightLeg ?? null,
+    fat_left_leg_kg: d.fatLeftLeg ?? null,
+    fat_right_leg_kg: d.fatRightLeg ?? null,
+    // Metas de exercício (kcal)
+    aerobic_calories_kcal: d.aerobicGoal ?? null,
+    endurance_calories_kcal: d.enduGoal ?? null,
+    anaerobic_calories_kcal: d.anaGoal ?? null,
     date:
       typeof d.gmtCreate === "number" ? new Date(d.gmtCreate).toISOString().slice(0, 10) : null,
   };
