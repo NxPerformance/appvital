@@ -195,8 +195,14 @@ export function PostureAnalysis({ record }: PostureAnalysisProps) {
             ? getRiskLevel(metric.riskLevel)
             : getPostureLevel(metric.value, metric.thresholds!);
 
+          // Níveis de risco (1-5) ficam como número inteiro; medidas precisas em
+          // cm/graus arredondam pra 1 casa, igual ao laudo em PDF da Anovator.
           const displayText = metric.displayValue
-            ?? (metric.value !== null ? `${metric.value}${metric.unit}` : '--');
+            ?? (metric.value === null
+              ? '--'
+              : metric.riskLevel !== undefined
+                ? `${metric.value}${metric.unit}`
+                : `${metric.value.toFixed(1)}${metric.unit}`);
 
           return (
             <div key={index} className="grid grid-cols-3 gap-2 p-3">
