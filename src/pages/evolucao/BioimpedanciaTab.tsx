@@ -257,6 +257,55 @@ function SimpleMetricsCard({ title, description, metrics }: { title: string; des
   );
 }
 
+interface BestPhaseResult {
+  record: BioimpedanceRecord;
+  diffKg: number;
+}
+
+function findBestPhase(records: BioimpedanceRecord[]): BestPhaseResult | null {
+  let best: BestPhaseResult | null = null;
+
+  for (const record of records) {
+    if (typeof record.weight_kg !== 'number' || typeof record.ideal_weight_kg !== 'number') continue;
+
+    const diffKg = Math.abs(record.weight_kg - record.ideal_weight_kg);
+    if (best === null || diffKg < best.diffKg) {
+      best = { record, diffKg };
+    }
+  }
+
+  return best;
+}
+
+function BestPhaseCard({ records, onSelect }: { records: BioimpedanceRecord[]; onSelect: (id: string) => void }) {
+  const best = useMemo(() => findBestPhase(records), [records]);
+  if (!best) return null;
+
+  return (
+    <section className="rounded-[2rem] border border-primary/20 bg-primary/10 p-5 shadow-elegant">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-[11px] font-extrabold uppercase tracking-[0.22em] text-primary">Sua melhor fase</p>
+          <h2 className="mt-1 text-xl font-semibold">{formatDate(best.record.date)}</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {best.diffKg < 0.1
+              ? 'Seu peso bateu exatamente com o peso ideal calculado pela bioimpedância nesse exame.'
+              : `A ${best.diffKg.toFixed(1)}kg do peso ideal calculado pela bioimpedância nesse exame — a menor distância registrada.`}
+          </p>
+        </div>
+        <ThumbsUp className="h-5 w-5 shrink-0 text-primary" />
+      </div>
+      <button
+        type="button"
+        onClick={() => onSelect(best.record.id)}
+        className="mt-4 inline-flex h-9 items-center gap-2 rounded-xl bg-primary px-4 text-xs font-black text-primary-foreground"
+      >
+        Ver esse exame
+      </button>
+    </section>
+  );
+}
+
 function resolveUploadUrl(url: string) {
   if (url.startsWith('http://') || url.startsWith('https://')) return url;
   const base = (import.meta.env.VITE_API_URL || 'http://localhost:3001/api').replace(/\/api\/?$/, '');
@@ -574,6 +623,23 @@ export function BioimpedanciaTab() {
     hasComparison,
   } = useBioimpedance();
   const { profile } = useProfile();
+  const [selectedExamId, setSelectedExamId] = useState<string | null>(null);
+
+  const selectedRecord = useMemo(() => {
+    if (!hasRecords) return null;
+    return records.find((r) => r.id === selectedExamId) ?? latestRecord;
+  }, [records, selectedExamId, latestRecord, hasRecords]);
+
+  const selectedPreviousRecord = useMemo(() => {
+    if (!selectedRecord) return null;
+    const index = records.findIndex((r) => r.id === selectedRecord.id);
+    return index >= 0 ? (records[index + 1] ?? null) : null;
+  }, [records, selectedRecord]);
+
+  const selectExam = (id: string) => {
+    setSelectedExamId(id);
+    document.getElementById('exame-selecionado')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
 
   if (loading) {
     return (
@@ -693,6 +759,8 @@ export function BioimpedanciaTab() {
         );
       })()}
 
+      {records.length > 1 ? <BestPhaseCard records={records} onSelect={selectExam} /> : null}
+
       <section className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
         <div className="rounded-[2rem] border border-white/5 bg-card/85 p-5 shadow-elegant">
           <div className="mb-5 flex items-center justify-between gap-4">
@@ -707,33 +775,48 @@ export function BioimpedanciaTab() {
           <EvolutionChart records={records} />
         </div>
 
-        <div className="rounded-[2rem] border border-white/5 bg-card/85 p-5 shadow-elegant">
+        <div id="exame-selecionado" className="rounded-[2rem] border border-white/5 bg-card/85 p-5 shadow-elegant">
           <div className="mb-5 flex items-center justify-between gap-4">
-            <div>
-              <h2 className="text-xl font-semibold">Último exame</h2>
-              <p className="text-sm text-muted-foreground">{formatDate(latestRecord?.date)}</p>
-              {latestRecord?.source_pdf_url ? (
+            <div className="min-w-0 flex-1">
+              <h2 className="text-xl font-semibold">{records.length > 1 ? 'Exame selecionado' : 'Último exame'}</h2>
+              {records.length > 1 ? (
+                <Select value={selectedRecord?.id} onValueChange={setSelectedExamId}>
+                  <SelectTrigger className="mt-2 h-9 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {records.map((r) => (
+                      <SelectItem key={r.id} value={r.id}>
+                        {formatDate(r.date)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <p className="text-sm text-muted-foreground">{formatDate(selectedRecord?.date)}</p>
+              )}
+              {selectedRecord?.source_pdf_url ? (
                 <a
-                  href={resolveUploadUrl(latestRecord.source_pdf_url)}
+                  href={resolveUploadUrl(selectedRecord.source_pdf_url)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+                  className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
                 >
                   <ExternalLink className="h-3 w-3" />
                   Ver laudo em PDF
                 </a>
               ) : null}
             </div>
-            <Flame className="h-5 w-5 text-primary" />
+            <Flame className="h-5 w-5 shrink-0 text-primary" />
           </div>
 
           {hasRecords ? (
             <div className="divide-y divide-white/10">
-              <MetricRow label="IMC" value={latestRecord?.bmi ?? null} previousValue={previousRecord?.bmi ?? null} standard="18.5 - 24.9" isLowerBetter />
-              <MetricRow label="Água" value={latestRecord?.water_percent ?? null} unit="%" previousValue={previousRecord?.water_percent ?? null} standard="45% - 65%" />
-              <MetricRow label="Gordura visceral" value={latestRecord?.visceral_fat ?? null} previousValue={previousRecord?.visceral_fat ?? null} standard="< 10" isLowerBetter />
-              <MetricRow label="Cintura" value={latestRecord?.waist_cm ?? null} unit="cm" previousValue={previousRecord?.waist_cm ?? null} standard="Acompanhar" isLowerBetter />
-              <MetricRow label="Quadril" value={latestRecord?.hip_cm ?? null} unit="cm" previousValue={previousRecord?.hip_cm ?? null} standard="Acompanhar" />
+              <MetricRow label="IMC" value={selectedRecord?.bmi ?? null} previousValue={selectedPreviousRecord?.bmi ?? null} standard="18.5 - 24.9" isLowerBetter />
+              <MetricRow label="Água" value={selectedRecord?.water_percent ?? null} unit="%" previousValue={selectedPreviousRecord?.water_percent ?? null} standard="45% - 65%" />
+              <MetricRow label="Gordura visceral" value={selectedRecord?.visceral_fat ?? null} previousValue={selectedPreviousRecord?.visceral_fat ?? null} standard="< 10" isLowerBetter />
+              <MetricRow label="Cintura" value={selectedRecord?.waist_cm ?? null} unit="cm" previousValue={selectedPreviousRecord?.waist_cm ?? null} standard="Acompanhar" isLowerBetter />
+              <MetricRow label="Quadril" value={selectedRecord?.hip_cm ?? null} unit="cm" previousValue={selectedPreviousRecord?.hip_cm ?? null} standard="Acompanhar" />
             </div>
           ) : (
             <div className="rounded-2xl bg-secondary/60 p-5 text-center text-sm text-muted-foreground">
@@ -743,34 +826,34 @@ export function BioimpedanciaTab() {
         </div>
       </section>
 
-      {hasRecords && latestRecord ? <SegmentalAnalysis record={latestRecord} /> : null}
+      {hasRecords && selectedRecord ? <SegmentalAnalysis record={selectedRecord} /> : null}
 
-      {hasRecords && latestRecord ? (
+      {hasRecords && selectedRecord ? (
         <SimpleMetricsCard
           title="Medidas Corporais"
-          description="Comprimentos e larguras adicionais capturados pelo scanner corporal, no exame mais recente."
+          description="Comprimentos e larguras adicionais capturados pelo scanner corporal, no exame selecionado."
           metrics={[
-            { label: 'Comprimento da Cabeça', value: latestRecord.head_length_cm, unit: 'cm' },
-            { label: 'Comprimento do Tronco Superior', value: latestRecord.upper_body_length_cm, unit: 'cm' },
-            { label: 'Comprimento do Tronco Inferior', value: latestRecord.lower_body_length_cm, unit: 'cm' },
-            { label: 'Comprimento da Panturrilha', value: latestRecord.calf_length_cm, unit: 'cm' },
-            { label: 'Comprimento da Coxa', value: latestRecord.thigh_length_cm, unit: 'cm' },
-            { label: 'Envergadura', value: latestRecord.arm_span_cm, unit: 'cm' },
-            { label: 'Largura dos Ombros', value: latestRecord.shoulder_width_cm, unit: 'cm' },
-            { label: 'Distância Ombro-Orelha', value: latestRecord.shoulder_ear_distance_cm, unit: 'cm' },
-            { label: 'Comprimento do Pé', value: latestRecord.foot_length_cm, unit: 'cm' },
+            { label: 'Comprimento da Cabeça', value: selectedRecord.head_length_cm, unit: 'cm' },
+            { label: 'Comprimento do Tronco Superior', value: selectedRecord.upper_body_length_cm, unit: 'cm' },
+            { label: 'Comprimento do Tronco Inferior', value: selectedRecord.lower_body_length_cm, unit: 'cm' },
+            { label: 'Comprimento da Panturrilha', value: selectedRecord.calf_length_cm, unit: 'cm' },
+            { label: 'Comprimento da Coxa', value: selectedRecord.thigh_length_cm, unit: 'cm' },
+            { label: 'Envergadura', value: selectedRecord.arm_span_cm, unit: 'cm' },
+            { label: 'Largura dos Ombros', value: selectedRecord.shoulder_width_cm, unit: 'cm' },
+            { label: 'Distância Ombro-Orelha', value: selectedRecord.shoulder_ear_distance_cm, unit: 'cm' },
+            { label: 'Comprimento do Pé', value: selectedRecord.foot_length_cm, unit: 'cm' },
           ]}
         />
       ) : null}
 
-      {hasRecords && latestRecord ? (
+      {hasRecords && selectedRecord ? (
         <SimpleMetricsCard
           title="Metas de Exercício"
-          description="Calorias sugeridas por tipo de exercício, calculadas a partir do exame mais recente."
+          description="Calorias sugeridas por tipo de exercício, calculadas a partir do exame selecionado."
           metrics={[
-            { label: 'Meta de Exercício Aeróbico', value: latestRecord.aerobic_calories_kcal, unit: 'kcal' },
-            { label: 'Meta de Exercício de Resistência', value: latestRecord.endurance_calories_kcal, unit: 'kcal' },
-            { label: 'Meta de Exercício Anaeróbico', value: latestRecord.anaerobic_calories_kcal, unit: 'kcal' },
+            { label: 'Meta de Exercício Aeróbico', value: selectedRecord.aerobic_calories_kcal, unit: 'kcal' },
+            { label: 'Meta de Exercício de Resistência', value: selectedRecord.endurance_calories_kcal, unit: 'kcal' },
+            { label: 'Meta de Exercício Anaeróbico', value: selectedRecord.anaerobic_calories_kcal, unit: 'kcal' },
           ]}
         />
       ) : null}
@@ -780,10 +863,10 @@ export function BioimpedanciaTab() {
           <div className="mb-5">
             <h2 className="text-xl font-semibold">Análise postural</h2>
             <p className="text-sm text-muted-foreground">
-              Indicadores de assimetria e postura do exame mais recente.
+              Indicadores de assimetria e postura do exame selecionado.
             </p>
           </div>
-          <PostureAnalysis record={latestRecord} previousRecord={previousRecord} />
+          <PostureAnalysis record={selectedRecord} previousRecord={selectedPreviousRecord} />
         </section>
       ) : null}
 
