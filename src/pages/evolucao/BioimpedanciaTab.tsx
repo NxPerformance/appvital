@@ -745,7 +745,20 @@ export function BioimpedanciaTab() {
           {hasRecords ? (
             <div className="divide-y divide-white/10">
               <MetricRow label="IMC" value={selectedRecord?.bmi ?? null} previousValue={selectedPreviousRecord?.bmi ?? null} standard="18.5 - 24.9" isLowerBetter />
-              <MetricRow label="Peso" value={selectedRecord?.weight_kg ?? null} unit="kg" previousValue={selectedPreviousRecord?.weight_kg ?? null} standard={profile?.weight_goal_kg ? `Meta: ${profile.weight_goal_kg}kg` : 'Acompanhar'} isLowerBetter />
+              <MetricRow
+                label="Peso"
+                value={selectedRecord?.weight_kg ?? null}
+                unit="kg"
+                previousValue={selectedPreviousRecord?.weight_kg ?? null}
+                standard={
+                  selectedRecord?.ideal_weight_kg
+                    ? `Ideal: ${selectedRecord.ideal_weight_kg}kg`
+                    : profile?.weight_goal_kg
+                      ? `Meta: ${profile.weight_goal_kg}kg`
+                      : '--'
+                }
+                isLowerBetter
+              />
               <MetricRow label="Gordura corporal" value={selectedRecord?.body_fat_percent ?? null} unit="%" previousValue={selectedPreviousRecord?.body_fat_percent ?? null} standard="11% - 20%" isLowerBetter />
               <MetricRow label="Massa muscular" value={selectedRecord?.muscle_percent ?? null} unit="%" previousValue={selectedPreviousRecord?.muscle_percent ?? null} standard="42,9% - 52,4%" />
             </div>

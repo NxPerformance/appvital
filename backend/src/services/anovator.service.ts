@@ -6,6 +6,7 @@ interface AnovatorApiResponse {
   CODE: number;
   INFO: string;
   DATA?: Record<string, unknown>;
+  standard?: Record<string, unknown>;
 }
 
 // Campos que a API da Anovator nao cobre - permanecem apenas de preenchimento
@@ -71,6 +72,11 @@ export async function fetchAnovatorExam(examId: string) {
   }
 
   const d = body.DATA;
+
+  // TODO(temporario): log do bloco "standard" (faixas saudaveis por metrica)
+  // pra confirmar os nomes de campo antes de usar a faixa de gordura/musculo
+  // no grafico de evolucao. Remover depois de confirmado.
+  console.log("[anovator] bloco standard:", JSON.stringify(body.standard, null, 2));
 
   const weight = typeof d.weight === "number" ? d.weight : null;
   const fatPercent = typeof d.fat === "number" ? d.fat : null;
