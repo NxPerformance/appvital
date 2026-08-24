@@ -7,7 +7,14 @@ export interface BackendUser {
 
 const defaultApiUrl = import.meta.env.DEV ? '/api' : 'https://app.vitalissy.com.br/api';
 const API_URL = (import.meta.env.VITE_API_URL || defaultApiUrl).replace(/\/$/, '');
+const API_ORIGIN = API_URL.replace(/\/api\/?$/, '');
 const AUTH_STORAGE_KEY = 'vitalissy-auth';
+
+export function resolveUploadUrl(url: string | null | undefined): string | null {
+  if (!url) return null;
+  if (url.startsWith('http://') || url.startsWith('https://')) return url;
+  return `${API_ORIGIN}${url}`;
+}
 
 interface StoredAuthSession {
   token: string;

@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useBioimpedance, type BioimpedanceRecord } from '@/hooks/useBioimpedance';
 import { useProfile } from '@/hooks/useProfile';
 import { formatDateSafe } from '@/lib/dateUtils';
+import { resolveUploadUrl } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { ptBR } from 'date-fns/locale';
 
@@ -304,12 +305,6 @@ function BestPhaseCard({ records, onSelect }: { records: BioimpedanceRecord[]; o
       </button>
     </section>
   );
-}
-
-function resolveUploadUrl(url: string) {
-  if (url.startsWith('http://') || url.startsWith('https://')) return url;
-  const base = (import.meta.env.VITE_API_URL || 'http://localhost:3001/api').replace(/\/api\/?$/, '');
-  return `${base}${url}`;
 }
 
 interface CompareField {
@@ -729,7 +724,7 @@ export function BioimpedanciaTab() {
               )}
               {selectedRecord?.source_pdf_url ? (
                 <a
-                  href={resolveUploadUrl(selectedRecord.source_pdf_url)}
+                  href={resolveUploadUrl(selectedRecord.source_pdf_url) ?? undefined}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"

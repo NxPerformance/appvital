@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useBodyProgress, type BodyProgressPhoto, type BodyProgressPose } from "@/hooks/useBodyProgress";
 import { useProfile } from "@/hooks/useProfile";
 import { formatDateSafe } from "@/lib/dateUtils";
+import { resolveUploadUrl } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 const poseOptions: Array<{ value: BodyProgressPose; label: string }> = [
@@ -18,13 +19,6 @@ const poseOptions: Array<{ value: BodyProgressPose; label: string }> = [
   { value: "back", label: "Costas" },
   { value: "custom", label: "Livre" },
 ];
-
-function resolveImageUrl(url: string) {
-  if (url.startsWith("http://") || url.startsWith("https://")) return url;
-
-  const base = (import.meta.env.VITE_API_URL || "http://localhost:3001/api").replace(/\/api\/?$/, "");
-  return `${base}${url}`;
-}
 
 function formatTakenDate(value: string) {
   return formatDateSafe(value, "dd 'de' MMM yyyy", { locale: ptBR });
@@ -53,7 +47,7 @@ function PhotoCard({
       <button type="button" onClick={onSelect} className="block w-full text-left">
         <div className="aspect-[4/5] overflow-hidden bg-[hsl(var(--secondary))]">
           <img
-            src={resolveImageUrl(photo.image_url)}
+            src={resolveUploadUrl(photo.image_url) ?? undefined}
             alt={photo.label || `Foto ${photo.pose}`}
             className="h-full w-full object-cover"
           />
@@ -429,7 +423,7 @@ export function PhotosTab() {
                     {photo ? (
                       <>
                         <img
-                          src={resolveImageUrl(photo.image_url)}
+                          src={resolveUploadUrl(photo.image_url) ?? undefined}
                           alt={photo.label || "Foto de evolução"}
                           className="aspect-[4/5] w-full object-cover"
                         />

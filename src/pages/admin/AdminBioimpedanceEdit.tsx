@@ -10,13 +10,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useBioimpedanceRecord, useUpdateBioimpedance, useDeleteBioimpedance } from '@/hooks/useAdmin';
 import { parseLocaleInteger, parseLocaleNumber } from '@/lib/inputValidation';
+import { resolveUploadUrl } from '@/lib/api';
 import { toast } from '@/hooks/use-toast';
-
-function resolveUploadUrl(url: string) {
-  if (url.startsWith('http://') || url.startsWith('https://')) return url;
-  const base = (import.meta.env.VITE_API_URL || 'http://localhost:3001/api').replace(/\/api\/?$/, '');
-  return `${base}${url}`;
-}
 
 interface FormData {
   date: string;
@@ -414,7 +409,7 @@ export default function AdminBioimpedanceEdit() {
         <CardContent className="space-y-2">
           {record.source_pdf_url ? (
             <a
-              href={resolveUploadUrl(record.source_pdf_url)}
+              href={resolveUploadUrl(record.source_pdf_url) ?? undefined}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1 text-sm text-primary hover:underline"

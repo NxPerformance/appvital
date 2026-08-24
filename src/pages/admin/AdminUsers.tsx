@@ -33,14 +33,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { ptBR } from 'date-fns/locale';
 import { formatDateSafe } from '@/lib/dateUtils';
-
-const apiOrigin = (import.meta.env.VITE_API_URL || 'http://localhost:3001/api').replace(/\/api\/?$/, '');
-
-function getUploadUrl(path: string | null) {
-  if (!path) return null;
-  if (path.startsWith('http')) return path;
-  return `${apiOrigin}${path}`;
-}
+import { resolveUploadUrl as getUploadUrl } from '@/lib/api';
 
 export default function AdminUsers() {
   const navigate = useNavigate();

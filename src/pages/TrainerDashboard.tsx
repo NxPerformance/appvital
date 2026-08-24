@@ -29,6 +29,7 @@ import {
   useUpdateTrainerClient,
 } from '@/hooks/useTrainer';
 import { formatDateSafe } from '@/lib/dateUtils';
+import { resolveUploadUrl } from '@/lib/api';
 
 function getInitials(name: string) {
   return name
@@ -37,12 +38,6 @@ function getInitials(name: string) {
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase())
     .join('');
-}
-
-function resolveImageUrl(url: string) {
-  if (url.startsWith('http://') || url.startsWith('https://')) return url;
-  const base = (import.meta.env.VITE_API_URL || 'http://localhost:3001/api').replace(/\/api\/?$/, '');
-  return `${base}${url}`;
 }
 
 export default function TrainerDashboard() {
@@ -437,7 +432,7 @@ export default function TrainerDashboard() {
                         {clientSummary.summary.latest_body_progress_photo ? (
                           <div className="overflow-hidden rounded-[1.5rem] border border-white/5">
                             <img
-                              src={resolveImageUrl(clientSummary.summary.latest_body_progress_photo.image_url)}
+                              src={resolveUploadUrl(clientSummary.summary.latest_body_progress_photo.image_url) ?? undefined}
                               alt="Última evolução corporal"
                               className="aspect-[4/5] w-full object-cover"
                             />
