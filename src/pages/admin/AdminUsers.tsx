@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { ArrowLeft, Search, MoreVertical, Crown, Trash2, Shield, BadgeCheck, Hourglass } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { ArrowLeft, Search, MoreVertical, Crown, Trash2, Shield, BadgeCheck, Hourglass, Activity } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
@@ -33,16 +33,10 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { ptBR } from 'date-fns/locale';
 import { formatDateSafe } from '@/lib/dateUtils';
-
-const apiOrigin = (import.meta.env.VITE_API_URL || 'http://localhost:3001/api').replace(/\/api\/?$/, '');
-
-function getUploadUrl(path: string | null) {
-  if (!path) return null;
-  if (path.startsWith('http')) return path;
-  return `${apiOrigin}${path}`;
-}
+import { resolveUploadUrl as getUploadUrl } from '@/lib/api';
 
 export default function AdminUsers() {
+  const navigate = useNavigate();
   const { data: profiles, isLoading } = useAllProfiles();
   const updatePremium = useUpdateUserPremium();
   const deleteUser = useDeleteUser();
@@ -331,6 +325,12 @@ export default function AdminUsers() {
                       >
                         <BadgeCheck className="w-4 h-4 mr-2" />
                         {profile.is_personal_trainer ? 'Remover Personal' : 'Tornar Personal'}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => navigate(`/admin/users/${profile.id}/history`)}
+                      >
+                        <Activity className="w-4 h-4 mr-2" />
+                        Histórico de Bioimpedância
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         className="text-destructive focus:text-destructive"

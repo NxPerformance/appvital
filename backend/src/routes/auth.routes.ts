@@ -1,352 +1,240 @@
-import fs from "node:fs";
-import path from "node:path";
-import crypto from "node:crypto";
 import { Router } from "express";
 import bcrypt from "bcryptjs";
-import { UserRole } from "@prisma/client";
-import multer from "multer";
 import { z } from "zod";
-import { env } from "../config/env.js";
 import { prisma } from "../lib/prisma.js";
-import { signToken } from "../lib/jwt.js";
+import { signJwt } from "../lib/jwt.js";
 import { asyncHandler } from "../utils/async-handler.js";
-import { requireAuth, type AuthenticatedRequest } from "../middleware/auth.js";
-import { serializeProfile, serializeUser } from "../utils/serializers.js";
+import { HttpError } from "../middleware/error-handler.js";
+import { requireAuth } from "../middleware/auth.js";
+import { serializeUser, serializeProfile, DEFAULT_NOTIFICATION_PREFERENCES } from "../utils/serializers.js";
+import { trainerApplicationUpload, deleteUploadedFileSafe } from "../lib/upload.js";
 
-const router = Router();
+export const authRouter = Router();
 
-const trainerProofUploadDir = path.join(env.UPLOAD_DIR, "trainer-applications");
-fs.mkdirSync(trainerProofUploadDir, { recursive: true });
-
-const proofImageExtensions: Record<string, string> = {
-  "image/jpeg": ".jpg",
-  "image/png": ".png",
-  "image/webp": ".webp",
-};
-
-const allowedProofMimeTypes = new Set(Object.keys(proofImageExtensions));
-const defaultNotificationPreferences = {
-  updates: true,
-  reminders: true,
-  account: true,
-  wearables: true,
-  email: true,
-  whatsapp: false,
-};
-
-const trainerProofUpload = multer({
-  storage: multer.diskStorage({
-    destination: (_req, _file, callback) => callback(null, trainerProofUploadDir),
-    filename: (_req, file, callback) => {
-      const ext = proofImageExtensions[file.mimetype] ?? ".jpg";
-      callback(null, `${crypto.randomUUID()}${ext}`);
-    },
-  }),
-  limits: {
-    fileSize: 5 * 1024 * 1024,
-  },
-  fileFilter: (_req, file, callback) => {
-    if (!allowedProofMimeTypes.has(file.mimetype)) {
-      callback(new Error("Envie imagens JPG, PNG ou WebP para a comprovacao do personal"));
-      return;
-    }
-
-    callback(null, true);
-  },
-});
-
-type TrainerProofFiles =
-  | {
-      self_photo?: Express.Multer.File[];
-      document_photo?: Express.Multer.File[];
-    }
-  | undefined;
-
-function removeTrainerProofFiles(files: TrainerProofFiles) {
-  for (const fileList of Object.values(files ?? {})) {
-    for (const file of fileList ?? []) {
-      if (fs.existsSync(file.path)) {
-        fs.unlinkSync(file.path);
-      }
-    }
-  }
-}
-
-function parseMaybeJson(value: unknown) {
-  if (typeof value !== "string") return value;
-
-  try {
-    return JSON.parse(value);
-  } catch {
-    return value;
-  }
-}
-
-function parseBoolean(value: unknown) {
-  return value === true || value === "true";
-}
-
-function normalizeOptionalPhone(value: unknown) {
-  if (typeof value !== "string") return value;
-
-  const digits = value.replace(/\D/g, "");
-  return digits || null;
-}
-
-const validBrazilianStates = new Set([
+const BR_STATES = new Set([
   "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG",
   "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO",
 ]);
 
-function validateCref(cref: string, state: string) {
-  const normalizedCref = cref.trim().toUpperCase().replace(/\s+/g, "");
-  const normalizedState = state.trim().toUpperCase();
-  const match = normalizedCref.match(/^(\d{4,6})(?:-?[GP])?(?:\/([A-Z]{2}))?$/);
+const CREF_REGEX = /^\d{4,6}(-[A-Z])?\/([A-Z]{2})$/i;
 
-  return Boolean(
-    match &&
-      validBrazilianStates.has(normalizedState) &&
-      (!match[2] || match[2] === normalizedState),
-  );
+function isValidCref(cref: string, crefState: string): boolean {
+  const match = CREF_REGEX.exec(cref.trim());
+  const uf = crefState.trim().toUpperCase();
+  if (!match) return false;
+  if (!BR_STATES.has(uf)) return false;
+  const crefUf = match[2]?.toUpperCase();
+  return crefUf === uf;
 }
 
+const boolish = z.preprocess((value) => {
+  if (typeof value === "string") {
+    if (value === "true") return true;
+    if (value === "false") return false;
+  }
+  return value;
+}, z.boolean());
+
+const trainerApplicationSchema = z.object({
+  cref: z.string().min(1),
+  cref_state: z.string().min(1),
+  specialties: z.string().nullable().optional(),
+  experience_years: z.coerce.number().int().nullable().optional(),
+  instagram_handle: z.string().nullable().optional(),
+  proof_notes: z.string().nullable().optional(),
+});
+
+const emptyToUndefined = (value: unknown) => (value === "" || value === null ? undefined : value);
+
 const registerSchema = z.object({
-  full_name: z.string().min(3),
-  email: z.string().email(),
-  phone: z.preprocess(
-    normalizeOptionalPhone,
-    z.string().regex(/^\d{10,11}$/, "Telefone deve ter 10 ou 11 numeros com DDD").optional().nullable(),
-  ),
+  full_name: z.string().min(1, "Nome obrigatorio"),
+  email: z.string().email("E-mail invalido"),
+  phone: z.preprocess(emptyToUndefined, z.string().optional()),
   age: z.coerce.number().int().positive(),
   height_cm: z.coerce.number().int().positive(),
   weight_kg: z.coerce.number().positive(),
-  password: z.string().min(6),
-  terms_accepted: z.preprocess(parseBoolean, z.literal(true, {
-    errorMap: () => ({ message: "Aceite os Termos de Uso para criar sua conta" }),
-  })),
-  account_type: z.enum(["client", "personal"]).default("client"),
-  selected_plan: z.enum(["essential", "premium"]).optional().default("essential"),
-  initial_payment_method: z.enum(["pix", "credit_card"]).optional().nullable(),
-  trainer_application: z.preprocess(parseMaybeJson, z
-    .object({
-      cref: z.string().min(3),
-      cref_state: z.string().min(2).max(2),
-      specialties: z.string().trim().max(200).optional().nullable(),
-      experience_years: z.coerce.number().int().min(0).max(80).optional().nullable(),
-      instagram_handle: z.string().trim().max(100).optional().nullable(),
-      proof_notes: z.string().trim().max(500).optional().nullable(),
-    })
-    .optional()),
-}).superRefine((data, ctx) => {
-  if (data.account_type === "personal" && !data.trainer_application) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ["trainer_application"],
-      message: "Informe os dados para validar seu cadastro como personal",
-    });
-  }
-
-  if (data.account_type === "personal" && data.trainer_application) {
-    const { cref, cref_state: crefState } = data.trainer_application;
-    if (!validateCref(cref, crefState)) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["trainer_application", "cref"],
-        message: "Informe um CREF valido com UF correspondente",
-      });
+  password: z.string().min(6, "Senha deve ter ao menos 6 caracteres"),
+  terms_accepted: boolish,
+  account_type: z.preprocess(emptyToUndefined, z.enum(["client", "personal"]).default("client")),
+  selected_plan: z.preprocess(emptyToUndefined, z.enum(["essential", "premium"]).default("essential")),
+  initial_payment_method: z.preprocess(emptyToUndefined, z.enum(["pix", "credit_card"]).optional()),
+  trainer_application: z.preprocess((value) => {
+    if (typeof value === "string") {
+      if (!value) return undefined;
+      try {
+        return JSON.parse(value);
+      } catch {
+        return value;
+      }
     }
+    return value;
+  }, trainerApplicationSchema.optional()),
+});
+
+function normalizePhone(phone?: string): string | undefined {
+  if (!phone) return undefined;
+  const digits = phone.replace(/\D/g, "");
+  if (digits.length === 0) return undefined;
+  if (digits.length < 10 || digits.length > 11) {
+    throw new HttpError(400, "Telefone invalido, informe DDD + numero");
   }
-});
+  return digits;
+}
 
-const loginSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(6),
-});
-
-router.post(
+authRouter.post(
   "/register",
-  trainerProofUpload.fields([
+  trainerApplicationUpload.fields([
     { name: "self_photo", maxCount: 1 },
     { name: "document_photo", maxCount: 1 },
   ]),
   asyncHandler(async (req, res) => {
-    const files = req.files as TrainerProofFiles;
-    let data: z.infer<typeof registerSchema>;
+    const files = req.files as { self_photo?: Express.Multer.File[]; document_photo?: Express.Multer.File[] } | undefined;
+    const selfPhoto = files?.self_photo?.[0];
+    const documentPhoto = files?.document_photo?.[0];
 
     try {
-      data = registerSchema.parse(req.body);
-    } catch (error) {
-      removeTrainerProofFiles(files);
-      throw error;
-    }
+      const data = registerSchema.parse(req.body);
 
-    const selfPhoto = files?.self_photo?.[0] ?? null;
-    const documentPhoto = files?.document_photo?.[0] ?? null;
+      if (!data.terms_accepted) {
+        throw new HttpError(400, "E necessario aceitar os termos de uso");
+      }
 
-    if (data.account_type === "personal" && (!selfPhoto || !documentPhoto)) {
-      removeTrainerProofFiles(files);
-      return res.status(400).json({ message: "Envie sua foto e a foto do documento para validar o personal" });
-    }
+      const phone = normalizePhone(data.phone);
 
-    const existing = await prisma.user.findUnique({
-      where: { email: data.email.toLowerCase() },
-    });
+      const existing = await prisma.user.findUnique({ where: { email: data.email.toLowerCase() } });
+      if (existing) {
+        throw new HttpError(409, "E-mail ja cadastrado");
+      }
 
-    if (existing) {
-      removeTrainerProofFiles(files);
-      return res.status(409).json({ message: "Email ja cadastrado" });
-    }
+      if (data.account_type === "personal") {
+        if (!data.trainer_application) {
+          throw new HttpError(400, "Dados de aplicacao de personal trainer obrigatorios");
+        }
+        if (!isValidCref(data.trainer_application.cref, data.trainer_application.cref_state)) {
+          throw new HttpError(400, "CREF invalido");
+        }
+        if (!selfPhoto || !documentPhoto) {
+          throw new HttpError(400, "Envie a foto pessoal e a foto do documento");
+        }
+      }
 
-    const passwordHash = await bcrypt.hash(data.password, 10);
-    const user = await prisma
-      .$transaction(async (tx) => {
-        return tx.user.create({
+      const passwordHash = await bcrypt.hash(data.password, 10);
+      const now = new Date();
+
+      const result = await prisma.$transaction(async (tx) => {
+        const user = await tx.user.create({
           data: {
             email: data.email.toLowerCase(),
             passwordHash,
-            profile: {
-              create: {
-                fullName: data.full_name,
-                phone: data.phone || null,
-                age: data.age,
-                heightCm: data.height_cm,
-                weightKg: data.weight_kg.toString(),
-                accountType: data.account_type,
-                selectedPlan: data.account_type === "client" ? data.selected_plan : null,
-                initialPaymentMethod:
-                  data.account_type === "client" && data.selected_plan === "premium"
-                    ? data.initial_payment_method ?? null
-                    : null,
-                termsAcceptedAt: new Date(),
-                notificationPreferences: defaultNotificationPreferences,
-                entryDate: new Date(),
-              },
-            },
-            trainerApplication:
-              data.account_type === "personal"
-                ? {
-                    create: {
-                      fullName: data.full_name,
-                      cref: data.trainer_application?.cref ?? "",
-                      crefState: data.trainer_application?.cref_state ?? "",
-                      specialties: data.trainer_application?.specialties ?? null,
-                      experienceYears: data.trainer_application?.experience_years ?? null,
-                      instagramHandle: data.trainer_application?.instagram_handle ?? null,
-                      proofNotes: data.trainer_application?.proof_notes ?? null,
-                      selfPhotoUrl: selfPhoto ? `/uploads/trainer-applications/${selfPhoto.filename}` : null,
-                      documentPhotoUrl: documentPhoto ? `/uploads/trainer-applications/${documentPhoto.filename}` : null,
-                    },
-                  }
-                : undefined,
-          },
-          include: {
-            profile: true,
-            roles: true,
-            trainerApplication: true,
           },
         });
-      })
-      .catch((error: unknown) => {
-        removeTrainerProofFiles(files);
-        throw error;
+
+        const profile = await tx.profile.create({
+          data: {
+            userId: user.id,
+            fullName: data.full_name,
+            phone: phone ?? null,
+            age: data.age,
+            heightCm: data.height_cm,
+            weightKg: data.weight_kg,
+            accountType: data.account_type,
+            selectedPlan: data.account_type === "client" ? data.selected_plan : null,
+            initialPaymentMethod: data.initial_payment_method ?? null,
+            termsAcceptedAt: now,
+            notificationPreferences: DEFAULT_NOTIFICATION_PREFERENCES,
+            entryDate: now,
+          },
+        });
+
+        let trainerApplication = null;
+        if (data.account_type === "personal" && data.trainer_application) {
+          trainerApplication = await tx.trainerApplication.create({
+            data: {
+              userId: user.id,
+              fullName: data.full_name,
+              cref: data.trainer_application.cref.trim(),
+              crefState: data.trainer_application.cref_state.trim().toUpperCase(),
+              specialties: data.trainer_application.specialties ?? null,
+              experienceYears: data.trainer_application.experience_years ?? null,
+              instagramHandle: data.trainer_application.instagram_handle ?? null,
+              proofNotes: data.trainer_application.proof_notes ?? null,
+              selfPhotoUrl: `/uploads/trainer-applications/${selfPhoto!.filename}`,
+              documentPhotoUrl: `/uploads/trainer-applications/${documentPhoto!.filename}`,
+            },
+          });
+        }
+
+        return { user, profile, trainerApplication };
       });
 
-    const token = signToken({
-      sub: user.id,
-      email: user.email,
-      roles: user.roles.map((role) => role.role),
-    });
+      const token = signJwt({ sub: result.user.id, email: result.user.email, roles: [] });
 
-    return res.status(201).json({
-      token,
-      user: serializeUser(user, user.roles.map((role) => role.role)),
-      profile: user.profile
-        ? serializeProfile(user.profile, user.email, {
-            isAdmin: user.roles.some((role) => role.role === UserRole.ADMIN),
-            isPersonalTrainer: user.roles.some((role) => role.role === UserRole.PERSONAL_TRAINER),
-            trainerApplicationStatus: user.trainerApplication?.status ?? null,
-            trainerApplicationId: user.trainerApplication?.id ?? null,
-          })
-        : null,
-    });
+      res.status(201).json({
+        token,
+        user: serializeUser(result.user, []),
+        profile: serializeProfile(result.profile, [], result.trainerApplication),
+      });
+    } catch (err) {
+      deleteUploadedFileSafe(selfPhoto?.path);
+      deleteUploadedFileSafe(documentPhoto?.path);
+      throw err;
+    }
   }),
 );
 
-router.post(
+const loginSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(1),
+});
+
+authRouter.post(
   "/login",
   asyncHandler(async (req, res) => {
-    const data = loginSchema.parse(req.body);
+    const { email, password } = loginSchema.parse(req.body);
+
     const user = await prisma.user.findUnique({
-      where: { email: data.email.toLowerCase() },
-      include: {
-        profile: true,
-        roles: true,
-        trainerApplication: true,
-      },
+      where: { email: email.toLowerCase() },
+      include: { profile: true, roles: true, trainerApplication: true },
     });
 
-    if (!user) {
-      return res.status(401).json({ message: "Credenciais invalidas" });
+    if (!user || !user.profile) {
+      throw new HttpError(401, "Credenciais invalidas");
     }
 
-    const matches = await bcrypt.compare(data.password, user.passwordHash);
-    if (!matches) {
-      return res.status(401).json({ message: "Credenciais invalidas" });
+    const passwordMatches = await bcrypt.compare(password, user.passwordHash);
+    if (!passwordMatches) {
+      throw new HttpError(401, "Credenciais invalidas");
     }
 
-    const roles = user.roles.map((entry) => entry.role);
-    const token = signToken({
-      sub: user.id,
-      email: user.email,
-      roles,
-    });
+    const roles = user.roles.map((assignment) => assignment.role);
+    const token = signJwt({ sub: user.id, email: user.email, roles });
 
-    return res.json({
+    res.json({
       token,
       user: serializeUser(user, roles),
-      profile: user.profile
-        ? serializeProfile(user.profile, user.email, {
-            isAdmin: roles.includes(UserRole.ADMIN),
-            isPersonalTrainer: roles.includes(UserRole.PERSONAL_TRAINER),
-            trainerApplicationStatus: user.trainerApplication?.status ?? null,
-            trainerApplicationId: user.trainerApplication?.id ?? null,
-          })
-        : null,
+      profile: serializeProfile(user.profile, roles, user.trainerApplication),
     });
   }),
 );
 
-router.get(
+authRouter.get(
   "/me",
   requireAuth,
-  asyncHandler(async (req: AuthenticatedRequest, res) => {
+  asyncHandler(async (req, res) => {
     const user = await prisma.user.findUnique({
       where: { id: req.auth!.userId },
-      include: {
-        profile: true,
-        roles: true,
-        trainerApplication: true,
-      },
+      include: { profile: true, roles: true, trainerApplication: true },
     });
 
-    if (!user) {
-      return res.status(404).json({ message: "Usuario nao encontrado" });
+    if (!user || !user.profile) {
+      throw new HttpError(404, "Usuario nao encontrado");
     }
 
-    const roles = user.roles.map((entry) => entry.role);
+    const roles = user.roles.map((assignment) => assignment.role);
 
-    return res.json({
+    res.json({
       user: serializeUser(user, roles),
-      profile: user.profile
-        ? serializeProfile(user.profile, user.email, {
-            isAdmin: roles.includes(UserRole.ADMIN),
-            isPersonalTrainer: roles.includes(UserRole.PERSONAL_TRAINER),
-            trainerApplicationStatus: user.trainerApplication?.status ?? null,
-            trainerApplicationId: user.trainerApplication?.id ?? null,
-          })
-        : null,
+      profile: serializeProfile(user.profile, roles, user.trainerApplication),
     });
   }),
 );
-
-export { router as authRouter };

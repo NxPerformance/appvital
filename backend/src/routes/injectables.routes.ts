@@ -1,13 +1,51 @@
 import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
-import { requireAuth, type AuthenticatedRequest } from "../middleware/auth.js";
+import { requireAuth } from "../middleware/auth.js";
 import { asyncHandler } from "../utils/async-handler.js";
+import { HttpError } from "../middleware/error-handler.js";
 import { getRouteParam } from "../utils/params.js";
 
-const router = Router();
+export const injectablesRouter = Router();
 
-const injectableSchema = z.object({
+injectablesRouter.use(requireAuth);
+
+function serializeInjectable(injectable: {
+  id: string;
+  userId: string;
+  medication: string;
+  dose: string;
+  date: Date;
+  time: string;
+  location: string;
+  notes: string | null;
+  createdAt: Date;
+}) {
+  return {
+    id: injectable.id,
+    user_id: injectable.userId,
+    medication: injectable.medication,
+    dose: injectable.dose,
+    date: injectable.date,
+    time: injectable.time,
+    location: injectable.location,
+    notes: injectable.notes,
+    created_at: injectable.createdAt,
+  };
+}
+
+injectablesRouter.get(
+  "/",
+  asyncHandler(async (req, res) => {
+    const injectables = await prisma.injectable.findMany({
+      where: { userId: req.auth!.userId },
+      orderBy: { date: "desc" },
+    });
+    res.json({ injectables: injectables.map(serializeInjectable) });
+  }),
+);
+
+const createSchema = z.object({
   medication: z.string().min(1),
   dose: z.string().min(1),
   date: z.string().min(1),
@@ -16,24 +54,11 @@ const injectableSchema = z.object({
   notes: z.string().nullable().optional(),
 });
 
-router.get(
+injectablesRouter.post(
   "/",
-  requireAuth,
-  asyncHandler(async (req: AuthenticatedRequest, res) => {
-    const injectables = await prisma.injectable.findMany({
-      where: { userId: req.auth!.userId },
-      orderBy: [{ date: "desc" }, { createdAt: "desc" }],
-    });
+  asyncHandler(async (req, res) => {
+    const data = createSchema.parse(req.body);
 
-    return res.json({ injectables });
-  }),
-);
-
-router.post(
-  "/",
-  requireAuth,
-  asyncHandler(async (req: AuthenticatedRequest, res) => {
-    const data = injectableSchema.parse(req.body);
     const injectable = await prisma.injectable.create({
       data: {
         userId: req.auth!.userId,
@@ -46,70 +71,56 @@ router.post(
       },
     });
 
-    return res.status(201).json({ injectable });
+    res.status(201).json({ injectable: serializeInjectable(injectable) });
   }),
 );
 
-router.patch(
+const updateSchema = createSchema.partial();
+
+injectablesRouter.patch(
   "/:id",
-  requireAuth,
-  asyncHandler(async (req: AuthenticatedRequest, res) => {
-    const injectableId = getRouteParam(req.params.id, "id");
-    const data = injectableSchema.parse(req.body);
-    const existing = await prisma.injectable.findUnique({
-      where: { id: injectableId },
-    });
+  asyncHandler(async (req, res) => {
+    const id = getRouteParam(req.params.id, "id");
+    const data = updateSchema.parse(req.body);
 
+    const existing = await prisma.injectable.findUnique({ where: { id } });
     if (!existing) {
-      return res.status(404).json({ message: "Aplicacao nao encontrada" });
+      throw new HttpError(404, "Registro nao encontrado");
     }
-
     if (existing.userId !== req.auth!.userId) {
-      return res.status(403).json({ message: 'Sem permissao para editar esta aplicacao' });
+      throw new HttpError(403, "Acesso negado");
     }
 
     const injectable = await prisma.injectable.update({
-      where: { id: injectableId },
+      where: { id },
       data: {
         medication: data.medication,
         dose: data.dose,
-        date: new Date(data.date),
+        date: data.date ? new Date(data.date) : undefined,
         time: data.time,
         location: data.location,
-        notes: data.notes ?? null,
+        notes: data.notes,
       },
     });
 
-    return res.json({ injectable });
+    res.json({ injectable: serializeInjectable(injectable) });
   }),
 );
 
-router.delete(
+injectablesRouter.delete(
   "/:id",
-  requireAuth,
-  asyncHandler(async (req: AuthenticatedRequest, res) => {
-    const injectableId = getRouteParam(req.params.id, "id");
-    const injectable = await prisma.injectable.findUnique({
-      where: { id: injectableId },
-    });
+  asyncHandler(async (req, res) => {
+    const id = getRouteParam(req.params.id, "id");
 
-    if (!injectable) {
-      return res.status(404).json({ message: 'Aplicacao nao encontrada' });
+    const existing = await prisma.injectable.findUnique({ where: { id } });
+    if (!existing) {
+      throw new HttpError(404, "Registro nao encontrado");
+    }
+    if (existing.userId !== req.auth!.userId) {
+      throw new HttpError(403, "Acesso negado");
     }
 
-    if (injectable.userId !== req.auth!.userId) {
-      return res.status(403).json({ message: 'Sem permissao para excluir esta aplicacao' });
-    }
-
-    await prisma.injectable.deleteMany({
-      where: {
-        id: injectableId,
-        userId: req.auth!.userId,
-      },
-    });
-
-    return res.status(204).send();
+    await prisma.injectable.delete({ where: { id } });
+    res.status(204).send();
   }),
 );
-
-export { router as injectablesRouter };

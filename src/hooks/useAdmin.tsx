@@ -11,7 +11,11 @@ function mapBioimpedanceRecord(record: any) {
     created_at: record.createdAt,
     weight_kg: record.weightKg ? Number(record.weightKg) : null,
     body_fat_percent: record.bodyFatPercent ? Number(record.bodyFatPercent) : null,
+    body_fat_standard_low: record.bodyFatStandardLow ? Number(record.bodyFatStandardLow) : null,
+    body_fat_standard_high: record.bodyFatStandardHigh ? Number(record.bodyFatStandardHigh) : null,
     muscle_percent: record.musclePercent ? Number(record.musclePercent) : null,
+    muscle_standard_low: record.muscleStandardLow ? Number(record.muscleStandardLow) : null,
+    muscle_standard_high: record.muscleStandardHigh ? Number(record.muscleStandardHigh) : null,
     water_percent: record.waterPercent ? Number(record.waterPercent) : null,
     visceral_fat: record.visceralFat ? Number(record.visceralFat) : null,
     subcutaneous_fat_percent: record.subcutaneousFatPercent ? Number(record.subcutaneousFatPercent) : null,
@@ -32,14 +36,60 @@ function mapBioimpedanceRecord(record: any) {
     hip_cm: record.hipCm ? Number(record.hipCm) : null,
     arm_cm: record.armCm ? Number(record.armCm) : null,
     thigh_cm: record.thighCm ? Number(record.thighCm) : null,
+    head_length_cm: record.headLengthCm ? Number(record.headLengthCm) : null,
+    upper_body_length_cm: record.upperBodyLengthCm ? Number(record.upperBodyLengthCm) : null,
+    lower_body_length_cm: record.lowerBodyLengthCm ? Number(record.lowerBodyLengthCm) : null,
+    calf_length_cm: record.calfLengthCm ? Number(record.calfLengthCm) : null,
+    thigh_length_cm: record.thighLengthCm ? Number(record.thighLengthCm) : null,
+    arm_span_cm: record.armSpanCm ? Number(record.armSpanCm) : null,
+    shoulder_width_cm: record.shoulderWidthCm ? Number(record.shoulderWidthCm) : null,
+    shoulder_ear_distance_cm: record.shoulderEarDistanceCm ? Number(record.shoulderEarDistanceCm) : null,
+    foot_length_cm: record.footLengthCm ? Number(record.footLengthCm) : null,
+    muscle_left_arm_kg: record.muscleLeftArmKg ? Number(record.muscleLeftArmKg) : null,
+    muscle_right_arm_kg: record.muscleRightArmKg ? Number(record.muscleRightArmKg) : null,
+    fat_left_arm_kg: record.fatLeftArmKg ? Number(record.fatLeftArmKg) : null,
+    fat_right_arm_kg: record.fatRightArmKg ? Number(record.fatRightArmKg) : null,
+    muscle_trunk_kg: record.muscleTrunkKg ? Number(record.muscleTrunkKg) : null,
+    fat_trunk_kg: record.fatTrunkKg ? Number(record.fatTrunkKg) : null,
+    muscle_left_leg_kg: record.muscleLeftLegKg ? Number(record.muscleLeftLegKg) : null,
+    muscle_right_leg_kg: record.muscleRightLegKg ? Number(record.muscleRightLegKg) : null,
+    fat_left_leg_kg: record.fatLeftLegKg ? Number(record.fatLeftLegKg) : null,
+    fat_right_leg_kg: record.fatRightLegKg ? Number(record.fatRightLegKg) : null,
+    aerobic_calories_kcal: record.aerobicCaloriesKcal,
+    endurance_calories_kcal: record.enduranceCaloriesKcal,
+    anaerobic_calories_kcal: record.anaerobicCaloriesKcal,
     shoulder_imbalance_cm: record.shoulderImbalanceCm ? Number(record.shoulderImbalanceCm) : null,
     spine_curvature_cm: record.spineCurvatureCm ? Number(record.spineCurvatureCm) : null,
     head_tilt_degrees: record.headTiltDegrees ? Number(record.headTiltDegrees) : null,
     trunk_curvature_degrees: record.trunkCurvatureDegrees ? Number(record.trunkCurvatureDegrees) : null,
     pelvis_tilt_degrees: record.pelvisTiltDegrees ? Number(record.pelvisTiltDegrees) : null,
     head_forward_degrees: record.headForwardDegrees ? Number(record.headForwardDegrees) : null,
+    shoulder_risk_level: record.shoulderRiskLevel ?? null,
+    humpback_risk_level: record.humpbackRiskLevel ?? null,
+    leg_risk_type: record.legRiskType ?? null,
+    pelvis_risk_level: record.pelvisRiskLevel ?? null,
+    spine_risk_level: record.spineRiskLevel ?? null,
+    head_risk_level: record.headRiskLevel ?? null,
+    knee_risk_level: record.kneeRiskLevel ?? null,
+    front_head_risk_level: record.frontHeadRiskLevel ?? null,
+    body_shape_risk_level: record.bodyShapeRiskLevel ?? null,
+    posture_risk_level: record.postureRiskLevel ?? null,
     notes: record.notes,
+    source_pdf_url: record.sourcePdfUrl ?? null,
+    anovator_exam_id: record.anovatorExamId ?? null,
   };
+}
+
+function buildBioimpedanceFormData(record: Record<string, unknown>, reportFile?: File) {
+  const formData = new FormData();
+  for (const [key, value] of Object.entries(record)) {
+    if (value === null || value === undefined) continue;
+    formData.append(key, String(value));
+  }
+  if (reportFile) {
+    formData.append('report', reportFile);
+  }
+  return formData;
 }
 
 export interface AdminProfile {
@@ -209,8 +259,15 @@ export function useInsertBioimpedance() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (record: Record<string, unknown>) => {
-      const response = await api.post<{ record: any }>('/bioimpedance/admin', record);
+    mutationFn: async ({
+      record,
+      reportFile,
+    }: {
+      record: Record<string, unknown>;
+      reportFile?: File;
+    }) => {
+      const body = reportFile ? buildBioimpedanceFormData(record, reportFile) : record;
+      const response = await api.post<{ record: any }>('/bioimpedance/admin', body);
       return mapBioimpedanceRecord(response.record);
     },
     onSuccess: () => {
@@ -224,13 +281,30 @@ export function useUpdateBioimpedance() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, ...record }: { id: string } & Record<string, unknown>) => {
-      const response = await api.patch<{ record: any }>(`/bioimpedance/admin/${id}`, record);
+    mutationFn: async ({
+      id,
+      reportFile,
+      ...record
+    }: { id: string; reportFile?: File } & Record<string, unknown>) => {
+      const body = reportFile ? buildBioimpedanceFormData(record, reportFile) : record;
+      const response = await api.patch<{ record: any }>(`/bioimpedance/admin/${id}`, body);
       return mapBioimpedanceRecord(response.record);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['userBioimpedance'] });
       queryClient.invalidateQueries({ queryKey: ['bioimpedanceRecord'] });
+    },
+  });
+}
+
+export function useAnovatorLookup() {
+  return useMutation({
+    mutationFn: async (examId: string) => {
+      const response = await api.post<{ data: Record<string, unknown>; unavailable_fields: string[] }>(
+        '/bioimpedance/admin/anovator-lookup',
+        { exam_id: examId },
+      );
+      return response;
     },
   });
 }

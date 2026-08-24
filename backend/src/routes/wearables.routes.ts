@@ -1,146 +1,379 @@
 import { Router } from "express";
 import { z } from "zod";
-import { requireAuth, type AuthenticatedRequest } from "../middleware/auth.js";
+import crypto from "node:crypto";
+import { prisma } from "../lib/prisma.js";
+import { requireAuth } from "../middleware/auth.js";
 import { asyncHandler } from "../utils/async-handler.js";
+import { HttpError } from "../middleware/error-handler.js";
 import { getRouteParam } from "../utils/params.js";
 import { env } from "../config/env.js";
 import {
-  completeFitbitAuthorization,
-  connectWearable,
-  createFitbitAuthorizationUrl,
-  disconnectWearable,
-  getWearableSummary,
-  markAllWearableNotificationsRead,
-  markWearableNotificationRead,
-  serializeWearableProvider,
-  syncWearable,
+  buildDemoReading,
+  buildWearableSummary,
+  createFitbitReading,
+  decryptSecret,
+  encryptSecret,
+  exchangeFitbitCode,
+  fetchFitbitProfile,
+  generatePkce,
+  PROVIDER_LABELS,
+  refreshFitbitToken,
 } from "../services/wearables.service.js";
+import type { WearableProvider } from "@prisma/client";
 
-const router = Router();
+export const wearablesRouter = Router();
 
-const providerSchema = z.enum(["apple_health", "google_fit", "garmin", "fitbit"]);
-const connectSchema = z.object({
-  provider: providerSchema,
-  device_name: z.string().trim().min(1).max(120).nullable().optional(),
-  external_account_label: z.string().trim().max(160).nullable().optional(),
-});
-const fitbitAuthorizeSchema = z.object({
-  redirect_path: z.string().optional(),
-});
-const fitbitCallbackSchema = z.object({
-  code: z.string().optional(),
-  state: z.string().optional(),
-  error: z.string().optional(),
-});
+const PROVIDER_TO_DB: Record<string, WearableProvider> = {
+  apple_health: "APPLE_HEALTH",
+  google_fit: "GOOGLE_FIT",
+  garmin: "GARMIN",
+  fitbit: "FITBIT",
+};
 
-function appRedirect(path: string, params: Record<string, string>) {
-  const url = new URL(path, env.APP_URL);
-  Object.entries(params).forEach(([key, value]) => url.searchParams.set(key, value));
-  return url.toString();
-}
-
-router.get(
-  "/summary",
-  requireAuth,
-  asyncHandler(async (req: AuthenticatedRequest, res) => {
-    const summary = await getWearableSummary(req.auth!.userId);
-    return res.json({ summary });
-  }),
-);
-
-router.post(
-  "/connect",
-  requireAuth,
-  asyncHandler(async (req: AuthenticatedRequest, res) => {
-    const data = connectSchema.parse(req.body);
-    const summary = await connectWearable({
-      userId: req.auth!.userId,
-      provider: serializeWearableProvider(data.provider),
-      deviceName: data.device_name,
-      externalAccountLabel: data.external_account_label,
-    });
-
-    return res.status(201).json({ summary });
-  }),
-);
-
-router.get(
-  "/fitbit/authorize",
-  requireAuth,
-  asyncHandler(async (req: AuthenticatedRequest, res) => {
-    const data = fitbitAuthorizeSchema.parse(req.query);
-    const authorizationUrl = await createFitbitAuthorizationUrl(req.auth!.userId, data.redirect_path);
-    return res.json({ authorization_url: authorizationUrl });
-  }),
-);
-
-router.get(
+wearablesRouter.get(
   "/fitbit/callback",
   asyncHandler(async (req, res) => {
-    const data = fitbitCallbackSchema.parse(req.query);
+    const { code, state, error } = req.query as { code?: string; state?: string; error?: string };
 
-    if (data.error) {
-      return res.redirect(appRedirect("/wearables", { fitbit: "denied", error: data.error }));
+    const finish = (query: Record<string, string>) => {
+      const params = new URLSearchParams(query);
+      res.redirect(`${env.APP_URL}/wearables?${params.toString()}`);
+    };
+
+    if (error || !code || !state) {
+      finish({ fitbit: "denied", error: error ?? "missing_code" });
+      return;
     }
 
-    if (!data.code || !data.state) {
-      return res.redirect(appRedirect("/wearables", { fitbit: "error", error: "missing_code_or_state" }));
+    const oauthState = await prisma.wearableOAuthState.findUnique({ where: { state } });
+    if (!oauthState || oauthState.provider !== "FITBIT" || oauthState.usedAt || oauthState.expiresAt < new Date()) {
+      finish({ fitbit: "error", error: "invalid_state" });
+      return;
     }
 
     try {
-      const redirectPath = await completeFitbitAuthorization({
-        code: data.code,
-        state: data.state,
+      const redirectUri = env.FITBIT_REDIRECT_URI ?? `${env.APP_URL}/api/wearables/fitbit/callback`;
+      const tokens = await exchangeFitbitCode(code, oauthState.codeVerifier, redirectUri);
+      const profile = await fetchFitbitProfile(tokens.accessToken);
+
+      await prisma.wearableOAuthState.update({ where: { id: oauthState.id }, data: { usedAt: new Date() } });
+
+      await prisma.wearableConnection.upsert({
+        where: { userId_provider: { userId: oauthState.userId, provider: "FITBIT" } },
+        create: {
+          userId: oauthState.userId,
+          provider: "FITBIT",
+          status: "CONNECTED",
+          externalAccountLabel: profile.label,
+          accessTokenEncrypted: encryptSecret(tokens.accessToken),
+          refreshTokenEncrypted: encryptSecret(tokens.refreshToken),
+          tokenExpiresAt: tokens.expiresAt,
+        },
+        update: {
+          status: "CONNECTED",
+          externalAccountLabel: profile.label,
+          accessTokenEncrypted: encryptSecret(tokens.accessToken),
+          refreshTokenEncrypted: encryptSecret(tokens.refreshToken),
+          tokenExpiresAt: tokens.expiresAt,
+          disconnectedAt: null,
+        },
       });
 
-      return res.redirect(appRedirect(redirectPath, { fitbit: "connected" }));
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "fitbit_callback_error";
-      return res.redirect(appRedirect("/wearables", { fitbit: "error", error: message }));
+      await prisma.wearableNotification.create({
+        data: {
+          userId: oauthState.userId,
+          type: "CONSENT",
+          severity: "SUCCESS",
+          title: "Fitbit conectado",
+          message: "Sua conta Fitbit foi conectada com sucesso.",
+        },
+      });
+
+      finish({ fitbit: "connected", redirect_path: oauthState.redirectPath ?? "/wearables" });
+    } catch (err) {
+      console.error("Falha no callback Fitbit:", err);
+      finish({ fitbit: "error", error: "exchange_failed" });
     }
   }),
 );
 
-router.post(
+wearablesRouter.use(requireAuth);
+
+wearablesRouter.get(
+  "/summary",
+  asyncHandler(async (req, res) => {
+    res.json({ summary: await buildWearableSummary(req.auth!.userId) });
+  }),
+);
+
+const connectSchema = z.object({
+  provider: z.enum(["apple_health", "google_fit", "garmin", "fitbit"]),
+  device_name: z.string().nullable().optional(),
+  external_account_label: z.string().nullable().optional(),
+});
+
+wearablesRouter.post(
+  "/connect",
+  asyncHandler(async (req, res) => {
+    const data = connectSchema.parse(req.body);
+    const provider = PROVIDER_TO_DB[data.provider];
+    const userId = req.auth!.userId;
+
+    const connection = await prisma.wearableConnection.upsert({
+      where: { userId_provider: { userId, provider } },
+      create: {
+        userId,
+        provider,
+        status: "CONNECTED",
+        deviceName: data.device_name ?? null,
+        externalAccountLabel: data.external_account_label ?? null,
+      },
+      update: {
+        status: "CONNECTED",
+        deviceName: data.device_name ?? undefined,
+        externalAccountLabel: data.external_account_label ?? undefined,
+        disconnectedAt: null,
+      },
+    });
+
+    const demoReading = buildDemoReading(provider);
+    await prisma.wearableReading.create({
+      data: {
+        userId,
+        connectionId: connection.id,
+        provider,
+        recordedAt: new Date(),
+        ...demoReading,
+      },
+    });
+
+    await prisma.wearableNotification.createMany({
+      data: [
+        {
+          userId,
+          type: "CONSENT",
+          severity: "INFO",
+          title: `${PROVIDER_LABELS[provider]} conectado`,
+          message: `Voce autorizou a Vitalissy a acessar dados do ${PROVIDER_LABELS[provider]}.`,
+        },
+        {
+          userId,
+          type: "SYNC",
+          severity: "SUCCESS",
+          title: "Primeira sincronizacao concluida",
+          message: `Recebemos os primeiros dados do ${PROVIDER_LABELS[provider]}.`,
+        },
+      ],
+    });
+
+    res.json({ summary: await buildWearableSummary(userId) });
+  }),
+);
+
+wearablesRouter.post(
   "/sync",
-  requireAuth,
-  asyncHandler(async (req: AuthenticatedRequest, res) => {
-    const summary = await syncWearable(req.auth!.userId);
+  asyncHandler(async (req, res) => {
+    const userId = req.auth!.userId;
 
-    if (!summary) {
-      return res.status(404).json({ message: "Nenhum relogio conectado" });
+    const connection = await prisma.wearableConnection.findFirst({
+      where: { userId, status: "CONNECTED" },
+      orderBy: { connectedAt: "desc" },
+    });
+
+    if (!connection) {
+      throw new HttpError(400, "Nenhum dispositivo conectado");
     }
 
-    return res.json({ summary });
+    let readingData;
+    let partialFailure = false;
+
+    if (connection.provider === "FITBIT" && connection.accessTokenEncrypted && connection.refreshTokenEncrypted) {
+      try {
+        let accessToken = decryptSecret(connection.accessTokenEncrypted);
+
+        const expiresSoon = connection.tokenExpiresAt && connection.tokenExpiresAt.getTime() - Date.now() < 5 * 60 * 1000;
+        if (expiresSoon) {
+          const refreshed = await refreshFitbitToken(decryptSecret(connection.refreshTokenEncrypted));
+          accessToken = refreshed.accessToken;
+          await prisma.wearableConnection.update({
+            where: { id: connection.id },
+            data: {
+              accessTokenEncrypted: encryptSecret(refreshed.accessToken),
+              refreshTokenEncrypted: encryptSecret(refreshed.refreshToken),
+              tokenExpiresAt: refreshed.expiresAt,
+            },
+          });
+        }
+
+        readingData = await createFitbitReading(accessToken);
+      } catch (err) {
+        console.error("Falha ao sincronizar com Fitbit, usando dados demo:", err);
+        readingData = buildDemoReading(connection.provider);
+        partialFailure = true;
+      }
+    } else {
+      readingData = buildDemoReading(connection.provider);
+    }
+
+    await prisma.wearableReading.create({
+      data: {
+        userId,
+        connectionId: connection.id,
+        provider: connection.provider,
+        recordedAt: new Date(),
+        ...readingData,
+      },
+    });
+
+    await prisma.wearableConnection.update({ where: { id: connection.id }, data: { lastSyncAt: new Date() } });
+
+    const notifications: Array<{ userId: string; type: "SYNC" | "RECOVERY" | "HEART_RATE"; severity: "SUCCESS" | "WARNING"; title: string; message: string }> = [];
+
+    if (partialFailure) {
+      notifications.push({
+        userId,
+        type: "SYNC",
+        severity: "WARNING",
+        title: "Sincronizacao parcial",
+        message: "Nao foi possivel obter todos os dados do provedor agora; usamos uma estimativa temporaria.",
+      });
+    } else {
+      notifications.push({
+        userId,
+        type: "SYNC",
+        severity: "SUCCESS",
+        title: "Sincronizado com sucesso",
+        message: "Seus dados do wearable foram atualizados.",
+      });
+    }
+
+    if (readingData.recoveryScore !== null && readingData.recoveryScore !== undefined && readingData.recoveryScore < 70) {
+      notifications.push({
+        userId,
+        type: "RECOVERY",
+        severity: "WARNING",
+        title: "Recuperacao baixa",
+        message: "Seu score de recuperacao esta abaixo do ideal hoje.",
+      });
+    }
+
+    if (
+      readingData.restingHeartRateBpm !== null &&
+      readingData.restingHeartRateBpm !== undefined &&
+      readingData.restingHeartRateBpm >= 75
+    ) {
+      notifications.push({
+        userId,
+        type: "HEART_RATE",
+        severity: "WARNING",
+        title: "Batimento de repouso elevado",
+        message: "Seu batimento cardiaco de repouso esta acima do habitual.",
+      });
+    }
+
+    await prisma.wearableNotification.createMany({ data: notifications });
+
+    res.json({ summary: await buildWearableSummary(userId) });
   }),
 );
 
-router.delete(
+wearablesRouter.delete(
   "/connection",
-  requireAuth,
-  asyncHandler(async (req: AuthenticatedRequest, res) => {
-    const summary = await disconnectWearable(req.auth!.userId);
-    return res.json({ summary });
+  asyncHandler(async (req, res) => {
+    const userId = req.auth!.userId;
+
+    await prisma.wearableConnection.updateMany({
+      where: { userId, status: { not: "DISCONNECTED" } },
+      data: {
+        status: "DISCONNECTED",
+        accessTokenEncrypted: null,
+        refreshTokenEncrypted: null,
+        tokenExpiresAt: null,
+        disconnectedAt: new Date(),
+      },
+    });
+
+    await prisma.wearableNotification.create({
+      data: {
+        userId,
+        type: "CONSENT",
+        severity: "INFO",
+        title: "Conexao removida",
+        message: "Sua conexao com o wearable foi removida.",
+      },
+    });
+
+    res.json({ summary: await buildWearableSummary(userId) });
   }),
 );
 
-router.patch(
+wearablesRouter.patch(
   "/notifications/:id/read",
-  requireAuth,
-  asyncHandler(async (req: AuthenticatedRequest, res) => {
-    const notificationId = getRouteParam(req.params.id, "id");
-    const summary = await markWearableNotificationRead(req.auth!.userId, notificationId);
-    return res.json({ summary });
+  asyncHandler(async (req, res) => {
+    const id = getRouteParam(req.params.id, "id");
+    const userId = req.auth!.userId;
+
+    const notification = await prisma.wearableNotification.findUnique({ where: { id } });
+    if (!notification || notification.userId !== userId) {
+      throw new HttpError(404, "Notificacao nao encontrada");
+    }
+
+    await prisma.wearableNotification.update({
+      where: { id },
+      data: { isRead: true, readAt: new Date() },
+    });
+
+    res.json({ summary: await buildWearableSummary(userId) });
   }),
 );
 
-router.post(
+wearablesRouter.post(
   "/notifications/read-all",
-  requireAuth,
-  asyncHandler(async (req: AuthenticatedRequest, res) => {
-    const summary = await markAllWearableNotificationsRead(req.auth!.userId);
-    return res.json({ summary });
+  asyncHandler(async (req, res) => {
+    const userId = req.auth!.userId;
+
+    await prisma.wearableNotification.updateMany({
+      where: { userId, isRead: false },
+      data: { isRead: true, readAt: new Date() },
+    });
+
+    res.json({ summary: await buildWearableSummary(userId) });
   }),
 );
 
-export { router as wearablesRouter };
+const authorizeQuerySchema = z.object({
+  redirect_path: z.string().default("/wearables"),
+});
+
+wearablesRouter.get(
+  "/fitbit/authorize",
+  asyncHandler(async (req, res) => {
+    const { redirect_path } = authorizeQuerySchema.parse(req.query);
+    const { codeVerifier, codeChallenge } = generatePkce();
+    const state = crypto.randomBytes(32).toString("base64url");
+
+    await prisma.wearableOAuthState.create({
+      data: {
+        userId: req.auth!.userId,
+        provider: "FITBIT",
+        state,
+        codeVerifier,
+        redirectPath: redirect_path,
+        expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+      },
+    });
+
+    const redirectUri = env.FITBIT_REDIRECT_URI ?? `${env.APP_URL}/api/wearables/fitbit/callback`;
+    const params = new URLSearchParams({
+      client_id: env.FITBIT_CLIENT_ID ?? "",
+      response_type: "code",
+      scope: "activity heartrate sleep profile",
+      code_challenge: codeChallenge,
+      code_challenge_method: "S256",
+      redirect_uri: redirectUri,
+      state,
+    });
+
+    res.json({ authorization_url: `https://www.fitbit.com/oauth2/authorize?${params.toString()}` });
+  }),
+);

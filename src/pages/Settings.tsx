@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import type { ElementType } from 'react';
 import {
+  AlertTriangle,
   ArrowLeft,
   Bell,
   Edit,
@@ -20,6 +21,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
+import { useBioimpedance } from '@/hooks/useBioimpedance';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { handleIntegerKeyDown, handleDecimalKeyDown, sanitizeInteger, sanitizeDecimal } from '@/lib/inputValidation';
@@ -64,6 +66,7 @@ function DetailRow({ label, value }: { label: string; value?: string | number | 
 export default function Settings() {
   const { signOut } = useAuth();
   const { profile, loading, updateProfile } = useProfile();
+  const { latestRecord: latestBioimpedance } = useBioimpedance();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -80,6 +83,7 @@ export default function Settings() {
     age: '',
     height_cm: '',
     weight_kg: '',
+    weight_goal_kg: '',
   });
 
   // Auto-edit when coming from BMI card
@@ -91,6 +95,7 @@ export default function Settings() {
         age: String(profile.age),
         height_cm: String(profile.height_cm),
         weight_kg: String(profile.weight_kg),
+        weight_goal_kg: profile.weight_goal_kg != null ? String(profile.weight_goal_kg) : '',
       });
       setEditing(true);
       setHighlightBMI(true);
@@ -122,6 +127,7 @@ export default function Settings() {
         age: String(profile.age),
         height_cm: String(profile.height_cm),
         weight_kg: String(profile.weight_kg),
+        weight_goal_kg: profile.weight_goal_kg != null ? String(profile.weight_goal_kg) : '',
       });
     }
     setEditing(true);
@@ -140,6 +146,7 @@ export default function Settings() {
         age: Number(formData.age),
         height_cm: Number(formData.height_cm),
         weight_kg: parseDecimalInput(formData.weight_kg),
+        weight_goal_kg: formData.weight_goal_kg.trim() ? parseDecimalInput(formData.weight_goal_kg) : null,
       });
 
       if (error) throw new Error(error);
@@ -320,6 +327,50 @@ export default function Settings() {
                 />
               </div>
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="weight_goal_kg">Meta de peso (kg)</Label>
+              <Input
+                id="weight_goal_kg"
+                type="text"
+                inputMode="decimal"
+                maxLength={6}
+                placeholder="Opcional"
+                value={formData.weight_goal_kg}
+                onKeyDown={handleDecimalKeyDown}
+                onChange={(e) => setFormData((prev) => ({ ...prev, weight_goal_kg: sanitizeDecimal(e.target.value) }))}
+                className="h-14 rounded-xl border-white/5 bg-secondary/70 text-base focus-visible:ring-offset-0"
+              />
+              {(() => {
+                const goalWeight = parseDecimalInput(formData.weight_goal_kg);
+                const heightCm = Number(formData.height_cm);
+                if (!formData.weight_goal_kg.trim() || !Number.isFinite(goalWeight) || !heightCm) return null;
+
+                const goalBmi = goalWeight / ((heightCm / 100) ** 2);
+                if (goalBmi >= 18.5 && goalBmi <= 30) return null;
+
+                return (
+                  <p className="flex items-start gap-2 rounded-xl bg-amber-400/10 p-3 text-xs text-amber-300">
+                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                    Essa meta resultaria em um IMC de {goalBmi.toFixed(1)}, fora da faixa saudável (18,5 – 24,9).
+                    Confirme com a equipe da clínica antes de manter esse valor.
+                  </p>
+                );
+              })()}
+              {latestBioimpedance?.ideal_weight_kg ? (
+                <button
+                  type="button"
+                  onClick={() =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      weight_goal_kg: String(latestBioimpedance.ideal_weight_kg),
+                    }))
+                  }
+                  className="text-xs font-semibold text-primary hover:underline"
+                >
+                  Usar peso ideal sugerido pela bioimpedância ({latestBioimpedance.ideal_weight_kg}kg)
+                </button>
+              ) : null}
+            </div>
             <div className="flex gap-3">
               <Button
                 variant="outline"
@@ -347,6 +398,7 @@ export default function Settings() {
             <DetailRow label="Idade" value={profile?.age ? `${profile.age} anos` : null} />
             <DetailRow label="Altura" value={profile?.height_cm ? `${profile.height_cm} cm` : null} />
             <DetailRow label="Peso" value={profile?.weight_kg ? `${profile.weight_kg} kg` : null} />
+            <DetailRow label="Meta de peso" value={profile?.weight_goal_kg != null ? `${profile.weight_goal_kg} kg` : null} />
           </div>
         )}
       </section>

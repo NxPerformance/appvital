@@ -2,10 +2,12 @@ import { useState } from 'react';
 import {
   LineChart,
   Line,
+  Area,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
+  Legend,
   ResponsiveContainer,
 } from 'recharts';
 import { ptBR } from 'date-fns/locale';
@@ -14,6 +16,8 @@ import { formatDateSafe } from '@/lib/dateUtils';
 
 interface EvolutionChartProps {
   records: BioimpedanceRecord[];
+  selectedRecordId?: string | null;
+  onPointClick?: (recordId: string) => void;
 }
 
 type MetricKey = 'weight_kg' | 'body_fat_percent' | 'muscle_percent';
@@ -23,15 +27,33 @@ interface MetricConfig {
   label: string;
   color: string;
   unit: string;
+  rangeLowKey?: 'body_fat_standard_low' | 'muscle_standard_low';
+  rangeHighKey?: 'body_fat_standard_high' | 'muscle_standard_high';
 }
 
 const METRICS: MetricConfig[] = [
   { key: 'weight_kg', label: 'Peso', color: 'hsl(var(--accent))', unit: 'kg' },
-  { key: 'body_fat_percent', label: 'Gordura', color: 'hsl(var(--destructive))', unit: '%' },
-  { key: 'muscle_percent', label: 'Músculo', color: 'hsl(142, 76%, 36%)', unit: '%' },
+  {
+    key: 'body_fat_percent',
+    label: 'Gordura',
+    color: 'hsl(var(--destructive))',
+    unit: '%',
+    rangeLowKey: 'body_fat_standard_low',
+    rangeHighKey: 'body_fat_standard_high',
+  },
+  {
+    key: 'muscle_percent',
+    label: 'Músculo',
+    color: 'hsl(142, 76%, 36%)',
+    unit: '%',
+    rangeLowKey: 'muscle_standard_low',
+    rangeHighKey: 'muscle_standard_high',
+  },
 ];
 
-export function EvolutionChart({ records }: EvolutionChartProps) {
+const IDEAL_WEIGHT_COLOR = 'hsl(48, 96%, 53%)';
+
+export function EvolutionChart({ records, selectedRecordId, onPointClick }: EvolutionChartProps) {
   const [selectedMetric, setSelectedMetric] = useState<MetricKey>('weight_kg');
 
   if (records.length === 0) {
@@ -46,14 +68,27 @@ export function EvolutionChart({ records }: EvolutionChartProps) {
   const chartData = [...records]
     .reverse()
     .map((record) => ({
+      id: record.id,
       date: formatDateSafe(record.date, 'dd/MM', { locale: ptBR }),
       fullDate: formatDateSafe(record.date, 'dd/MM/yyyy', { locale: ptBR }),
       weight_kg: record.weight_kg,
+      ideal_weight_kg: record.ideal_weight_kg,
       body_fat_percent: record.body_fat_percent,
+      body_fat_range:
+        record.body_fat_standard_low != null && record.body_fat_standard_high != null
+          ? [record.body_fat_standard_low, record.body_fat_standard_high]
+          : null,
       muscle_percent: record.muscle_percent,
+      muscle_range:
+        record.muscle_standard_low != null && record.muscle_standard_high != null
+          ? [record.muscle_standard_low, record.muscle_standard_high]
+          : null,
     }));
 
   const currentMetric = METRICS.find((m) => m.key === selectedMetric)!;
+  const showIdealWeight = selectedMetric === 'weight_kg' && chartData.some((d) => d.ideal_weight_kg !== null);
+  const rangeDataKey = currentMetric.key === 'body_fat_percent' ? 'body_fat_range' : currentMetric.key === 'muscle_percent' ? 'muscle_range' : null;
+  const showHealthyRange = rangeDataKey !== null && chartData.some((d) => d[rangeDataKey] !== null);
 
   return (
     <div className="space-y-3">
@@ -76,17 +111,17 @@ export function EvolutionChart({ records }: EvolutionChartProps) {
       </div>
 
       {/* Chart */}
-      <div className="bg-card rounded-2xl p-4 h-52">
+      <div className="bg-card rounded-2xl p-4 h-64">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={chartData} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-            <XAxis 
-              dataKey="date" 
+            <XAxis
+              dataKey="date"
               tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
               tickLine={false}
               axisLine={{ stroke: 'hsl(var(--border))' }}
             />
-            <YAxis 
+            <YAxis
               tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
               tickLine={false}
               axisLine={{ stroke: 'hsl(var(--border))' }}
@@ -100,15 +135,67 @@ export function EvolutionChart({ records }: EvolutionChartProps) {
                 padding: '8px 12px',
               }}
               labelStyle={{ color: 'hsl(var(--foreground))', fontWeight: 600 }}
-              formatter={(value: number) => [`${value}${currentMetric.unit}`, currentMetric.label]}
+              formatter={(value: number | [number, number], name: string) =>
+                Array.isArray(value)
+                  ? [`${value[0]} – ${value[1]}${currentMetric.unit}`, name]
+                  : [`${value}${currentMetric.unit}`, name]
+              }
               labelFormatter={(label, payload) => payload[0]?.payload?.fullDate || label}
             />
+            {showIdealWeight || showHealthyRange ? (
+              <Legend wrapperStyle={{ fontSize: 12 }} formatter={(value) => <span className="text-muted-foreground">{value}</span>} />
+            ) : null}
+            {showHealthyRange ? (
+              <Area
+                type="monotone"
+                dataKey={rangeDataKey!}
+                name="Faixa saudável"
+                stroke="none"
+                fill={currentMetric.color}
+                fillOpacity={0.12}
+                connectNulls
+                legendType="rect"
+              />
+            ) : null}
+            {showIdealWeight ? (
+              <Line
+                type="monotone"
+                dataKey="ideal_weight_kg"
+                name="Peso ideal"
+                stroke={IDEAL_WEIGHT_COLOR}
+                strokeWidth={2}
+                strokeDasharray="5 4"
+                dot={false}
+                connectNulls
+              />
+            ) : null}
             <Line
               type="monotone"
               dataKey={selectedMetric}
+              name={currentMetric.label}
               stroke={currentMetric.color}
               strokeWidth={2}
-              dot={{ fill: currentMetric.color, strokeWidth: 0, r: 4 }}
+              dot={(props: { cx: number; cy: number; payload: { id: string } }) => {
+                const isSelected = props.payload.id === selectedRecordId;
+                return (
+                  <g
+                    key={props.payload.id}
+                    onClick={() => onPointClick?.(props.payload.id)}
+                    style={{ cursor: onPointClick ? 'pointer' : undefined }}
+                  >
+                    {/* Área de toque maior, invisível, pra facilitar clicar/tocar no ponto */}
+                    <circle cx={props.cx} cy={props.cy} r={14} fill="transparent" />
+                    <circle
+                      cx={props.cx}
+                      cy={props.cy}
+                      r={isSelected ? 7 : 4}
+                      fill={currentMetric.color}
+                      stroke={isSelected ? 'hsl(var(--background))' : 'none'}
+                      strokeWidth={isSelected ? 2 : 0}
+                    />
+                  </g>
+                );
+              }}
               activeDot={{ r: 6, fill: currentMetric.color }}
             />
           </LineChart>

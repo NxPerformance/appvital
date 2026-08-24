@@ -1,99 +1,103 @@
+import "dotenv/config";
 import bcrypt from "bcryptjs";
-import { BillingCycle, PrismaClient, ProductStatus, UserRole } from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-async function main() {
-  const achievementSeed = [
-    {
-      name: "Mudanca de Vida",
-      description: "Voce iniciou sua jornada de transformacao",
-      icon: "🌟",
-      sortOrder: 1,
-    },
-    {
-      name: "Primeiro Treino",
-      description: "Completou seu primeiro treino",
-      icon: "💪",
-      sortOrder: 2,
-    },
-  ];
+const ADMIN_EMAIL = "admin@vitalissy.dev";
+const ADMIN_PASSWORD = "VitalissyDev2026!";
 
-  for (const achievement of achievementSeed) {
-    await prisma.achievement.upsert({
-      where: { name: achievement.name },
-      update: achievement,
-      create: achievement,
-    });
+const DEFAULT_NOTIFICATION_PREFERENCES = {
+  updates: true,
+  reminders: true,
+  account: true,
+  wearables: true,
+  email: true,
+  whatsapp: false,
+};
+
+async function seedAdminUser() {
+  const existing = await prisma.user.findUnique({ where: { email: ADMIN_EMAIL } });
+  if (existing) {
+    console.log(`Usuario admin ja existe: ${ADMIN_EMAIL}`);
+    return existing;
   }
 
-  await prisma.product.upsert({
-    where: { slug: "vitalissy-premium-monthly" },
-    update: {
-      name: "Vitalissy Premium",
-      description: "Acesso mensal aos recursos Premium da plataforma Vitalissy.",
-      priceCents: 1990,
-      currency: "BRL",
-      status: ProductStatus.ACTIVE,
-      billingCycle: BillingCycle.MONTHLY,
-      grantsPremium: true,
-      metadata: {
-        features: ["body_progress", "injectables", "priority_support", "premium_content"],
-      },
-    },
-    create: {
-      slug: "vitalissy-premium-monthly",
-      name: "Vitalissy Premium",
-      description: "Acesso mensal aos recursos Premium da plataforma Vitalissy.",
-      priceCents: 1990,
-      currency: "BRL",
-      status: ProductStatus.ACTIVE,
-      billingCycle: BillingCycle.MONTHLY,
-      grantsPremium: true,
-      metadata: {
-        features: ["body_progress", "injectables", "priority_support", "premium_content"],
-      },
-    },
-  });
+  const passwordHash = await bcrypt.hash(ADMIN_PASSWORD, 10);
 
-  const adminEmail = "erykdeveloper@gmail.com";
-  const adminPassword = "Admin123456";
-
-  const existing = await prisma.user.findUnique({
-    where: { email: adminEmail },
-  });
-
-  if (!existing) {
-    const passwordHash = await bcrypt.hash(adminPassword, 10);
-
-    const admin = await prisma.user.create({
-      data: {
-        email: adminEmail,
-        passwordHash,
-        profile: {
-          create: {
-            fullName: "Eryk Admin",
-            age: 30,
-            heightCm: 175,
-            weightKg: "75",
-          },
+  const user = await prisma.user.create({
+    data: {
+      email: ADMIN_EMAIL,
+      passwordHash,
+      profile: {
+        create: {
+          fullName: "Administrador Vitalissy",
+          age: 30,
+          heightCm: 170,
+          weightKg: 70,
+          isPremium: true,
+          accountType: "client",
+          termsAcceptedAt: new Date(),
+          notificationPreferences: DEFAULT_NOTIFICATION_PREFERENCES,
+          entryDate: new Date(),
         },
       },
-    });
-
-    await prisma.userRoleAssignment.create({
-      data: {
-        userId: admin.id,
-        role: UserRole.ADMIN,
+      roles: {
+        create: { role: "ADMIN" },
       },
+    },
+  });
+
+  console.log(`Usuario admin criado: ${ADMIN_EMAIL}`);
+  return user;
+}
+
+async function seedAchievements() {
+  const achievements = [
+    { name: "Mudança de Vida", description: "Comece sua jornada de transformação na Vitalissy.", sortOrder: 1 },
+    { name: "Primeiro Treino", description: "Registre seu primeiro treino no app.", sortOrder: 2 },
+  ];
+
+  for (const achievement of achievements) {
+    await prisma.achievement.upsert({
+      where: { name: achievement.name },
+      create: achievement,
+      update: {},
     });
   }
+
+  console.log("Conquistas verificadas/criadas.");
+}
+
+async function seedProducts() {
+  await prisma.product.upsert({
+    where: { slug: "premium-mensal" },
+    create: {
+      slug: "premium-mensal",
+      name: "Vitalissy Premium",
+      description: "Acesso completo aos recursos premium da Vitalissy.",
+      priceCents: 1990,
+      currency: "BRL",
+      status: "ACTIVE",
+      billingCycle: "MONTHLY",
+      grantsPremium: true,
+    },
+    update: {},
+  });
+
+  console.log("Produto Premium verificado/criado.");
+}
+
+async function main() {
+  await seedAdminUser();
+  await seedAchievements();
+  await seedProducts();
 }
 
 main()
-  .catch((error) => {
-    console.error(error);
-    process.exit(1);
+  .catch((err) => {
+    console.error("Falha ao rodar seed:", err);
+    process.exitCode = 1;
   })
   .finally(async () => {
     await prisma.$disconnect();

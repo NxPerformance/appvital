@@ -1,170 +1,146 @@
 import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
-import { requireAuth, type AuthenticatedRequest } from "../middleware/auth.js";
+import { requireAuth } from "../middleware/auth.js";
 import { asyncHandler } from "../utils/async-handler.js";
+import { HttpError } from "../middleware/error-handler.js";
 
-const router = Router();
+export const reportsRouter = Router();
 
-const reportQuerySchema = z.object({
-  period: z.enum(["weekly", "monthly", "yearly"]).default("weekly"),
-});
+reportsRouter.use(requireAuth);
 
-function getDateRange(period: "weekly" | "monthly" | "yearly") {
-  const now = new Date();
-  const end = new Date(now);
-  const start = new Date(now);
+type Period = "weekly" | "monthly" | "yearly";
 
-  if (period === "weekly") {
-    start.setDate(now.getDate() - 6);
-  } else if (period === "monthly") {
-    start.setMonth(now.getMonth() - 1);
-    start.setDate(start.getDate() + 1);
-  } else {
-    start.setFullYear(now.getFullYear() - 1);
-    start.setDate(start.getDate() + 1);
-  }
-
-  start.setHours(0, 0, 0, 0);
-  end.setHours(23, 59, 59, 999);
-
-  return { start, end };
+function startOfDay(date: Date): Date {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  return d;
 }
 
-function getBucketKey(date: Date, period: "weekly" | "monthly" | "yearly") {
+function endOfDay(date: Date): Date {
+  const d = new Date(date);
+  d.setHours(23, 59, 59, 999);
+  return d;
+}
+
+function computeRange(period: Period): { start: Date; end: Date } {
+  const today = new Date();
+  const end = endOfDay(today);
+
   if (period === "weekly") {
-    return date.toISOString().slice(0, 10);
+    const start = startOfDay(today);
+    start.setDate(start.getDate() - 6);
+    return { start, end };
   }
 
   if (period === "monthly") {
-    const year = date.getUTCFullYear();
-    const month = String(date.getUTCMonth() + 1).padStart(2, "0");
-    return `${year}-${month}`;
+    const start = startOfDay(today);
+    start.setMonth(start.getMonth() - 1);
+    start.setDate(start.getDate() + 1);
+    return { start, end };
   }
 
-  return String(date.getUTCFullYear());
+  const start = startOfDay(today);
+  start.setFullYear(start.getFullYear() - 1);
+  start.setDate(start.getDate() + 1);
+  return { start, end };
 }
 
-router.get(
-  "/me",
-  requireAuth,
-  asyncHandler(async (req: AuthenticatedRequest, res) => {
-    const { period } = reportQuerySchema.parse(req.query);
-    const profile = await prisma.profile.findUnique({
-      where: { userId: req.auth!.userId },
-      select: { isPremium: true },
-    });
+function bucketKeyFor(date: Date, period: Period): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
 
+  if (period === "weekly") return `${year}-${month}-${day}`;
+  if (period === "monthly") return `${year}-${month}`;
+  return `${year}`;
+}
+
+const querySchema = z.object({
+  period: z.enum(["weekly", "monthly", "yearly"]).default("weekly"),
+});
+
+reportsRouter.get(
+  "/me",
+  asyncHandler(async (req, res) => {
+    const profile = await prisma.profile.findUnique({ where: { userId: req.auth!.userId } });
     if (!profile?.isPremium) {
-      return res.status(403).json({ message: "Relatorios avancados disponiveis apenas para usuarios premium" });
+      throw new HttpError(403, "Recurso exclusivo para assinantes Premium");
     }
 
-    const { start, end } = getDateRange(period);
-    const [strengthWorkouts, cardioWorkouts, bodyPhotos, latestBioimpedance] = await Promise.all([
-      prisma.workout.findMany({
-        where: {
-          userId: req.auth!.userId,
-          date: { gte: start, lte: end },
-        },
-        select: {
-          id: true,
-          date: true,
-          durationMin: true,
-          calories: true,
-        },
-        orderBy: { date: "asc" },
-      }),
-      prisma.cardioWorkout.findMany({
-        where: {
-          userId: req.auth!.userId,
-          date: { gte: start, lte: end },
-        },
-        select: {
-          id: true,
-          date: true,
-          durationMin: true,
-          calories: true,
-          distanceKm: true,
-        },
-        orderBy: { date: "asc" },
-      }),
-      prisma.bodyProgressPhoto.count({
-        where: {
-          userId: req.auth!.userId,
-          takenAt: { gte: start, lte: end },
-        },
-      }),
+    const { period } = querySchema.parse(req.query);
+    const { start, end } = computeRange(period);
+
+    const [strengthWorkouts, cardioWorkouts, bodyProgressPhotosCount, latestBioimpedance] = await Promise.all([
+      prisma.workout.findMany({ where: { userId: req.auth!.userId, date: { gte: start, lte: end } } }),
+      prisma.cardioWorkout.findMany({ where: { userId: req.auth!.userId, date: { gte: start, lte: end } } }),
+      prisma.bodyProgressPhoto.count({ where: { userId: req.auth!.userId, takenAt: { gte: start, lte: end } } }),
       prisma.bioimpedanceRecord.findFirst({
-        where: {
-          userId: req.auth!.userId,
-          date: { lte: end },
-        },
+        where: { userId: req.auth!.userId, date: { lte: end } },
         orderBy: { date: "desc" },
-        select: {
-          date: true,
-          weightKg: true,
-          bodyFatPercent: true,
-          muscleMassKg: true,
-        },
       }),
     ]);
 
-    const allWorkouts = [
-      ...strengthWorkouts.map((item) => ({
-        date: item.date,
-        durationMin: item.durationMin ?? 0,
-        calories: item.calories ?? 0,
-        distanceKm: 0,
-        type: "strength",
-      })),
-      ...cardioWorkouts.map((item) => ({
-        date: item.date,
-        durationMin: item.durationMin ? Number(item.durationMin) : 0,
-        calories: item.calories ?? 0,
-        distanceKm: item.distanceKm ? Number(item.distanceKm) : 0,
-        type: "cardio",
-      })),
-    ].sort((a, b) => a.date.getTime() - b.date.getTime());
+    const timelineMap = new Map<string, { workouts: number; calories: number; minutes: number; distance_km: number }>();
+    const order: string[] = [];
 
-    const grouped = new Map<string, { workouts: number; calories: number; minutes: number; distance_km: number }>();
-
-    for (const workout of allWorkouts) {
-      const key = getBucketKey(workout.date, period);
-      const previous = grouped.get(key) ?? { workouts: 0, calories: 0, minutes: 0, distance_km: 0 };
-      grouped.set(key, {
-        workouts: previous.workouts + 1,
-        calories: previous.calories + workout.calories,
-        minutes: previous.minutes + workout.durationMin,
-        distance_km: previous.distance_km + workout.distanceKm,
-      });
+    for (const cursor = new Date(start); cursor <= end; cursor.setDate(cursor.getDate() + 1)) {
+      const key = bucketKeyFor(cursor, period);
+      if (!timelineMap.has(key)) {
+        timelineMap.set(key, { workouts: 0, calories: 0, minutes: 0, distance_km: 0 });
+        order.push(key);
+      }
     }
 
-    const totalStrengthWorkouts = strengthWorkouts.length;
-    const totalCardioWorkouts = cardioWorkouts.length;
-    const totalWorkouts = allWorkouts.length;
-    const totalCalories = allWorkouts.reduce((sum, item) => sum + item.calories, 0);
-    const totalMinutes = allWorkouts.reduce((sum, item) => sum + item.durationMin, 0);
-    const totalDistanceKm = allWorkouts.reduce((sum, item) => sum + item.distanceKm, 0);
+    let totalCalories = 0;
+    let totalMinutes = 0;
+    let totalDistanceKm = 0;
 
-    return res.json({
+    for (const workout of strengthWorkouts) {
+      const key = bucketKeyFor(workout.date, period);
+      const bucket = timelineMap.get(key) ?? { workouts: 0, calories: 0, minutes: 0, distance_km: 0 };
+      bucket.workouts += 1;
+      bucket.calories += workout.calories ?? 0;
+      bucket.minutes += workout.durationMin ?? 0;
+      timelineMap.set(key, bucket);
+
+      totalCalories += workout.calories ?? 0;
+      totalMinutes += workout.durationMin ?? 0;
+    }
+
+    for (const workout of cardioWorkouts) {
+      const key = bucketKeyFor(workout.date, period);
+      const bucket = timelineMap.get(key) ?? { workouts: 0, calories: 0, minutes: 0, distance_km: 0 };
+      const minutes = workout.durationMin ? Number(workout.durationMin) : 0;
+      const distanceKm = workout.distanceKm ? Number(workout.distanceKm) : 0;
+      bucket.workouts += 1;
+      bucket.calories += workout.calories ?? 0;
+      bucket.minutes += minutes;
+      bucket.distance_km += distanceKm;
+      timelineMap.set(key, bucket);
+
+      totalCalories += workout.calories ?? 0;
+      totalMinutes += minutes;
+      totalDistanceKm += distanceKm;
+    }
+
+    const timeline = order.map((key) => ({ label: key, ...timelineMap.get(key)! }));
+
+    res.json({
       report: {
         period,
         start_date: start,
         end_date: end,
         totals: {
-          workouts: totalWorkouts,
-          strength_workouts: totalStrengthWorkouts,
-          cardio_workouts: totalCardioWorkouts,
+          workouts: strengthWorkouts.length + cardioWorkouts.length,
+          strength_workouts: strengthWorkouts.length,
+          cardio_workouts: cardioWorkouts.length,
           calories: totalCalories,
           active_minutes: totalMinutes,
-          distance_km: Number(totalDistanceKm.toFixed(2)),
-          body_progress_photos: bodyPhotos,
+          distance_km: totalDistanceKm,
+          body_progress_photos: bodyProgressPhotosCount,
         },
-        timeline: Array.from(grouped.entries()).map(([label, values]) => ({
-          label,
-          ...values,
-          distance_km: Number(values.distance_km.toFixed(2)),
-        })),
+        timeline,
         latest_body_metrics: latestBioimpedance
           ? {
               date: latestBioimpedance.date,
@@ -177,5 +153,3 @@ router.get(
     });
   }),
 );
-
-export { router as reportsRouter };

@@ -64,12 +64,12 @@ export default function Register() {
   const { toast } = useToast();
 
   useEffect(() => {
-    document.documentElement.classList.add('auth-scroll-page');
-    document.body.classList.add('auth-scroll-page');
+    document.documentElement.classList.add('scrollable-page');
+    document.body.classList.add('scrollable-page');
 
     return () => {
-      document.documentElement.classList.remove('auth-scroll-page');
-      document.body.classList.remove('auth-scroll-page');
+      document.documentElement.classList.remove('scrollable-page');
+      document.body.classList.remove('scrollable-page');
     };
   }, []);
 

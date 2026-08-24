@@ -1,16 +1,15 @@
-import { Prisma } from "@prisma/client";
 import { prisma } from "../lib/prisma.js";
 
-interface AuditInput {
+interface LogAuditInput {
   actorUserId?: string | null;
   targetUserId?: string | null;
   action: string;
   entityType: string;
   entityId?: string | null;
-  details?: Prisma.InputJsonValue;
+  details?: unknown;
 }
 
-export async function logAudit(input: AuditInput) {
+export async function logAudit(input: LogAuditInput) {
   await prisma.auditLog.create({
     data: {
       actorUserId: input.actorUserId ?? null,
@@ -18,7 +17,7 @@ export async function logAudit(input: AuditInput) {
       action: input.action,
       entityType: input.entityType,
       entityId: input.entityId ?? null,
-      details: input.details ?? {},
+      details: (input.details ?? {}) as any,
     },
   });
 }

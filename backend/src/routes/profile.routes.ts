@@ -1,164 +1,114 @@
-import fs from "node:fs";
-import path from "node:path";
 import { Router } from "express";
-import { Prisma, UserRole } from "@prisma/client";
-import multer from "multer";
 import { z } from "zod";
-import { env } from "../config/env.js";
 import { prisma } from "../lib/prisma.js";
-import { requireAuth, type AuthenticatedRequest } from "../middleware/auth.js";
+import { requireAuth } from "../middleware/auth.js";
 import { asyncHandler } from "../utils/async-handler.js";
+import { HttpError } from "../middleware/error-handler.js";
 import { serializeProfile } from "../utils/serializers.js";
+import { avatarUpload, deleteUploadedFileSafe } from "../lib/upload.js";
 
-const router = Router();
+export const profileRouter = Router();
 
-fs.mkdirSync(env.UPLOAD_DIR, { recursive: true });
+profileRouter.use(requireAuth);
 
-const imageExtensions: Record<string, string> = {
-  "image/jpeg": ".jpg",
-  "image/png": ".png",
-  "image/webp": ".webp",
-  "image/gif": ".gif",
-};
+profileRouter.get(
+  "/me",
+  asyncHandler(async (req, res) => {
+    const [profile, trainerApplication] = await Promise.all([
+      prisma.profile.findUnique({ where: { userId: req.auth!.userId } }),
+      prisma.trainerApplication.findUnique({ where: { userId: req.auth!.userId } }),
+    ]);
 
-const allowedImageTypes = new Set(Object.keys(imageExtensions));
-
-const storage = multer.diskStorage({
-  destination: (_req, _file, callback) => callback(null, env.UPLOAD_DIR),
-  filename: (req: AuthenticatedRequest, file, callback) => {
-    const ext = (imageExtensions[file.mimetype] ?? path.extname(file.originalname)) || ".jpg";
-    callback(null, `${req.auth!.userId}-avatar${ext}`);
-  },
-});
-
-const upload = multer({
-  storage,
-  limits: { fileSize: 5 * 1024 * 1024 },
-  fileFilter: (_req, file, callback) => {
-    if (!allowedImageTypes.has(file.mimetype)) {
-      callback(new Error("Tipo de arquivo nao permitido"));
-      return;
+    if (!profile) {
+      throw new HttpError(404, "Perfil nao encontrado");
     }
 
-    callback(null, true);
-  },
-});
-
-function normalizeOptionalPhone(value: unknown) {
-  if (typeof value !== "string") return value;
-
-  const digits = value.replace(/\D/g, "");
-  return digits || null;
-}
+    res.json({ profile: serializeProfile(profile, req.auth!.roles, trainerApplication) });
+  }),
+);
 
 const updateSchema = z.object({
-  full_name: z.string().min(3).optional(),
-  phone: z.preprocess(
-    normalizeOptionalPhone,
-    z.string().regex(/^\d{10,11}$/, "Telefone deve ter 10 ou 11 numeros com DDD").optional().nullable(),
-  ),
+  full_name: z.string().min(1).optional(),
+  phone: z.string().nullable().optional(),
   age: z.coerce.number().int().positive().optional(),
   height_cm: z.coerce.number().int().positive().optional(),
   weight_kg: z.coerce.number().positive().optional(),
+  weight_goal_kg: z.coerce.number().positive().nullable().optional(),
   notification_preferences: z.record(z.boolean()).optional(),
 });
 
-router.get(
+profileRouter.patch(
   "/me",
-  requireAuth,
-  asyncHandler(async (req: AuthenticatedRequest, res) => {
-    const user = await prisma.user.findUnique({
-      where: { id: req.auth!.userId },
-      include: { profile: true, roles: true, trainerApplication: true },
-    });
+  asyncHandler(async (req, res) => {
+    const data = updateSchema.parse(req.body);
 
-    if (!user?.profile) {
-      return res.status(404).json({ message: "Perfil nao encontrado" });
+    const current = await prisma.profile.findUnique({ where: { userId: req.auth!.userId } });
+    if (!current) {
+      throw new HttpError(404, "Perfil nao encontrado");
     }
 
-    return res.json({
-      profile: serializeProfile(
-        user.profile,
-        user.email,
-        {
-          isAdmin: user.roles.some((role) => role.role === UserRole.ADMIN),
-          isPersonalTrainer: user.roles.some((role) => role.role === UserRole.PERSONAL_TRAINER),
-          trainerApplicationStatus: user.trainerApplication?.status ?? null,
-          trainerApplicationId: user.trainerApplication?.id ?? null,
-        },
-      ),
-    });
-  }),
-);
+    let phone = current.phone;
+    if (data.phone !== undefined) {
+      if (data.phone === null || data.phone === "") {
+        phone = null;
+      } else {
+        const digits = data.phone.replace(/\D/g, "");
+        if (digits.length < 10 || digits.length > 11) {
+          throw new HttpError(400, "Telefone invalido, informe DDD + numero");
+        }
+        phone = digits;
+      }
+    }
 
-router.patch(
-  "/me",
-  requireAuth,
-  asyncHandler(async (req: AuthenticatedRequest, res) => {
-    const data = updateSchema.parse(req.body);
-    const profile = await prisma.profile.update({
+    const notificationPreferences =
+      data.notification_preferences !== undefined
+        ? { ...((current.notificationPreferences as Record<string, boolean>) ?? {}), ...data.notification_preferences }
+        : undefined;
+
+    const updated = await prisma.profile.update({
       where: { userId: req.auth!.userId },
       data: {
         fullName: data.full_name,
-        phone: data.phone,
+        phone,
         age: data.age,
         heightCm: data.height_cm,
-        weightKg: data.weight_kg?.toString(),
-        notificationPreferences: data.notification_preferences as Prisma.InputJsonValue | undefined,
+        weightKg: data.weight_kg,
+        weightGoalKg: data.weight_goal_kg,
+        notificationPreferences,
       },
     });
 
-    return res.json({
-      profile: serializeProfile(profile, req.auth!.email, {
-        isAdmin: req.auth!.roles.includes(UserRole.ADMIN),
-        isPersonalTrainer: req.auth!.roles.includes(UserRole.PERSONAL_TRAINER),
-      }),
-    });
+    const trainerApplication = await prisma.trainerApplication.findUnique({ where: { userId: req.auth!.userId } });
+
+    res.json({ profile: serializeProfile(updated, req.auth!.roles, trainerApplication) });
   }),
 );
 
-router.post(
+profileRouter.post(
   "/avatar",
-  requireAuth,
-  upload.single("avatar"),
-  asyncHandler(async (req: AuthenticatedRequest, res) => {
+  avatarUpload.single("avatar"),
+  asyncHandler(async (req, res) => {
     if (!req.file) {
-      return res.status(400).json({ message: "Arquivo nao enviado" });
+      throw new HttpError(400, "Nenhum arquivo enviado");
     }
 
-    const avatarUrl = `/uploads/${req.file.filename}`;
-    const currentProfile = await prisma.profile.findUnique({
+    const current = await prisma.profile.findUnique({ where: { userId: req.auth!.userId } });
+    if (!current) {
+      throw new HttpError(404, "Perfil nao encontrado");
+    }
+
+    const newUrl = `/uploads/${req.file.filename}`;
+    if (current.avatarUrl && current.avatarUrl !== newUrl) {
+      deleteUploadedFileSafe(current.avatarUrl);
+    }
+
+    const updated = await prisma.profile.update({
       where: { userId: req.auth!.userId },
-      select: { avatarUrl: true },
+      data: { avatarUrl: newUrl },
     });
-    const previousAvatarPath = currentProfile?.avatarUrl
-      ? path.resolve(env.UPLOAD_DIR, path.basename(currentProfile.avatarUrl))
-      : null;
 
-    const profile = await prisma.profile
-      .update({
-        where: { userId: req.auth!.userId },
-        data: { avatarUrl },
-      })
-      .catch((error: unknown) => {
-        if (previousAvatarPath !== req.file?.path && fs.existsSync(req.file!.path)) {
-          fs.unlinkSync(req.file!.path);
-        }
+    const trainerApplication = await prisma.trainerApplication.findUnique({ where: { userId: req.auth!.userId } });
 
-        throw error;
-      });
-
-    if (previousAvatarPath && previousAvatarPath !== req.file.path && fs.existsSync(previousAvatarPath)) {
-      fs.unlinkSync(previousAvatarPath);
-    }
-
-    return res.json({
-      profile: serializeProfile(profile, req.auth!.email, {
-        isAdmin: req.auth!.roles.includes(UserRole.ADMIN),
-        isPersonalTrainer: req.auth!.roles.includes(UserRole.PERSONAL_TRAINER),
-      }),
-    });
+    res.json({ profile: serializeProfile(updated, req.auth!.roles, trainerApplication) });
   }),
 );
-
-export { router as profileRouter };

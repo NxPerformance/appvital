@@ -147,6 +147,7 @@ model Profile {
   age       Int
   heightCm  Int
   weightKg  Decimal   @db.Decimal(10, 2)
+  weightGoalKg Decimal? @db.Decimal(10, 2)
   isPremium Boolean   @default(false)
   accountType String   @default("client")
   selectedPlan String?
@@ -268,7 +269,11 @@ model BioimpedanceRecord {
   date                   DateTime
   weightKg               Decimal? @db.Decimal(10, 2)
   bodyFatPercent         Decimal? @db.Decimal(10, 2)
+  bodyFatStandardLow     Decimal? @db.Decimal(10, 2)
+  bodyFatStandardHigh    Decimal? @db.Decimal(10, 2)
   musclePercent          Decimal? @db.Decimal(10, 2)
+  muscleStandardLow      Decimal? @db.Decimal(10, 2)
+  muscleStandardHigh     Decimal? @db.Decimal(10, 2)
   waterPercent           Decimal? @db.Decimal(10, 2)
   visceralFat            Decimal? @db.Decimal(10, 2)
   subcutaneousFatPercent Decimal? @db.Decimal(10, 2)
@@ -285,17 +290,55 @@ model BioimpedanceRecord {
   fatControlTip          Decimal? @db.Decimal(10, 2)
   muscleControlTip       Decimal? @db.Decimal(10, 2)
   dailyCalories          Int?
+  // Metas de exercício (kcal)
+  aerobicCaloriesKcal    Int?
+  enduranceCaloriesKcal  Int?
+  anaerobicCaloriesKcal  Int?
   waistCm                Decimal? @db.Decimal(10, 2)
   hipCm                  Decimal? @db.Decimal(10, 2)
   armCm                  Decimal? @db.Decimal(10, 2)
   thighCm                Decimal? @db.Decimal(10, 2)
+  // Medidas corporais estendidas (cm)
+  headLengthCm           Decimal? @db.Decimal(10, 2)
+  upperBodyLengthCm      Decimal? @db.Decimal(10, 2)
+  lowerBodyLengthCm      Decimal? @db.Decimal(10, 2)
+  calfLengthCm           Decimal? @db.Decimal(10, 2)
+  thighLengthCm          Decimal? @db.Decimal(10, 2)
+  armSpanCm              Decimal? @db.Decimal(10, 2)
+  shoulderWidthCm        Decimal? @db.Decimal(10, 2)
+  shoulderEarDistanceCm  Decimal? @db.Decimal(10, 2)
+  footLengthCm           Decimal? @db.Decimal(10, 2)
+  // Análise segmentada - músculo/gordura por região (kg)
+  muscleLeftArmKg        Decimal? @db.Decimal(10, 2)
+  muscleRightArmKg       Decimal? @db.Decimal(10, 2)
+  fatLeftArmKg           Decimal? @db.Decimal(10, 2)
+  fatRightArmKg          Decimal? @db.Decimal(10, 2)
+  muscleTrunkKg          Decimal? @db.Decimal(10, 2)
+  fatTrunkKg             Decimal? @db.Decimal(10, 2)
+  muscleLeftLegKg        Decimal? @db.Decimal(10, 2)
+  muscleRightLegKg       Decimal? @db.Decimal(10, 2)
+  fatLeftLegKg           Decimal? @db.Decimal(10, 2)
+  fatRightLegKg          Decimal? @db.Decimal(10, 2)
   shoulderImbalanceCm    Decimal? @db.Decimal(10, 2)
   spineCurvatureCm       Decimal? @db.Decimal(10, 2)
   headTiltDegrees        Decimal? @db.Decimal(10, 2)
   trunkCurvatureDegrees  Decimal? @db.Decimal(10, 2)
   pelvisTiltDegrees      Decimal? @db.Decimal(10, 2)
   headForwardDegrees     Decimal? @db.Decimal(10, 2)
+  // Classificação de risco postural (nível 1-5, importado automaticamente da Anovator)
+  shoulderRiskLevel      Int?
+  humpbackRiskLevel      Int?
+  legRiskType            String?
+  pelvisRiskLevel        Int?
+  spineRiskLevel         Int?
+  headRiskLevel          Int?
+  kneeRiskLevel          Int?
+  frontHeadRiskLevel     Int?
+  bodyShapeRiskLevel     Int?
+  postureRiskLevel       Int?
   notes                  String?
+  sourcePdfUrl           String?
+  anovatorExamId         String?
   createdAt              DateTime @default(now())
   updatedAt              DateTime @updatedAt
   user                   User     @relation(fields: [userId], references: [id], onDelete: Cascade)

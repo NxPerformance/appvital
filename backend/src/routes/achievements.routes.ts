@@ -1,34 +1,28 @@
 import { Router } from "express";
 import { prisma } from "../lib/prisma.js";
-import { requireAuth, type AuthenticatedRequest } from "../middleware/auth.js";
+import { requireAuth } from "../middleware/auth.js";
 import { asyncHandler } from "../utils/async-handler.js";
 
-const router = Router();
+export const achievementsRouter = Router();
 
-router.get(
+achievementsRouter.use(requireAuth);
+
+achievementsRouter.get(
   "/catalog",
-  requireAuth,
   asyncHandler(async (_req, res) => {
-    const achievements = await prisma.achievement.findMany({
-      orderBy: { sortOrder: "asc" },
-    });
-
-    return res.json({ achievements });
+    const achievements = await prisma.achievement.findMany({ orderBy: { sortOrder: "asc" } });
+    res.json({ achievements });
   }),
 );
 
-router.get(
+achievementsRouter.get(
   "/me",
-  requireAuth,
-  asyncHandler(async (req: AuthenticatedRequest, res) => {
+  asyncHandler(async (req, res) => {
     const achievements = await prisma.userAchievement.findMany({
       where: { userId: req.auth!.userId },
       include: { achievement: true },
       orderBy: { unlockedAt: "asc" },
     });
-
-    return res.json({ achievements });
+    res.json({ achievements });
   }),
 );
-
-export { router as achievementsRouter };

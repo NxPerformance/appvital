@@ -20,9 +20,14 @@ export function MetricRow({
   isLowerBetter = false,
   showDifference = true,
 }: MetricRowProps) {
-  const displayValue = value !== null && value !== undefined
-    ? `${value}${unit}`
-    : '--';
+  // Arredonda pra 1 casa decimal, igual ao laudo em PDF da Anovator - o valor
+  // bruto que a API devolve tem mais casas, o que gerava divergência visual
+  // com o PDF (ex: 0.19 aqui vs 0.2 no laudo, mesmo dado).
+  const displayValue = typeof value === 'number'
+    ? `${value.toFixed(1)}${unit}`
+    : value !== null && value !== undefined
+      ? `${value}${unit}`
+      : '--';
 
   const difference = 
     showDifference && 

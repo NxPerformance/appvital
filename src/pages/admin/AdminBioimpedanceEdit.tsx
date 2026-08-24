@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Save, Trash2, Loader2 } from 'lucide-react';
+import { ArrowLeft, Save, Trash2, Loader2, FileText, ExternalLink } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,13 +10,18 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useBioimpedanceRecord, useUpdateBioimpedance, useDeleteBioimpedance } from '@/hooks/useAdmin';
 import { parseLocaleInteger, parseLocaleNumber } from '@/lib/inputValidation';
+import { resolveUploadUrl } from '@/lib/api';
 import { toast } from '@/hooks/use-toast';
 
 interface FormData {
   date: string;
   weight_kg: string;
   body_fat_percent: string;
+  body_fat_standard_low: string;
+  body_fat_standard_high: string;
   muscle_percent: string;
+  muscle_standard_low: string;
+  muscle_standard_high: string;
   water_percent: string;
   visceral_fat: string;
   subcutaneous_fat_percent: string;
@@ -37,12 +42,44 @@ interface FormData {
   hip_cm: string;
   arm_cm: string;
   thigh_cm: string;
+  head_length_cm: string;
+  upper_body_length_cm: string;
+  lower_body_length_cm: string;
+  calf_length_cm: string;
+  thigh_length_cm: string;
+  arm_span_cm: string;
+  shoulder_width_cm: string;
+  shoulder_ear_distance_cm: string;
+  foot_length_cm: string;
+  muscle_left_arm_kg: string;
+  muscle_right_arm_kg: string;
+  fat_left_arm_kg: string;
+  fat_right_arm_kg: string;
+  muscle_trunk_kg: string;
+  fat_trunk_kg: string;
+  muscle_left_leg_kg: string;
+  muscle_right_leg_kg: string;
+  fat_left_leg_kg: string;
+  fat_right_leg_kg: string;
+  aerobic_calories_kcal: string;
+  endurance_calories_kcal: string;
+  anaerobic_calories_kcal: string;
   shoulder_imbalance_cm: string;
   spine_curvature_cm: string;
   head_tilt_degrees: string;
   trunk_curvature_degrees: string;
   pelvis_tilt_degrees: string;
   head_forward_degrees: string;
+  shoulder_risk_level: string;
+  humpback_risk_level: string;
+  leg_risk_type: string;
+  pelvis_risk_level: string;
+  spine_risk_level: string;
+  head_risk_level: string;
+  knee_risk_level: string;
+  front_head_risk_level: string;
+  body_shape_risk_level: string;
+  posture_risk_level: string;
   notes: string;
 }
 
@@ -53,11 +90,16 @@ export default function AdminBioimpedanceEdit() {
   const updateMutation = useUpdateBioimpedance();
   const deleteMutation = useDeleteBioimpedance();
 
+  const [reportFile, setReportFile] = useState<File | null>(null);
   const [formData, setFormData] = useState<FormData>({
     date: '',
     weight_kg: '',
     body_fat_percent: '',
+    body_fat_standard_low: '',
+    body_fat_standard_high: '',
     muscle_percent: '',
+    muscle_standard_low: '',
+    muscle_standard_high: '',
     water_percent: '',
     visceral_fat: '',
     subcutaneous_fat_percent: '',
@@ -78,12 +120,44 @@ export default function AdminBioimpedanceEdit() {
     hip_cm: '',
     arm_cm: '',
     thigh_cm: '',
+    head_length_cm: '',
+    upper_body_length_cm: '',
+    lower_body_length_cm: '',
+    calf_length_cm: '',
+    thigh_length_cm: '',
+    arm_span_cm: '',
+    shoulder_width_cm: '',
+    shoulder_ear_distance_cm: '',
+    foot_length_cm: '',
+    muscle_left_arm_kg: '',
+    muscle_right_arm_kg: '',
+    fat_left_arm_kg: '',
+    fat_right_arm_kg: '',
+    muscle_trunk_kg: '',
+    fat_trunk_kg: '',
+    muscle_left_leg_kg: '',
+    muscle_right_leg_kg: '',
+    fat_left_leg_kg: '',
+    fat_right_leg_kg: '',
+    aerobic_calories_kcal: '',
+    endurance_calories_kcal: '',
+    anaerobic_calories_kcal: '',
     shoulder_imbalance_cm: '',
     spine_curvature_cm: '',
     head_tilt_degrees: '',
     trunk_curvature_degrees: '',
     pelvis_tilt_degrees: '',
     head_forward_degrees: '',
+    shoulder_risk_level: '',
+    humpback_risk_level: '',
+    leg_risk_type: '',
+    pelvis_risk_level: '',
+    spine_risk_level: '',
+    head_risk_level: '',
+    knee_risk_level: '',
+    front_head_risk_level: '',
+    body_shape_risk_level: '',
+    posture_risk_level: '',
     notes: '',
   });
 
@@ -93,7 +167,11 @@ export default function AdminBioimpedanceEdit() {
         date: record.date || '',
         weight_kg: record.weight_kg?.toString() || '',
         body_fat_percent: record.body_fat_percent?.toString() || '',
+        body_fat_standard_low: record.body_fat_standard_low?.toString() || '',
+        body_fat_standard_high: record.body_fat_standard_high?.toString() || '',
         muscle_percent: record.muscle_percent?.toString() || '',
+        muscle_standard_low: record.muscle_standard_low?.toString() || '',
+        muscle_standard_high: record.muscle_standard_high?.toString() || '',
         water_percent: record.water_percent?.toString() || '',
         visceral_fat: record.visceral_fat?.toString() || '',
         subcutaneous_fat_percent: record.subcutaneous_fat_percent?.toString() || '',
@@ -114,12 +192,44 @@ export default function AdminBioimpedanceEdit() {
         hip_cm: record.hip_cm?.toString() || '',
         arm_cm: record.arm_cm?.toString() || '',
         thigh_cm: record.thigh_cm?.toString() || '',
+        head_length_cm: record.head_length_cm?.toString() || '',
+        upper_body_length_cm: record.upper_body_length_cm?.toString() || '',
+        lower_body_length_cm: record.lower_body_length_cm?.toString() || '',
+        calf_length_cm: record.calf_length_cm?.toString() || '',
+        thigh_length_cm: record.thigh_length_cm?.toString() || '',
+        arm_span_cm: record.arm_span_cm?.toString() || '',
+        shoulder_width_cm: record.shoulder_width_cm?.toString() || '',
+        shoulder_ear_distance_cm: record.shoulder_ear_distance_cm?.toString() || '',
+        foot_length_cm: record.foot_length_cm?.toString() || '',
+        muscle_left_arm_kg: record.muscle_left_arm_kg?.toString() || '',
+        muscle_right_arm_kg: record.muscle_right_arm_kg?.toString() || '',
+        fat_left_arm_kg: record.fat_left_arm_kg?.toString() || '',
+        fat_right_arm_kg: record.fat_right_arm_kg?.toString() || '',
+        muscle_trunk_kg: record.muscle_trunk_kg?.toString() || '',
+        fat_trunk_kg: record.fat_trunk_kg?.toString() || '',
+        muscle_left_leg_kg: record.muscle_left_leg_kg?.toString() || '',
+        muscle_right_leg_kg: record.muscle_right_leg_kg?.toString() || '',
+        fat_left_leg_kg: record.fat_left_leg_kg?.toString() || '',
+        fat_right_leg_kg: record.fat_right_leg_kg?.toString() || '',
+        aerobic_calories_kcal: record.aerobic_calories_kcal?.toString() || '',
+        endurance_calories_kcal: record.endurance_calories_kcal?.toString() || '',
+        anaerobic_calories_kcal: record.anaerobic_calories_kcal?.toString() || '',
         shoulder_imbalance_cm: record.shoulder_imbalance_cm?.toString() || '',
         spine_curvature_cm: record.spine_curvature_cm?.toString() || '',
         head_tilt_degrees: record.head_tilt_degrees?.toString() || '',
         trunk_curvature_degrees: record.trunk_curvature_degrees?.toString() || '',
         pelvis_tilt_degrees: record.pelvis_tilt_degrees?.toString() || '',
         head_forward_degrees: record.head_forward_degrees?.toString() || '',
+        shoulder_risk_level: record.shoulder_risk_level?.toString() || '',
+        humpback_risk_level: record.humpback_risk_level?.toString() || '',
+        leg_risk_type: record.leg_risk_type || '',
+        pelvis_risk_level: record.pelvis_risk_level?.toString() || '',
+        spine_risk_level: record.spine_risk_level?.toString() || '',
+        head_risk_level: record.head_risk_level?.toString() || '',
+        knee_risk_level: record.knee_risk_level?.toString() || '',
+        front_head_risk_level: record.front_head_risk_level?.toString() || '',
+        body_shape_risk_level: record.body_shape_risk_level?.toString() || '',
+        posture_risk_level: record.posture_risk_level?.toString() || '',
         notes: record.notes || '',
       });
     }
@@ -139,7 +249,11 @@ export default function AdminBioimpedanceEdit() {
       date: formData.date,
       weight_kg: parseLocaleNumber(formData.weight_kg),
       body_fat_percent: parseLocaleNumber(formData.body_fat_percent),
+      body_fat_standard_low: parseLocaleNumber(formData.body_fat_standard_low),
+      body_fat_standard_high: parseLocaleNumber(formData.body_fat_standard_high),
       muscle_percent: parseLocaleNumber(formData.muscle_percent),
+      muscle_standard_low: parseLocaleNumber(formData.muscle_standard_low),
+      muscle_standard_high: parseLocaleNumber(formData.muscle_standard_high),
       water_percent: parseLocaleNumber(formData.water_percent),
       visceral_fat: parseLocaleNumber(formData.visceral_fat),
       subcutaneous_fat_percent: parseLocaleNumber(formData.subcutaneous_fat_percent),
@@ -160,17 +274,49 @@ export default function AdminBioimpedanceEdit() {
       hip_cm: parseLocaleNumber(formData.hip_cm),
       arm_cm: parseLocaleNumber(formData.arm_cm),
       thigh_cm: parseLocaleNumber(formData.thigh_cm),
+      head_length_cm: parseLocaleNumber(formData.head_length_cm),
+      upper_body_length_cm: parseLocaleNumber(formData.upper_body_length_cm),
+      lower_body_length_cm: parseLocaleNumber(formData.lower_body_length_cm),
+      calf_length_cm: parseLocaleNumber(formData.calf_length_cm),
+      thigh_length_cm: parseLocaleNumber(formData.thigh_length_cm),
+      arm_span_cm: parseLocaleNumber(formData.arm_span_cm),
+      shoulder_width_cm: parseLocaleNumber(formData.shoulder_width_cm),
+      shoulder_ear_distance_cm: parseLocaleNumber(formData.shoulder_ear_distance_cm),
+      foot_length_cm: parseLocaleNumber(formData.foot_length_cm),
+      muscle_left_arm_kg: parseLocaleNumber(formData.muscle_left_arm_kg),
+      muscle_right_arm_kg: parseLocaleNumber(formData.muscle_right_arm_kg),
+      fat_left_arm_kg: parseLocaleNumber(formData.fat_left_arm_kg),
+      fat_right_arm_kg: parseLocaleNumber(formData.fat_right_arm_kg),
+      muscle_trunk_kg: parseLocaleNumber(formData.muscle_trunk_kg),
+      fat_trunk_kg: parseLocaleNumber(formData.fat_trunk_kg),
+      muscle_left_leg_kg: parseLocaleNumber(formData.muscle_left_leg_kg),
+      muscle_right_leg_kg: parseLocaleNumber(formData.muscle_right_leg_kg),
+      fat_left_leg_kg: parseLocaleNumber(formData.fat_left_leg_kg),
+      fat_right_leg_kg: parseLocaleNumber(formData.fat_right_leg_kg),
+      aerobic_calories_kcal: parseLocaleInteger(formData.aerobic_calories_kcal),
+      endurance_calories_kcal: parseLocaleInteger(formData.endurance_calories_kcal),
+      anaerobic_calories_kcal: parseLocaleInteger(formData.anaerobic_calories_kcal),
       shoulder_imbalance_cm: parseLocaleNumber(formData.shoulder_imbalance_cm),
       spine_curvature_cm: parseLocaleNumber(formData.spine_curvature_cm),
       head_tilt_degrees: parseLocaleNumber(formData.head_tilt_degrees),
       trunk_curvature_degrees: parseLocaleNumber(formData.trunk_curvature_degrees),
       pelvis_tilt_degrees: parseLocaleNumber(formData.pelvis_tilt_degrees),
       head_forward_degrees: parseLocaleNumber(formData.head_forward_degrees),
+      shoulder_risk_level: parseLocaleInteger(formData.shoulder_risk_level),
+      humpback_risk_level: parseLocaleInteger(formData.humpback_risk_level),
+      leg_risk_type: formData.leg_risk_type || null,
+      pelvis_risk_level: parseLocaleInteger(formData.pelvis_risk_level),
+      spine_risk_level: parseLocaleInteger(formData.spine_risk_level),
+      head_risk_level: parseLocaleInteger(formData.head_risk_level),
+      knee_risk_level: parseLocaleInteger(formData.knee_risk_level),
+      front_head_risk_level: parseLocaleInteger(formData.front_head_risk_level),
+      body_shape_risk_level: parseLocaleInteger(formData.body_shape_risk_level),
+      posture_risk_level: parseLocaleInteger(formData.posture_risk_level),
       notes: formData.notes || null,
     };
 
     try {
-      await updateMutation.mutateAsync(updates);
+      await updateMutation.mutateAsync({ ...updates, reportFile: reportFile ?? undefined });
       toast({ title: 'Sucesso', description: 'Exame atualizado com sucesso!' });
       navigate(-1);
     } catch (error) {
@@ -252,6 +398,34 @@ export default function AdminBioimpedanceEdit() {
             value={formData.date}
             onChange={(e) => handleChange('date', e.target.value)}
           />
+        </CardContent>
+      </Card>
+
+      {/* PDF Report */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Anexar laudo em PDF (opcional)</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {record.source_pdf_url ? (
+            <a
+              href={resolveUploadUrl(record.source_pdf_url) ?? undefined}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+              Ver laudo em PDF
+            </a>
+          ) : null}
+          <div className="flex items-center gap-2">
+            <FileText className="w-4 h-4 text-muted-foreground" />
+            <Input
+              type="file"
+              accept="application/pdf"
+              onChange={(e) => setReportFile(e.target.files?.[0] ?? null)}
+            />
+          </div>
         </CardContent>
       </Card>
 
@@ -355,6 +529,67 @@ export default function AdminBioimpedanceEdit() {
             <Label>Calorias Diárias</Label>
             <Input type="number" value={formData.daily_calories} onChange={(e) => handleChange('daily_calories', e.target.value)} />
           </div>
+          <div className="space-y-2">
+            <Label>Meta de Exercício Aeróbico (kcal)</Label>
+            <Input type="number" value={formData.aerobic_calories_kcal} onChange={(e) => handleChange('aerobic_calories_kcal', e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>Meta de Exercício de Resistência (kcal)</Label>
+            <Input type="number" value={formData.endurance_calories_kcal} onChange={(e) => handleChange('endurance_calories_kcal', e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>Meta de Exercício Anaeróbico (kcal)</Label>
+            <Input type="number" value={formData.anaerobic_calories_kcal} onChange={(e) => handleChange('anaerobic_calories_kcal', e.target.value)} />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Segmental Analysis */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Análise Segmentada</CardTitle>
+        </CardHeader>
+        <CardContent className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label>Músculo Braço Esquerdo (kg)</Label>
+            <Input type="number" step="0.1" value={formData.muscle_left_arm_kg} onChange={(e) => handleChange('muscle_left_arm_kg', e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>Músculo Braço Direito (kg)</Label>
+            <Input type="number" step="0.1" value={formData.muscle_right_arm_kg} onChange={(e) => handleChange('muscle_right_arm_kg', e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>Gordura Braço Esquerdo (kg)</Label>
+            <Input type="number" step="0.1" value={formData.fat_left_arm_kg} onChange={(e) => handleChange('fat_left_arm_kg', e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>Gordura Braço Direito (kg)</Label>
+            <Input type="number" step="0.1" value={formData.fat_right_arm_kg} onChange={(e) => handleChange('fat_right_arm_kg', e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>Músculo Tronco (kg)</Label>
+            <Input type="number" step="0.1" value={formData.muscle_trunk_kg} onChange={(e) => handleChange('muscle_trunk_kg', e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>Gordura Tronco (kg)</Label>
+            <Input type="number" step="0.1" value={formData.fat_trunk_kg} onChange={(e) => handleChange('fat_trunk_kg', e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>Músculo Perna Esquerda (kg)</Label>
+            <Input type="number" step="0.1" value={formData.muscle_left_leg_kg} onChange={(e) => handleChange('muscle_left_leg_kg', e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>Músculo Perna Direita (kg)</Label>
+            <Input type="number" step="0.1" value={formData.muscle_right_leg_kg} onChange={(e) => handleChange('muscle_right_leg_kg', e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>Gordura Perna Esquerda (kg)</Label>
+            <Input type="number" step="0.1" value={formData.fat_left_leg_kg} onChange={(e) => handleChange('fat_left_leg_kg', e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>Gordura Perna Direita (kg)</Label>
+            <Input type="number" step="0.1" value={formData.fat_right_leg_kg} onChange={(e) => handleChange('fat_right_leg_kg', e.target.value)} />
+          </div>
         </CardContent>
       </Card>
 
@@ -377,8 +612,44 @@ export default function AdminBioimpedanceEdit() {
             <Input type="number" step="0.1" value={formData.arm_cm} onChange={(e) => handleChange('arm_cm', e.target.value)} />
           </div>
           <div className="space-y-2">
-            <Label>Coxa (cm)</Label>
+            <Label>Coxa - Circunferência (cm)</Label>
             <Input type="number" step="0.1" value={formData.thigh_cm} onChange={(e) => handleChange('thigh_cm', e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>Comprimento da Cabeça (cm)</Label>
+            <Input type="number" step="0.1" value={formData.head_length_cm} onChange={(e) => handleChange('head_length_cm', e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>Comprimento do Tronco Superior (cm)</Label>
+            <Input type="number" step="0.1" value={formData.upper_body_length_cm} onChange={(e) => handleChange('upper_body_length_cm', e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>Comprimento do Tronco Inferior (cm)</Label>
+            <Input type="number" step="0.1" value={formData.lower_body_length_cm} onChange={(e) => handleChange('lower_body_length_cm', e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>Comprimento da Panturrilha (cm)</Label>
+            <Input type="number" step="0.1" value={formData.calf_length_cm} onChange={(e) => handleChange('calf_length_cm', e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>Comprimento da Coxa (cm)</Label>
+            <Input type="number" step="0.1" value={formData.thigh_length_cm} onChange={(e) => handleChange('thigh_length_cm', e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>Envergadura (cm)</Label>
+            <Input type="number" step="0.1" value={formData.arm_span_cm} onChange={(e) => handleChange('arm_span_cm', e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>Largura dos Ombros (cm)</Label>
+            <Input type="number" step="0.1" value={formData.shoulder_width_cm} onChange={(e) => handleChange('shoulder_width_cm', e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>Distância Ombro-Orelha (cm)</Label>
+            <Input type="number" step="0.1" value={formData.shoulder_ear_distance_cm} onChange={(e) => handleChange('shoulder_ear_distance_cm', e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>Comprimento do Pé (cm)</Label>
+            <Input type="number" step="0.1" value={formData.foot_length_cm} onChange={(e) => handleChange('foot_length_cm', e.target.value)} />
           </div>
         </CardContent>
       </Card>
@@ -413,6 +684,46 @@ export default function AdminBioimpedanceEdit() {
             <Label>Projeção Cabeça (°)</Label>
             <Input type="number" step="0.1" value={formData.head_forward_degrees} onChange={(e) => handleChange('head_forward_degrees', e.target.value)} />
           </div>
+          <div className="space-y-2">
+            <Label>Risco de Ombro (nível 1-5)</Label>
+            <Input type="number" value={formData.shoulder_risk_level} onChange={(e) => handleChange('shoulder_risk_level', e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>Risco de Cifose (nível 1-5)</Label>
+            <Input type="number" value={formData.humpback_risk_level} onChange={(e) => handleChange('humpback_risk_level', e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>Tipo/Risco de Perna (ex: O3)</Label>
+            <Input type="text" placeholder="ex: O3, X2" value={formData.leg_risk_type} onChange={(e) => handleChange('leg_risk_type', e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>Risco de Pelve (nível 1-5)</Label>
+            <Input type="number" value={formData.pelvis_risk_level} onChange={(e) => handleChange('pelvis_risk_level', e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>Risco de Escoliose (nível 1-5)</Label>
+            <Input type="number" value={formData.spine_risk_level} onChange={(e) => handleChange('spine_risk_level', e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>Risco de Inclinação de Cabeça (nível 1-5)</Label>
+            <Input type="number" value={formData.head_risk_level} onChange={(e) => handleChange('head_risk_level', e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>Risco de Joelho (nível 1-5)</Label>
+            <Input type="number" value={formData.knee_risk_level} onChange={(e) => handleChange('knee_risk_level', e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>Risco de Cabeça Projetada (nível 1-5)</Label>
+            <Input type="number" value={formData.front_head_risk_level} onChange={(e) => handleChange('front_head_risk_level', e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>Risco de Forma Corporal (nível 1-5)</Label>
+            <Input type="number" value={formData.body_shape_risk_level} onChange={(e) => handleChange('body_shape_risk_level', e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>Risco Postural Geral (nível 1-5)</Label>
+            <Input type="number" value={formData.posture_risk_level} onChange={(e) => handleChange('posture_risk_level', e.target.value)} />
+          </div>
         </CardContent>
       </Card>
 
@@ -431,14 +742,20 @@ export default function AdminBioimpedanceEdit() {
         </CardContent>
       </Card>
 
-      <Button type="submit" className="w-full" disabled={updateMutation.isPending}>
-        {updateMutation.isPending ? (
-          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-        ) : (
-          <Save className="w-4 h-4 mr-2" />
-        )}
-        Salvar Alterações
-      </Button>
+      <div className="fixed inset-x-0 bottom-0 z-50 border-t border-white/10 bg-background/95 px-4 pb-[calc(env(safe-area-inset-bottom,0px)+1rem)] pt-3 backdrop-blur">
+        <Button
+          type="submit"
+          className="mx-auto flex w-full max-w-2xl"
+          disabled={updateMutation.isPending}
+        >
+          {updateMutation.isPending ? (
+            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+          ) : (
+            <Save className="w-4 h-4 mr-2" />
+          )}
+          Salvar Alterações
+        </Button>
+      </div>
     </form>
   );
 }

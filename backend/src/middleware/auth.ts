@@ -1,28 +1,35 @@
 import type { NextFunction, Request, Response } from "express";
-import { UserRole } from "@prisma/client";
+import { verifyJwt } from "../lib/jwt.js";
 import { prisma } from "../lib/prisma.js";
-import { verifyToken } from "../lib/jwt.js";
+import { HttpError } from "./error-handler.js";
+import type { UserRole } from "@prisma/client";
 
-export interface AuthenticatedRequest extends Request {
-  auth?: {
-    userId: string;
-    email: string;
-    roles: UserRole[];
-  };
-  file?: Express.Multer.File;
+export interface AuthContext {
+  userId: string;
+  email: string;
+  roles: string[];
 }
 
-export async function requireAuth(req: AuthenticatedRequest, res: Response, next: NextFunction) {
-  const header = req.headers.authorization;
-
-  if (!header?.startsWith("Bearer ")) {
-    return res.status(401).json({ message: "Token ausente" });
+declare global {
+  // eslint-disable-next-line @typescript-eslint/no-namespace
+  namespace Express {
+    interface Request {
+      auth?: AuthContext;
+    }
   }
+}
 
+export async function requireAuth(req: Request, res: Response, next: NextFunction) {
   try {
-    const token = header.replace("Bearer ", "");
-    const payload = verifyToken(token);
-    const roles = await prisma.userRoleAssignment.findMany({
+    const header = req.headers.authorization;
+    if (!header || !header.startsWith("Bearer ")) {
+      throw new HttpError(401, "Nao autenticado");
+    }
+
+    const token = header.slice("Bearer ".length);
+    const payload = verifyJwt(token);
+
+    const assignments = await prisma.userRoleAssignment.findMany({
       where: { userId: payload.sub },
       select: { role: true },
     });
@@ -30,29 +37,29 @@ export async function requireAuth(req: AuthenticatedRequest, res: Response, next
     req.auth = {
       userId: payload.sub,
       email: payload.email,
-      roles: roles.map((entry) => entry.role),
+      roles: assignments.map((assignment) => assignment.role),
     };
 
-    return next();
+    next();
   } catch {
-    return res.status(401).json({ message: "Token invalido" });
+    res.status(401).json({ message: "Nao autenticado" });
   }
 }
 
-export function requireAdmin(req: AuthenticatedRequest, res: Response, next: NextFunction) {
-  if (!req.auth?.roles.includes(UserRole.ADMIN)) {
-    return res.status(403).json({ message: "Acesso restrito a administradores" });
+export function requireAdmin(req: Request, res: Response, next: NextFunction) {
+  if (!req.auth?.roles.includes("ADMIN")) {
+    res.status(403).json({ message: "Acesso restrito a administradores" });
+    return;
   }
-
-  return next();
+  next();
 }
 
-export function requireRole(role: UserRole, message?: string) {
-  return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+export function requireRole(role: UserRole, message = "Acesso restrito") {
+  return (req: Request, res: Response, next: NextFunction) => {
     if (!req.auth?.roles.includes(role)) {
-      return res.status(403).json({ message: message ?? "Acesso restrito" });
+      res.status(403).json({ message });
+      return;
     }
-
-    return next();
+    next();
   };
 }

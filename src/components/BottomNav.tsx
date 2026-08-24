@@ -1,10 +1,10 @@
 import { NavLink } from 'react-router-dom';
-import { Dumbbell, HeartPulse, Home, TrendingUp, User } from 'lucide-react';
+import { HeartPulse, Home, Syringe, TrendingUp, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const baseNavItems = [
   { to: '/', icon: Home, label: 'Início' },
-  { to: '/workouts', icon: Dumbbell, label: 'Treinos' },
+  { to: '/injectables', icon: Syringe, label: 'Injetáveis' },
   { to: '/body-progress', icon: TrendingUp, label: 'Evolução' },
   { to: '/appointments', icon: HeartPulse, label: 'Saúde' },
   { to: '/profile', icon: User, label: 'Perfil' },

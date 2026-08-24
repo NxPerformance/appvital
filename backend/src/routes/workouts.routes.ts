@@ -1,281 +1,213 @@
 import { Router } from "express";
-import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
-import { requireAuth, type AuthenticatedRequest } from "../middleware/auth.js";
+import { requireAuth } from "../middleware/auth.js";
 import { asyncHandler } from "../utils/async-handler.js";
+import { HttpError } from "../middleware/error-handler.js";
 import { getRouteParam } from "../utils/params.js";
 
-const router = Router();
+export const workoutsRouter = Router();
 
-const workoutSchema = z.object({
-  date: z.string().optional(),
-  objective: z.string().min(1),
-  duration_min: z.number().int().positive().nullable().optional(),
-  calories: z.number().int().positive().nullable().optional(),
-  workout_type: z.string().default("academia"),
-  exercises: z.array(z.record(z.unknown())),
-});
+workoutsRouter.use(requireAuth);
 
-const cardioSchema = z.object({
-  date: z.string().optional(),
-  workout_type: z.string().min(1),
-  duration_min: z.number().nullable().optional(),
-  distance_km: z.number().nullable().optional(),
-  calories: z.number().int().nullable().optional(),
-  avg_pace: z.string().nullable().optional(),
-  avg_speed: z.number().nullable().optional(),
-  notes: z.string().nullable().optional(),
-});
+async function grantFirstWorkoutAchievementIfNeeded(userId: string) {
+  try {
+    const [strengthCount, cardioCount] = await Promise.all([
+      prisma.workout.count({ where: { userId } }),
+      prisma.cardioWorkout.count({ where: { userId } }),
+    ]);
 
-function toJsonValue(value: unknown): Prisma.InputJsonValue {
-  return value as Prisma.InputJsonValue;
-}
+    if (strengthCount + cardioCount !== 1) return;
 
-async function awardAchievementByName(userId: string, name: string) {
-  const achievement = await prisma.achievement.findFirst({
-    where: { name: { equals: name, mode: "insensitive" } },
-    select: { id: true },
-  });
+    const achievement = await prisma.achievement.findUnique({ where: { name: "Primeiro Treino" } });
+    if (!achievement) return;
 
-  if (!achievement) return;
-
-  await prisma.userAchievement.upsert({
-    where: {
-      userId_achievementId: {
-        userId,
-        achievementId: achievement.id,
-      },
-    },
-    update: {},
-    create: {
-      userId,
-      achievementId: achievement.id,
-    },
-  });
-}
-
-async function awardFirstWorkoutAchievementIfNeeded(userId: string) {
-  const [strengthCount, cardioCount] = await Promise.all([
-    prisma.workout.count({ where: { userId } }),
-    prisma.cardioWorkout.count({ where: { userId } }),
-  ]);
-
-  if (strengthCount + cardioCount === 1) {
-    await awardAchievementByName(userId, "Primeiro Treino");
+    await prisma.userAchievement.upsert({
+      where: { userId_achievementId: { userId, achievementId: achievement.id } },
+      create: { userId, achievementId: achievement.id },
+      update: {},
+    });
+  } catch (err) {
+    console.error("Falha ao conceder conquista 'Primeiro Treino':", err);
   }
 }
 
-router.get(
+const strengthCreateSchema = z.object({
+  date: z.coerce.date().optional(),
+  objective: z.string().min(1),
+  duration_min: z.coerce.number().int().nullable().optional(),
+  calories: z.coerce.number().int().nullable().optional(),
+  workout_type: z.string().optional(),
+  exercises: z.array(z.record(z.any())),
+});
+
+workoutsRouter.get(
   "/strength",
-  requireAuth,
-  asyncHandler(async (req: AuthenticatedRequest, res) => {
+  asyncHandler(async (req, res) => {
     const workouts = await prisma.workout.findMany({
       where: { userId: req.auth!.userId },
       orderBy: { date: "desc" },
     });
-
-    return res.json({ workouts });
+    res.json({ workouts });
   }),
 );
 
-router.post(
+workoutsRouter.post(
   "/strength",
-  requireAuth,
-  asyncHandler(async (req: AuthenticatedRequest, res) => {
-    const startedAt = Date.now();
-    const data = workoutSchema.parse(req.body);
+  asyncHandler(async (req, res) => {
+    const data = strengthCreateSchema.parse(req.body);
+
     const workout = await prisma.workout.create({
       data: {
         userId: req.auth!.userId,
-        date: data.date ? new Date(data.date) : new Date(),
+        date: data.date ?? new Date(),
         objective: data.objective,
         durationMin: data.duration_min ?? null,
         calories: data.calories ?? null,
-        workoutType: data.workout_type,
-        exercises: toJsonValue(data.exercises),
+        workoutType: data.workout_type ?? "academia",
+        exercises: data.exercises,
       },
     });
 
-    const response = res.status(201).json({ workout });
+    setImmediate(() => {
+      void grantFirstWorkoutAchievementIfNeeded(req.auth!.userId);
+    });
 
-    console.info(`[workouts] strength saved id=${workout.id} in ${Date.now() - startedAt}ms`);
-    setImmediate(() => void awardFirstWorkoutAchievementIfNeeded(req.auth!.userId).catch((error) => {
-      console.error("[workouts] failed to award first workout achievement", error);
-    }));
-
-    return response;
+    res.status(201).json({ workout });
   }),
 );
 
-router.patch(
+const strengthUpdateSchema = strengthCreateSchema.partial();
+
+workoutsRouter.patch(
   "/strength/:id",
-  requireAuth,
-  asyncHandler(async (req: AuthenticatedRequest, res) => {
-    const workoutId = getRouteParam(req.params.id, "id");
-    const data = workoutSchema.parse(req.body);
-    const existing = await prisma.workout.findUnique({
-      where: { id: workoutId },
-    });
+  asyncHandler(async (req, res) => {
+    const id = getRouteParam(req.params.id, "id");
+    const data = strengthUpdateSchema.parse(req.body);
 
-    if (!existing) {
-      return res.status(404).json({ message: 'Treino nao encontrado' });
-    }
-
-    if (existing.userId !== req.auth!.userId) {
-      return res.status(403).json({ message: 'Sem permissao para editar este treino' });
-    }
+    const existing = await prisma.workout.findUnique({ where: { id } });
+    if (!existing) throw new HttpError(404, "Treino nao encontrado");
+    if (existing.userId !== req.auth!.userId) throw new HttpError(403, "Acesso negado");
 
     const workout = await prisma.workout.update({
-      where: { id: workoutId },
+      where: { id },
       data: {
-        date: data.date ? new Date(data.date) : existing.date,
+        date: data.date,
         objective: data.objective,
-        durationMin: data.duration_min ?? null,
-        calories: data.calories ?? null,
+        durationMin: data.duration_min,
+        calories: data.calories,
         workoutType: data.workout_type,
-        exercises: toJsonValue(data.exercises),
+        exercises: data.exercises,
       },
     });
 
-    return res.json({ workout });
+    res.json({ workout });
   }),
 );
 
-router.delete(
+workoutsRouter.delete(
   "/strength/:id",
-  requireAuth,
-  asyncHandler(async (req: AuthenticatedRequest, res) => {
-    const workoutId = getRouteParam(req.params.id, "id");
-    const workout = await prisma.workout.findUnique({
-      where: { id: workoutId },
-    });
+  asyncHandler(async (req, res) => {
+    const id = getRouteParam(req.params.id, "id");
 
-    if (!workout) {
-      return res.status(404).json({ message: 'Treino nao encontrado' });
-    }
+    const existing = await prisma.workout.findUnique({ where: { id } });
+    if (!existing) throw new HttpError(404, "Treino nao encontrado");
+    if (existing.userId !== req.auth!.userId) throw new HttpError(403, "Acesso negado");
 
-    if (workout.userId !== req.auth!.userId) {
-      return res.status(403).json({ message: 'Sem permissao para excluir este treino' });
-    }
-
-    await prisma.workout.deleteMany({
-      where: {
-        id: workoutId,
-        userId: req.auth!.userId,
-      },
-    });
-
-    return res.status(204).send();
+    await prisma.workout.delete({ where: { id } });
+    res.status(204).send();
   }),
 );
 
-router.get(
+const cardioCreateSchema = z.object({
+  date: z.coerce.date().optional(),
+  workout_type: z.string().min(1),
+  duration_min: z.coerce.number().nullable().optional(),
+  distance_km: z.coerce.number().nullable().optional(),
+  calories: z.coerce.number().int().nullable().optional(),
+  avg_pace: z.string().nullable().optional(),
+  avg_speed: z.coerce.number().nullable().optional(),
+  notes: z.string().nullable().optional(),
+});
+
+workoutsRouter.get(
   "/cardio",
-  requireAuth,
-  asyncHandler(async (req: AuthenticatedRequest, res) => {
-    const cardioWorkouts = await prisma.cardioWorkout.findMany({
+  asyncHandler(async (req, res) => {
+    const workouts = await prisma.cardioWorkout.findMany({
       where: { userId: req.auth!.userId },
       orderBy: { date: "desc" },
     });
-
-    return res.json({ cardio_workouts: cardioWorkouts });
+    res.json({ workouts });
   }),
 );
 
-router.post(
+workoutsRouter.post(
   "/cardio",
-  requireAuth,
-  asyncHandler(async (req: AuthenticatedRequest, res) => {
-    const startedAt = Date.now();
-    const data = cardioSchema.parse(req.body);
-    const cardioWorkout = await prisma.cardioWorkout.create({
+  asyncHandler(async (req, res) => {
+    const data = cardioCreateSchema.parse(req.body);
+
+    const workout = await prisma.cardioWorkout.create({
       data: {
         userId: req.auth!.userId,
-        date: data.date ? new Date(data.date) : new Date(),
+        date: data.date ?? new Date(),
         workoutType: data.workout_type,
-        durationMin: data.duration_min?.toString(),
-        distanceKm: data.distance_km?.toString(),
+        durationMin: data.duration_min ?? null,
+        distanceKm: data.distance_km ?? null,
         calories: data.calories ?? null,
         avgPace: data.avg_pace ?? null,
-        avgSpeed: data.avg_speed?.toString(),
+        avgSpeed: data.avg_speed ?? null,
         notes: data.notes ?? null,
       },
     });
 
-    const response = res.status(201).json({ cardio_workout: cardioWorkout });
+    setImmediate(() => {
+      void grantFirstWorkoutAchievementIfNeeded(req.auth!.userId);
+    });
 
-    console.info(`[workouts] cardio saved id=${cardioWorkout.id} in ${Date.now() - startedAt}ms`);
-    setImmediate(() => void awardFirstWorkoutAchievementIfNeeded(req.auth!.userId).catch((error) => {
-      console.error("[workouts] failed to award first workout achievement", error);
-    }));
-
-    return response;
+    res.status(201).json({ workout });
   }),
 );
 
-router.patch(
+const cardioUpdateSchema = cardioCreateSchema.partial();
+
+workoutsRouter.patch(
   "/cardio/:id",
-  requireAuth,
-  asyncHandler(async (req: AuthenticatedRequest, res) => {
-    const cardioWorkoutId = getRouteParam(req.params.id, "id");
-    const data = cardioSchema.parse(req.body);
-    const existing = await prisma.cardioWorkout.findUnique({
-      where: { id: cardioWorkoutId },
-    });
+  asyncHandler(async (req, res) => {
+    const id = getRouteParam(req.params.id, "id");
+    const data = cardioUpdateSchema.parse(req.body);
 
-    if (!existing) {
-      return res.status(404).json({ message: 'Treino cardio nao encontrado' });
-    }
+    const existing = await prisma.cardioWorkout.findUnique({ where: { id } });
+    if (!existing) throw new HttpError(404, "Treino nao encontrado");
+    if (existing.userId !== req.auth!.userId) throw new HttpError(403, "Acesso negado");
 
-    if (existing.userId !== req.auth!.userId) {
-      return res.status(403).json({ message: 'Sem permissao para editar este treino cardio' });
-    }
-
-    const cardioWorkout = await prisma.cardioWorkout.update({
-      where: { id: cardioWorkoutId },
+    const workout = await prisma.cardioWorkout.update({
+      where: { id },
       data: {
-        date: data.date ? new Date(data.date) : existing.date,
+        date: data.date,
         workoutType: data.workout_type,
-        durationMin: data.duration_min?.toString() ?? null,
-        distanceKm: data.distance_km?.toString() ?? null,
-        calories: data.calories ?? null,
-        avgPace: data.avg_pace ?? null,
-        avgSpeed: data.avg_speed?.toString() ?? null,
-        notes: data.notes ?? null,
+        durationMin: data.duration_min,
+        distanceKm: data.distance_km,
+        calories: data.calories,
+        avgPace: data.avg_pace,
+        avgSpeed: data.avg_speed,
+        notes: data.notes,
       },
     });
 
-    return res.json({ cardio_workout: cardioWorkout });
+    res.json({ workout });
   }),
 );
 
-router.delete(
+workoutsRouter.delete(
   "/cardio/:id",
-  requireAuth,
-  asyncHandler(async (req: AuthenticatedRequest, res) => {
-    const cardioWorkoutId = getRouteParam(req.params.id, "id");
-    const cardioWorkout = await prisma.cardioWorkout.findUnique({
-      where: { id: cardioWorkoutId },
-    });
+  asyncHandler(async (req, res) => {
+    const id = getRouteParam(req.params.id, "id");
 
-    if (!cardioWorkout) {
-      return res.status(404).json({ message: 'Treino cardio nao encontrado' });
-    }
+    const existing = await prisma.cardioWorkout.findUnique({ where: { id } });
+    if (!existing) throw new HttpError(404, "Treino nao encontrado");
+    if (existing.userId !== req.auth!.userId) throw new HttpError(403, "Acesso negado");
 
-    if (cardioWorkout.userId !== req.auth!.userId) {
-      return res.status(403).json({ message: 'Sem permissao para excluir este treino cardio' });
-    }
-
-    await prisma.cardioWorkout.deleteMany({
-      where: {
-        id: cardioWorkoutId,
-        userId: req.auth!.userId,
-      },
-    });
-
-    return res.status(204).send();
+    await prisma.cardioWorkout.delete({ where: { id } });
+    res.status(204).send();
   }),
 );
-
-export { router as workoutsRouter };

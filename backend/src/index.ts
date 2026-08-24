@@ -1,8 +1,6 @@
-import { createApp } from "./app.js";
+import { app } from "./app.js";
 import { env } from "./config/env.js";
 
-const app = createApp();
-
 app.listen(env.PORT, () => {
-  console.log(`Vitalissy backend running on port ${env.PORT}`);
+  console.log(`Vitalissy backend rodando na porta ${env.PORT} (${env.NODE_ENV})`);
 });

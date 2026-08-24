@@ -1,60 +1,49 @@
-import { TrainerClientStatus, UserRole } from "@prisma/client";
 import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
-import { requireAuth, requireRole, type AuthenticatedRequest } from "../middleware/auth.js";
+import { requireAuth, requireRole } from "../middleware/auth.js";
 import { asyncHandler } from "../utils/async-handler.js";
+import { HttpError } from "../middleware/error-handler.js";
 import { getRouteParam } from "../utils/params.js";
-import { serializeProfile } from "../utils/serializers.js";
+import type { Profile, User, UserRoleAssignment } from "@prisma/client";
 
-const router = Router();
+export const trainerRouter = Router();
 
-const assignmentSchema = z.object({
-  client_id: z.string().uuid(),
-  notes: z.string().trim().max(500).nullable().optional(),
-});
+trainerRouter.use(requireAuth);
 
-const updateAssignmentSchema = z.object({
-  status: z.nativeEnum(TrainerClientStatus).optional(),
-  notes: z.string().trim().max(500).nullable().optional(),
-  goals: z.string().trim().max(2000).nullable().optional(),
-  training_plan: z.string().trim().max(4000).nullable().optional(),
-});
+function serializeTrainerProfile(user: User & { profile: Profile | null; roles: UserRoleAssignment[] }) {
+  if (!user.profile) return null;
+  const roles = user.roles.map((assignment) => assignment.role);
+  return {
+    id: user.id,
+    full_name: user.profile.fullName,
+    email: user.email,
+    phone: user.profile.phone,
+    age: user.profile.age,
+    height_cm: user.profile.heightCm,
+    weight_kg: Number(user.profile.weightKg),
+    is_premium: user.profile.isPremium,
+    entry_date: user.profile.entryDate,
+    avatar_url: user.profile.avatarUrl,
+    is_admin: roles.includes("ADMIN"),
+    is_personal_trainer: roles.includes("PERSONAL_TRAINER"),
+  };
+}
 
-const searchUsersSchema = z.object({
-  q: z.string().trim().min(2),
-});
-
-const createLogSchema = z.object({
-  title: z.string().trim().min(2).max(120),
-  content: z.string().trim().min(2).max(5000),
-});
-
-router.use(requireAuth);
-
-router.get(
+trainerRouter.get(
   "/my-assignment",
-  asyncHandler(async (req: AuthenticatedRequest, res) => {
+  asyncHandler(async (req, res) => {
     const assignment = await prisma.trainerClient.findFirst({
-      where: {
-        clientId: req.auth!.userId,
-        status: TrainerClientStatus.ACTIVE,
-      },
-      include: {
-        trainer: {
-          include: {
-            profile: true,
-          },
-        },
-      },
-      orderBy: { updatedAt: "desc" },
+      where: { clientId: req.auth!.userId, status: "ACTIVE" },
+      include: { trainer: { include: { profile: true } } },
     });
 
     if (!assignment) {
-      return res.json({ assignment: null });
+      res.json({ assignment: null });
+      return;
     }
 
-    return res.json({
+    res.json({
       assignment: {
         id: assignment.id,
         status: assignment.status.toLowerCase(),
@@ -65,7 +54,7 @@ router.get(
         updated_at: assignment.updatedAt,
         trainer: assignment.trainer.profile
           ? {
-              id: assignment.trainerId,
+              id: assignment.trainer.id,
               full_name: assignment.trainer.profile.fullName,
               avatar_url: assignment.trainer.profile.avatarUrl,
             }
@@ -75,62 +64,49 @@ router.get(
   }),
 );
 
-router.use(requireRole(UserRole.PERSONAL_TRAINER, "Acesso restrito a personal trainers"));
+trainerRouter.use(requireRole("PERSONAL_TRAINER", "Acesso restrito a personal trainers"));
 
-router.get(
+trainerRouter.get(
   "/search-users",
-  asyncHandler(async (req: AuthenticatedRequest, res) => {
-    const { q } = searchUsersSchema.parse(req.query);
+  asyncHandler(async (req, res) => {
+    const q = String(req.query.q ?? "").trim();
+    if (q.length < 2) {
+      res.json({ users: [] });
+      return;
+    }
 
     const users = await prisma.user.findMany({
       where: {
         id: { not: req.auth!.userId },
+        roles: { none: { role: { in: ["ADMIN", "PERSONAL_TRAINER"] } } },
         OR: [
           { email: { contains: q, mode: "insensitive" } },
           { profile: { fullName: { contains: q, mode: "insensitive" } } },
         ],
       },
-      include: {
-        profile: true,
-        roles: true,
-      },
+      include: { profile: true, roles: true },
       take: 10,
-      orderBy: { createdAt: "desc" },
     });
 
-    return res.json({
+    res.json({
       users: users
-        .filter((user) => user.profile)
-        .map((user) => ({
-          profile: serializeProfile(user.profile!, user.email, {
-            isAdmin: user.roles.some((role) => role.role === UserRole.ADMIN),
-            isPersonalTrainer: user.roles.some((role) => role.role === UserRole.PERSONAL_TRAINER),
-          }),
-        }))
-        .filter((item) => !item.profile.is_admin && !item.profile.is_personal_trainer),
+        .map((user) => ({ profile: serializeTrainerProfile(user) }))
+        .filter((item) => item.profile !== null),
     });
   }),
 );
 
-router.get(
+trainerRouter.get(
   "/clients",
-  asyncHandler(async (req: AuthenticatedRequest, res) => {
-    const assignments = await prisma.trainerClient.findMany({
+  asyncHandler(async (req, res) => {
+    const clients = await prisma.trainerClient.findMany({
       where: { trainerId: req.auth!.userId },
-      include: {
-        client: {
-          include: {
-            profile: true,
-            roles: true,
-          },
-        },
-      },
-      orderBy: [{ status: "asc" }, { createdAt: "desc" }],
+      include: { client: { include: { profile: true, roles: true } } },
+      orderBy: { createdAt: "desc" },
     });
 
-    return res.json({
-      clients: assignments
-        .filter((assignment) => assignment.client.profile)
+    res.json({
+      clients: clients
         .map((assignment) => ({
           id: assignment.id,
           status: assignment.status.toLowerCase(),
@@ -138,90 +114,62 @@ router.get(
           goals: assignment.goals,
           training_plan: assignment.trainingPlan,
           created_at: assignment.createdAt,
-          profile: serializeProfile(
-            assignment.client.profile!,
-            assignment.client.email,
-            {
-              isAdmin: assignment.client.roles.some((role) => role.role === UserRole.ADMIN),
-              isPersonalTrainer: assignment.client.roles.some((role) => role.role === UserRole.PERSONAL_TRAINER),
-            },
-          ),
-        })),
+          profile: serializeTrainerProfile(assignment.client),
+        }))
+        .filter((item) => item.profile !== null),
     });
   }),
 );
 
-router.post(
+const assignSchema = z.object({
+  client_id: z.string().uuid(),
+  notes: z.string().nullable().optional(),
+});
+
+trainerRouter.post(
   "/clients",
-  asyncHandler(async (req: AuthenticatedRequest, res) => {
-    const data = assignmentSchema.parse(req.body);
+  asyncHandler(async (req, res) => {
+    const { client_id, notes } = assignSchema.parse(req.body);
 
-    if (data.client_id === req.auth!.userId) {
-      return res.status(400).json({ message: "Voce nao pode se vincular como proprio cliente" });
-    }
-
-    const client = await prisma.user.findUnique({
-      where: { id: data.client_id },
-      include: {
-        profile: true,
-        roles: true,
-      },
-    });
-
-    if (!client?.profile) {
-      return res.status(404).json({ message: "Cliente nao encontrado" });
+    if (client_id === req.auth!.userId) {
+      throw new HttpError(400, "Voce nao pode se vincular como seu proprio cliente");
     }
 
     const assignment = await prisma.trainerClient.upsert({
-      where: {
-        trainerId_clientId: {
-          trainerId: req.auth!.userId,
-          clientId: data.client_id,
-        },
-      },
-      update: {
-        status: TrainerClientStatus.ACTIVE,
-        notes: data.notes ?? null,
-        goals: null,
-        trainingPlan: null,
-      },
-      create: {
-        trainerId: req.auth!.userId,
-        clientId: data.client_id,
-        notes: data.notes ?? null,
-        goals: null,
-        trainingPlan: null,
-      },
+      where: { trainerId_clientId: { trainerId: req.auth!.userId, clientId: client_id } },
+      create: { trainerId: req.auth!.userId, clientId: client_id, notes: notes ?? null },
+      update: { status: "ACTIVE", notes: notes ?? null, goals: null, trainingPlan: null },
     });
 
-    return res.status(201).json({
+    res.status(201).json({
       assignment: {
         id: assignment.id,
         status: assignment.status.toLowerCase(),
         notes: assignment.notes,
         goals: assignment.goals,
         training_plan: assignment.trainingPlan,
+        created_at: assignment.createdAt,
       },
     });
   }),
 );
 
-router.patch(
+const updateSchema = z.object({
+  status: z.enum(["ACTIVE", "ARCHIVED"]).optional(),
+  notes: z.string().nullable().optional(),
+  goals: z.string().nullable().optional(),
+  training_plan: z.string().nullable().optional(),
+});
+
+trainerRouter.patch(
   "/clients/:assignmentId",
-  asyncHandler(async (req: AuthenticatedRequest, res) => {
+  asyncHandler(async (req, res) => {
     const assignmentId = getRouteParam(req.params.assignmentId, "assignmentId");
-    const data = updateAssignmentSchema.parse(req.body);
-    const existing = await prisma.trainerClient.findUnique({
-      where: { id: assignmentId },
-    });
+    const data = updateSchema.parse(req.body);
 
-    if (!existing) {
-      return res.status(404).json({ message: "Vinculo nao encontrado" });
-    }
-
-    if (existing.trainerId !== req.auth!.userId) {
-      return res.status(403).json({ message: "Sem permissao para editar este vinculo" });
-    }
+    const existing = await prisma.trainerClient.findUnique({ where: { id: assignmentId } });
+    if (!existing) throw new HttpError(404, "Vinculo nao encontrado");
+    if (existing.trainerId !== req.auth!.userId) throw new HttpError(403, "Acesso negado");
 
     const assignment = await prisma.trainerClient.update({
       where: { id: assignmentId },
@@ -233,104 +181,58 @@ router.patch(
       },
     });
 
-    return res.json({
+    res.json({
       assignment: {
         id: assignment.id,
         status: assignment.status.toLowerCase(),
         notes: assignment.notes,
         goals: assignment.goals,
         training_plan: assignment.trainingPlan,
-        updated_at: assignment.updatedAt,
+        created_at: assignment.createdAt,
       },
     });
   }),
 );
 
-router.get(
+trainerRouter.get(
   "/clients/:clientId/summary",
-  asyncHandler(async (req: AuthenticatedRequest, res) => {
+  asyncHandler(async (req, res) => {
     const clientId = getRouteParam(req.params.clientId, "clientId");
+
     const assignment = await prisma.trainerClient.findUnique({
-      where: {
-        trainerId_clientId: {
-          trainerId: req.auth!.userId,
-          clientId,
-        },
-      },
+      where: { trainerId_clientId: { trainerId: req.auth!.userId, clientId } },
+      include: { client: { include: { profile: true, roles: true } } },
     });
 
-    if (!assignment || assignment.status !== TrainerClientStatus.ACTIVE) {
-      return res.status(404).json({ message: "Cliente nao vinculado a este personal" });
+    if (!assignment || assignment.status !== "ACTIVE") {
+      throw new HttpError(403, "Vinculo inativo ou inexistente");
     }
 
-    const last30Days = new Date();
-    last30Days.setDate(last30Days.getDate() - 30);
+    const since30Days = new Date();
+    since30Days.setDate(since30Days.getDate() - 30);
 
-    const [client, fullAssignment, strengthCount, cardioCount, latestPhoto, latestBioimpedance] = await Promise.all([
-      prisma.user.findUnique({
-        where: { id: clientId },
-        include: {
-          profile: true,
-          roles: true,
-        },
-      }),
-      prisma.trainerClient.findUnique({
-        where: {
-          trainerId_clientId: {
-            trainerId: req.auth!.userId,
-            clientId,
-          },
-        },
-        include: {
-          logs: {
-            orderBy: { createdAt: "desc" },
-            take: 20,
-          },
-        },
-      }),
-      prisma.workout.count({
-        where: {
-          userId: clientId,
-          date: { gte: last30Days },
-        },
-      }),
-      prisma.cardioWorkout.count({
-        where: {
-          userId: clientId,
-          date: { gte: last30Days },
-        },
-      }),
-      prisma.bodyProgressPhoto.findFirst({
-        where: { userId: clientId },
-        orderBy: { takenAt: "desc" },
-      }),
-      prisma.bioimpedanceRecord.findFirst({
-        where: { userId: clientId },
-        orderBy: { date: "desc" },
+    const [strengthCount, cardioCount, latestPhoto, latestBioimpedance, logs] = await Promise.all([
+      prisma.workout.count({ where: { userId: clientId, date: { gte: since30Days } } }),
+      prisma.cardioWorkout.count({ where: { userId: clientId, date: { gte: since30Days } } }),
+      prisma.bodyProgressPhoto.findFirst({ where: { userId: clientId }, orderBy: { takenAt: "desc" } }),
+      prisma.bioimpedanceRecord.findFirst({ where: { userId: clientId }, orderBy: { date: "desc" } }),
+      prisma.trainerClientLog.findMany({
+        where: { trainerClientId: assignment.id },
+        orderBy: { createdAt: "desc" },
+        take: 20,
       }),
     ]);
 
-    if (!client?.profile) {
-      return res.status(404).json({ message: "Cliente nao encontrado" });
-    }
-
-    if (!fullAssignment) {
-      return res.status(404).json({ message: "Vinculo nao encontrado" });
-    }
-
-    return res.json({
-      client: serializeProfile(client.profile, client.email, {
-        isAdmin: client.roles.some((role) => role.role === UserRole.ADMIN),
-        isPersonalTrainer: client.roles.some((role) => role.role === UserRole.PERSONAL_TRAINER),
-      }),
+    res.json({
+      client: serializeTrainerProfile(assignment.client),
       summary: {
         assignment: {
-          id: fullAssignment.id,
-          status: fullAssignment.status.toLowerCase(),
-          notes: fullAssignment.notes,
-          goals: fullAssignment.goals,
-          training_plan: fullAssignment.trainingPlan,
-          created_at: fullAssignment.createdAt,
+          id: assignment.id,
+          status: assignment.status.toLowerCase(),
+          notes: assignment.notes,
+          goals: assignment.goals,
+          training_plan: assignment.trainingPlan,
+          created_at: assignment.createdAt,
         },
         workouts_last_30_days: strengthCount + cardioCount,
         strength_workouts_last_30_days: strengthCount,
@@ -351,7 +253,7 @@ router.get(
               muscle_mass_kg: latestBioimpedance.muscleMassKg ? Number(latestBioimpedance.muscleMassKg) : null,
             }
           : null,
-        logs: fullAssignment.logs.map((log) => ({
+        logs: logs.map((log) => ({
           id: log.id,
           title: log.title,
           content: log.content,
@@ -363,23 +265,23 @@ router.get(
   }),
 );
 
-router.post(
+const logSchema = z.object({
+  title: z.string().min(1),
+  content: z.string().min(1),
+});
+
+trainerRouter.post(
   "/clients/:clientId/logs",
-  asyncHandler(async (req: AuthenticatedRequest, res) => {
+  asyncHandler(async (req, res) => {
     const clientId = getRouteParam(req.params.clientId, "clientId");
-    const data = createLogSchema.parse(req.body);
+    const data = logSchema.parse(req.body);
 
     const assignment = await prisma.trainerClient.findUnique({
-      where: {
-        trainerId_clientId: {
-          trainerId: req.auth!.userId,
-          clientId,
-        },
-      },
+      where: { trainerId_clientId: { trainerId: req.auth!.userId, clientId } },
     });
 
-    if (!assignment || assignment.status !== TrainerClientStatus.ACTIVE) {
-      return res.status(404).json({ message: "Cliente nao vinculado a este personal" });
+    if (!assignment || assignment.status !== "ACTIVE") {
+      throw new HttpError(403, "Vinculo inativo ou inexistente");
     }
 
     const log = await prisma.trainerClientLog.create({
@@ -392,7 +294,7 @@ router.post(
       },
     });
 
-    return res.status(201).json({
+    res.status(201).json({
       log: {
         id: log.id,
         title: log.title,
@@ -403,5 +305,3 @@ router.post(
     });
   }),
 );
-
-export { router as trainerRouter };

@@ -11,7 +11,6 @@ import {
   HelpCircle,
   LogOut,
   Save,
-  Scale,
   Settings as SettingsIcon,
   Trophy,
   User,
@@ -43,10 +42,9 @@ const primaryActions: AccountAction[] = [
 ];
 
 const healthActions: AccountAction[] = [
-  { to: '/workouts', label: 'Treinos', description: 'Registros e categorias', icon: Dumbbell },
-  { to: '/wearables', label: 'Relógio e saúde', description: 'Sincronização e alertas', icon: Watch },
-  { to: '/body-progress', label: 'Evolução corporal', description: 'Peso, medidas e fotos', icon: Scale },
+  { to: '/workouts', label: 'Caderno de exercícios', description: 'Registro de musculação (complemento)', icon: Dumbbell },
   { to: '/workouts/dashboard', label: 'Desempenho', description: 'Estatísticas e progresso', icon: BarChart3 },
+  { to: '/wearables', label: 'Relógio e saúde', description: 'Sincronização e alertas', icon: Watch },
 ];
 
 const supportActions: AccountAction[] = [
