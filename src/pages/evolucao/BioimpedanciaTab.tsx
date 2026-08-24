@@ -704,7 +704,7 @@ export function BioimpedanciaTab() {
             </div>
             <TrendingUp className="h-5 w-5 text-primary" />
           </div>
-          <EvolutionChart records={records} selectedRecordId={selectedRecord?.id} />
+          <EvolutionChart records={records} selectedRecordId={selectedRecord?.id} onPointClick={setSelectedExamId} />
         </div>
 
         <div id="exame-selecionado" className="rounded-[2rem] border border-white/5 bg-card/85 p-5 shadow-elegant">

@@ -16,6 +16,7 @@ import { formatDateSafe } from '@/lib/dateUtils';
 interface EvolutionChartProps {
   records: BioimpedanceRecord[];
   selectedRecordId?: string | null;
+  onPointClick?: (recordId: string) => void;
 }
 
 type MetricKey = 'weight_kg' | 'body_fat_percent' | 'muscle_percent';
@@ -35,7 +36,7 @@ const METRICS: MetricConfig[] = [
 
 const IDEAL_WEIGHT_COLOR = 'hsl(48, 96%, 53%)';
 
-export function EvolutionChart({ records, selectedRecordId }: EvolutionChartProps) {
+export function EvolutionChart({ records, selectedRecordId, onPointClick }: EvolutionChartProps) {
   const [selectedMetric, setSelectedMetric] = useState<MetricKey>('weight_kg');
 
   if (records.length === 0) {
@@ -134,15 +135,22 @@ export function EvolutionChart({ records, selectedRecordId }: EvolutionChartProp
               dot={(props: { cx: number; cy: number; payload: { id: string } }) => {
                 const isSelected = props.payload.id === selectedRecordId;
                 return (
-                  <circle
+                  <g
                     key={props.payload.id}
-                    cx={props.cx}
-                    cy={props.cy}
-                    r={isSelected ? 7 : 4}
-                    fill={currentMetric.color}
-                    stroke={isSelected ? 'hsl(var(--background))' : 'none'}
-                    strokeWidth={isSelected ? 2 : 0}
-                  />
+                    onClick={() => onPointClick?.(props.payload.id)}
+                    style={{ cursor: onPointClick ? 'pointer' : undefined }}
+                  >
+                    {/* Área de toque maior, invisível, pra facilitar clicar/tocar no ponto */}
+                    <circle cx={props.cx} cy={props.cy} r={14} fill="transparent" />
+                    <circle
+                      cx={props.cx}
+                      cy={props.cy}
+                      r={isSelected ? 7 : 4}
+                      fill={currentMetric.color}
+                      stroke={isSelected ? 'hsl(var(--background))' : 'none'}
+                      strokeWidth={isSelected ? 2 : 0}
+                    />
+                  </g>
                 );
               }}
               activeDot={{ r: 6, fill: currentMetric.color }}
