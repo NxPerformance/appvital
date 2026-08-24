@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { ArrowDown, ArrowUp, CalendarCheck, CalendarPlus, Droplets, ExternalLink, Flame, Flag, GitCompare, Gauge, Scale, TrendingUp } from 'lucide-react';
+import { AlertTriangle, ArrowDown, ArrowUp, CalendarCheck, CalendarPlus, Droplets, ExternalLink, Flame, Flag, GitCompare, Gauge, Minus, Scale, ThumbsUp, TrendingUp } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { EvolutionChart } from '@/components/bioimpedance/EvolutionChart';
 import { MetricRow } from '@/components/bioimpedance/MetricRow';
@@ -227,12 +227,51 @@ const COMPARE_FIELDS: CompareField[] = [
   { key: 'head_forward_degrees', label: 'Projeção Cabeça', unit: '°', isLowerBetter: true },
 ];
 
+const HEADLINE_METRICS: { key: keyof BioimpedanceRecord; label: string; unit: string; isLowerBetter: boolean }[] = [
+  { key: 'weight_kg', label: 'peso', unit: 'kg', isLowerBetter: true },
+  { key: 'body_fat_percent', label: 'gordura corporal', unit: '%', isLowerBetter: true },
+  { key: 'muscle_percent', label: 'massa muscular', unit: '%', isLowerBetter: false },
+];
+
+function buildComparisonSummary(recordA: BioimpedanceRecord, recordB: BioimpedanceRecord) {
+  const parts: { label: string; diff: number; unit: string; favorable: boolean }[] = [];
+
+  for (const metric of HEADLINE_METRICS) {
+    const valueA = recordA[metric.key] as number | null;
+    const valueB = recordB[metric.key] as number | null;
+    if (typeof valueA !== 'number' || typeof valueB !== 'number') continue;
+
+    const diff = Number((valueB - valueA).toFixed(2));
+    if (diff === 0) continue;
+
+    parts.push({ label: metric.label, diff, unit: metric.unit, favorable: metric.isLowerBetter ? diff < 0 : diff > 0 });
+  }
+
+  if (parts.length === 0) return null;
+
+  const favorableCount = parts.filter((p) => p.favorable).length;
+  const unfavorableCount = parts.length - favorableCount;
+  const verdict: 'positive' | 'negative' | 'neutral' =
+    favorableCount > unfavorableCount ? 'positive' : favorableCount < unfavorableCount ? 'negative' : 'neutral';
+
+  const sentence = parts.map((p) => `${p.diff > 0 ? '+' : ''}${p.diff}${p.unit} de ${p.label}`).join(', ');
+
+  return { verdict, sentence };
+}
+
+const VERDICT_META = {
+  positive: { icon: ThumbsUp, title: 'Evolução positiva', className: 'border-emerald-400/30 bg-emerald-400/10 text-emerald-100' },
+  negative: { icon: AlertTriangle, title: 'Vale atenção', className: 'border-red-400/30 bg-red-400/10 text-red-100' },
+  neutral: { icon: Minus, title: 'Estável', className: 'border-white/10 bg-secondary/50 text-foreground' },
+} as const;
+
 function CompareSection({ records }: { records: BioimpedanceRecord[] }) {
   const [idA, setIdA] = useState(records[1]?.id ?? records[0].id);
   const [idB, setIdB] = useState(records[0].id);
 
   const recordA = useMemo(() => records.find((r) => r.id === idA) ?? records[0], [records, idA]);
   const recordB = useMemo(() => records.find((r) => r.id === idB) ?? records[0], [records, idB]);
+  const summary = useMemo(() => buildComparisonSummary(recordA, recordB), [recordA, recordB]);
 
   return (
     <section className="rounded-[2rem] border border-white/5 bg-card/85 p-5 shadow-elegant">
@@ -276,6 +315,21 @@ function CompareSection({ records }: { records: BioimpedanceRecord[] }) {
           </Select>
         </div>
       </div>
+
+      {summary ? (
+        <div className={cn('mb-4 flex items-start gap-3 rounded-2xl border p-4 text-sm', VERDICT_META[summary.verdict].className)}>
+          {(() => {
+            const Icon = VERDICT_META[summary.verdict].icon;
+            return <Icon className="mt-0.5 h-5 w-5 shrink-0" />;
+          })()}
+          <div>
+            <p className="font-semibold">{VERDICT_META[summary.verdict].title}</p>
+            <p className="mt-0.5 text-muted-foreground">
+              {summary.sentence} entre {formatDate(recordA.date)} e {formatDate(recordB.date)}.
+            </p>
+          </div>
+        </div>
+      ) : null}
 
       <div className="overflow-x-auto rounded-2xl border border-white/5">
         <table className="w-full min-w-[480px] border-collapse text-sm">
