@@ -709,6 +709,12 @@ export function BioimpedanciaTab() {
 
       <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         <MetricCard
+          label="IMC"
+          value={latestRecord?.bmi}
+          difference={getDifference(latestRecord?.bmi ?? null, previousRecord?.bmi ?? null)}
+          isLowerBetter
+        />
+        <MetricCard
           label="Peso atual"
           value={latestRecord?.weight_kg}
           difference={getDifference(latestRecord?.weight_kg ?? null, previousRecord?.weight_kg ?? null)}
@@ -731,12 +737,6 @@ export function BioimpedanciaTab() {
           )}
           unit={latestRecord?.muscle_mass_kg ? 'kg' : '%'}
         />
-        <MetricCard
-          label="Metabolismo basal"
-          value={latestRecord?.bmr_kcal}
-          difference={getDifference(latestRecord?.bmr_kcal ?? null, previousRecord?.bmr_kcal ?? null)}
-          unit="kcal"
-        />
       </section>
 
       {(() => {
@@ -749,12 +749,16 @@ export function BioimpedanciaTab() {
           ? goalWeightKg / ((profile.height_cm / 100) ** 2)
           : null;
 
+        const showTimeline = currentWeight != null && goalWeightKg != null;
+        const showBmi = currentBmi != null;
+        if (!showTimeline && !showBmi) return null;
+
         return (
-          <div className="grid gap-4 lg:grid-cols-2">
-            {currentWeight != null && goalWeightKg != null ? (
-              <WeightTimeline records={records} currentWeight={currentWeight} goalWeightKg={goalWeightKg} />
+          <div className={cn('grid gap-4', showTimeline && showBmi ? 'lg:grid-cols-2' : 'lg:grid-cols-1')}>
+            {showTimeline ? (
+              <WeightTimeline records={records} currentWeight={currentWeight!} goalWeightKg={goalWeightKg!} />
             ) : null}
-            {currentBmi != null ? <BmiGauge currentBmi={currentBmi} goalBmi={goalBmi} /> : null}
+            {showBmi ? <BmiGauge currentBmi={currentBmi!} goalBmi={goalBmi} /> : null}
           </div>
         );
       })()}
@@ -813,10 +817,9 @@ export function BioimpedanciaTab() {
           {hasRecords ? (
             <div className="divide-y divide-white/10">
               <MetricRow label="IMC" value={selectedRecord?.bmi ?? null} previousValue={selectedPreviousRecord?.bmi ?? null} standard="18.5 - 24.9" isLowerBetter />
-              <MetricRow label="Água" value={selectedRecord?.water_percent ?? null} unit="%" previousValue={selectedPreviousRecord?.water_percent ?? null} standard="45% - 65%" />
-              <MetricRow label="Gordura visceral" value={selectedRecord?.visceral_fat ?? null} previousValue={selectedPreviousRecord?.visceral_fat ?? null} standard="< 10" isLowerBetter />
-              <MetricRow label="Cintura" value={selectedRecord?.waist_cm ?? null} unit="cm" previousValue={selectedPreviousRecord?.waist_cm ?? null} standard="Acompanhar" isLowerBetter />
-              <MetricRow label="Quadril" value={selectedRecord?.hip_cm ?? null} unit="cm" previousValue={selectedPreviousRecord?.hip_cm ?? null} standard="Acompanhar" />
+              <MetricRow label="Peso" value={selectedRecord?.weight_kg ?? null} unit="kg" previousValue={selectedPreviousRecord?.weight_kg ?? null} standard={profile?.weight_goal_kg ? `Meta: ${profile.weight_goal_kg}kg` : 'Acompanhar'} isLowerBetter />
+              <MetricRow label="Gordura corporal" value={selectedRecord?.body_fat_percent ?? null} unit="%" previousValue={selectedPreviousRecord?.body_fat_percent ?? null} standard="11% - 20%" isLowerBetter />
+              <MetricRow label="Massa muscular" value={selectedRecord?.muscle_percent ?? null} unit="%" previousValue={selectedPreviousRecord?.muscle_percent ?? null} standard="42,9% - 52,4%" />
             </div>
           ) : (
             <div className="rounded-2xl bg-secondary/60 p-5 text-center text-sm text-muted-foreground">
@@ -825,6 +828,64 @@ export function BioimpedanciaTab() {
           )}
         </div>
       </section>
+
+      {hasRecords && selectedRecord ? (
+        <SimpleMetricsCard
+          title="Composição Corporal"
+          description="Detalhamento completo do exame selecionado."
+          metrics={[
+            { label: 'Peso', value: selectedRecord.weight_kg, unit: 'kg' },
+            { label: 'Gordura Corporal', value: selectedRecord.body_fat_percent, unit: '%' },
+            { label: 'Massa Muscular', value: selectedRecord.muscle_percent, unit: '%' },
+            { label: 'Água', value: selectedRecord.water_percent, unit: '%' },
+            { label: 'Gordura Visceral', value: selectedRecord.visceral_fat, unit: '' },
+            { label: 'Gordura Subcutânea', value: selectedRecord.subcutaneous_fat_percent, unit: '%' },
+            { label: 'Massa Livre de Gordura', value: selectedRecord.fat_free_mass_kg, unit: 'kg' },
+            { label: 'Proteína', value: selectedRecord.protein_percent, unit: '%' },
+            { label: 'Massa Óssea', value: selectedRecord.bone_mass_kg, unit: 'kg' },
+            { label: 'Peso Muscular', value: selectedRecord.muscle_mass_kg, unit: 'kg' },
+          ]}
+        />
+      ) : null}
+
+      {hasRecords && selectedRecord ? (
+        <SimpleMetricsCard
+          title="Controle de Peso"
+          description="Metas e recomendações calculadas a partir do exame selecionado."
+          metrics={[
+            { label: 'Peso Ideal', value: selectedRecord.ideal_weight_kg, unit: 'kg' },
+            { label: 'Controle de Peso', value: selectedRecord.weight_control_tip, unit: 'kg' },
+            { label: 'Controle de Gordura', value: selectedRecord.fat_control_tip, unit: 'kg' },
+            { label: 'Ganho de Massa', value: selectedRecord.muscle_control_tip, unit: 'kg' },
+          ]}
+        />
+      ) : null}
+
+      {hasRecords && selectedRecord ? (
+        <SimpleMetricsCard
+          title="Análise de Obesidade"
+          description="Indicadores de risco calculados a partir do exame selecionado."
+          metrics={[
+            { label: 'IMC', value: selectedRecord.bmi, unit: '' },
+            { label: 'Peso da Gordura', value: selectedRecord.fat_weight_kg, unit: 'kg' },
+            { label: 'Relação Cintura-Quadril', value: selectedRecord.waist_hip_ratio, unit: '' },
+            { label: 'TMB', value: selectedRecord.bmr_kcal, unit: 'kcal' },
+          ]}
+        />
+      ) : null}
+
+      {hasRecords && selectedRecord ? (
+        <SimpleMetricsCard
+          title="Controle Calórico"
+          description="Ingestão diária e metas de exercício por tipo, calculadas a partir do exame selecionado."
+          metrics={[
+            { label: 'Calorias Diárias', value: selectedRecord.daily_calories, unit: 'kcal' },
+            { label: 'Meta de Exercício Aeróbico', value: selectedRecord.aerobic_calories_kcal, unit: 'kcal' },
+            { label: 'Meta de Exercício de Resistência', value: selectedRecord.endurance_calories_kcal, unit: 'kcal' },
+            { label: 'Meta de Exercício Anaeróbico', value: selectedRecord.anaerobic_calories_kcal, unit: 'kcal' },
+          ]}
+        />
+      ) : null}
 
       {hasRecords && selectedRecord ? <SegmentalAnalysis record={selectedRecord} /> : null}
 
@@ -842,18 +903,6 @@ export function BioimpedanciaTab() {
             { label: 'Largura dos Ombros', value: selectedRecord.shoulder_width_cm, unit: 'cm' },
             { label: 'Distância Ombro-Orelha', value: selectedRecord.shoulder_ear_distance_cm, unit: 'cm' },
             { label: 'Comprimento do Pé', value: selectedRecord.foot_length_cm, unit: 'cm' },
-          ]}
-        />
-      ) : null}
-
-      {hasRecords && selectedRecord ? (
-        <SimpleMetricsCard
-          title="Metas de Exercício"
-          description="Calorias sugeridas por tipo de exercício, calculadas a partir do exame selecionado."
-          metrics={[
-            { label: 'Meta de Exercício Aeróbico', value: selectedRecord.aerobic_calories_kcal, unit: 'kcal' },
-            { label: 'Meta de Exercício de Resistência', value: selectedRecord.endurance_calories_kcal, unit: 'kcal' },
-            { label: 'Meta de Exercício Anaeróbico', value: selectedRecord.anaerobic_calories_kcal, unit: 'kcal' },
           ]}
         />
       ) : null}
