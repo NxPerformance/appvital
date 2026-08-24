@@ -110,7 +110,9 @@ export async function fetchAnovatorExam(examId: string) {
     waist_cm: d.waist ?? null,
     hip_cm: d.hips ?? null,
     arm_cm: d.armDim ?? null,
-    thigh_cm: d.thigh_dim ?? null,
+    // thighDim (nao thigh_dim) - confirmado na resposta crua da API, a doc usava
+    // snake_case mas o campo real e camelCase, como o resto do payload.
+    thigh_cm: d.thighDim ?? null,
     // Medidas corporais estendidas (cm) - mesmo bloco "Body dimension data" acima.
     head_length_cm: d.head ?? null,
     upper_body_length_cm: d.upperBody ?? null,
@@ -118,8 +120,10 @@ export async function fetchAnovatorExam(examId: string) {
     calf_length_cm: d.shank ?? null,
     thigh_length_cm: d.thigh ?? null,
     arm_span_cm: d.armSpan ?? null,
-    shoulder_width_cm: d.shoulder_width ?? null,
-    shoulder_ear_distance_cm: d.occipital_space ?? null,
+    // shoulderWidth/occipitalSpace (nao shoulder_width/occipital_space) - mesmo
+    // caso do thighDim acima, confirmado na resposta crua.
+    shoulder_width_cm: d.shoulderWidth ?? null,
+    shoulder_ear_distance_cm: d.occipitalSpace ?? null,
     foot_length_cm: d.footLength ?? null,
     // Análise segmentada - músculo/gordura por região (kg)
     muscle_left_arm_kg: d.muscleLeftArm ?? null,
