@@ -322,6 +322,17 @@ const COMPARE_FIELDS: CompareField[] = [
   { key: 'trunk_curvature_degrees', label: 'Curvatura Tronco', unit: '°', isLowerBetter: true },
   { key: 'pelvis_tilt_degrees', label: 'Inclinação Pelve', unit: '°', isLowerBetter: true },
   { key: 'head_forward_degrees', label: 'Projeção Cabeça', unit: '°', isLowerBetter: true },
+  // Classificação de risco postural importada automaticamente da Anovator
+  // (nível 1-5). leg_risk_type fica de fora por ser texto, não diferenciável.
+  { key: 'shoulder_risk_level', label: 'Risco de Ombro', unit: '', isLowerBetter: true },
+  { key: 'humpback_risk_level', label: 'Risco de Cifose', unit: '', isLowerBetter: true },
+  { key: 'pelvis_risk_level', label: 'Risco de Pelve', unit: '', isLowerBetter: true },
+  { key: 'spine_risk_level', label: 'Risco de Escoliose', unit: '', isLowerBetter: true },
+  { key: 'head_risk_level', label: 'Risco de Inclinação de Cabeça', unit: '', isLowerBetter: true },
+  { key: 'knee_risk_level', label: 'Risco de Joelho', unit: '', isLowerBetter: true },
+  { key: 'front_head_risk_level', label: 'Risco de Cabeça Projetada', unit: '', isLowerBetter: true },
+  { key: 'body_shape_risk_level', label: 'Risco de Forma Corporal', unit: '', isLowerBetter: true },
+  { key: 'posture_risk_level', label: 'Risco Postural Geral', unit: '', isLowerBetter: true },
 ];
 
 const HEADLINE_METRICS: { key: keyof BioimpedanceRecord; label: string; unit: string; isLowerBetter: boolean }[] = [

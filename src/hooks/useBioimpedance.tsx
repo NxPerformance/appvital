@@ -66,6 +66,17 @@ export interface BioimpedanceRecord {
   trunk_curvature_degrees: number | null;
   pelvis_tilt_degrees: number | null;
   head_forward_degrees: number | null;
+  // Classificação de Risco Postural (importado automaticamente da Anovator)
+  shoulder_risk_level: number | null;
+  humpback_risk_level: number | null;
+  leg_risk_type: string | null;
+  pelvis_risk_level: number | null;
+  spine_risk_level: number | null;
+  head_risk_level: number | null;
+  knee_risk_level: number | null;
+  front_head_risk_level: number | null;
+  body_shape_risk_level: number | null;
+  posture_risk_level: number | null;
   notes: string | null;
   source_pdf_url: string | null;
 }
@@ -144,6 +155,16 @@ export function useBioimpedance() {
           trunk_curvature_degrees: record.trunkCurvatureDegrees ? Number(record.trunkCurvatureDegrees) : null,
           pelvis_tilt_degrees: record.pelvisTiltDegrees ? Number(record.pelvisTiltDegrees) : null,
           head_forward_degrees: record.headForwardDegrees ? Number(record.headForwardDegrees) : null,
+          shoulder_risk_level: record.shoulderRiskLevel ?? null,
+          humpback_risk_level: record.humpbackRiskLevel ?? null,
+          leg_risk_type: record.legRiskType ?? null,
+          pelvis_risk_level: record.pelvisRiskLevel ?? null,
+          spine_risk_level: record.spineRiskLevel ?? null,
+          head_risk_level: record.headRiskLevel ?? null,
+          knee_risk_level: record.kneeRiskLevel ?? null,
+          front_head_risk_level: record.frontHeadRiskLevel ?? null,
+          body_shape_risk_level: record.bodyShapeRiskLevel ?? null,
+          posture_risk_level: record.postureRiskLevel ?? null,
           notes: record.notes,
           source_pdf_url: record.sourcePdfUrl ?? null,
         })));

@@ -82,6 +82,16 @@ interface FormData {
   trunk_curvature_degrees: string;
   pelvis_tilt_degrees: string;
   head_forward_degrees: string;
+  shoulder_risk_level: string;
+  humpback_risk_level: string;
+  leg_risk_type: string;
+  pelvis_risk_level: string;
+  spine_risk_level: string;
+  head_risk_level: string;
+  knee_risk_level: string;
+  front_head_risk_level: string;
+  body_shape_risk_level: string;
+  posture_risk_level: string;
   notes: string;
   anovator_exam_id: string;
 }
@@ -140,6 +150,16 @@ const initialFormData: FormData = {
   trunk_curvature_degrees: '',
   pelvis_tilt_degrees: '',
   head_forward_degrees: '',
+  shoulder_risk_level: '',
+  humpback_risk_level: '',
+  leg_risk_type: '',
+  pelvis_risk_level: '',
+  spine_risk_level: '',
+  head_risk_level: '',
+  knee_risk_level: '',
+  front_head_risk_level: '',
+  body_shape_risk_level: '',
+  posture_risk_level: '',
   notes: '',
   anovator_exam_id: '',
 };
@@ -278,6 +298,16 @@ export default function AdminBioimpedance() {
       trunk_curvature_degrees: parseLocaleNumber(formData.trunk_curvature_degrees),
       pelvis_tilt_degrees: parseLocaleNumber(formData.pelvis_tilt_degrees),
       head_forward_degrees: parseLocaleNumber(formData.head_forward_degrees),
+      shoulder_risk_level: parseLocaleInteger(formData.shoulder_risk_level),
+      humpback_risk_level: parseLocaleInteger(formData.humpback_risk_level),
+      leg_risk_type: formData.leg_risk_type || null,
+      pelvis_risk_level: parseLocaleInteger(formData.pelvis_risk_level),
+      spine_risk_level: parseLocaleInteger(formData.spine_risk_level),
+      head_risk_level: parseLocaleInteger(formData.head_risk_level),
+      knee_risk_level: parseLocaleInteger(formData.knee_risk_level),
+      front_head_risk_level: parseLocaleInteger(formData.front_head_risk_level),
+      body_shape_risk_level: parseLocaleInteger(formData.body_shape_risk_level),
+      posture_risk_level: parseLocaleInteger(formData.posture_risk_level),
       notes: formData.notes || null,
       anovator_exam_id: formData.anovator_exam_id || null,
     };
@@ -901,6 +931,87 @@ export default function AdminBioimpedance() {
               step="0.1"
               value={formData.head_forward_degrees}
               onChange={(e) => handleChange('head_forward_degrees', e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Risco de Ombro (nível 1-5)</Label>
+            <Input
+              type="number"
+              value={formData.shoulder_risk_level}
+              onChange={(e) => handleChange('shoulder_risk_level', e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Risco de Cifose (nível 1-5)</Label>
+            <Input
+              type="number"
+              value={formData.humpback_risk_level}
+              onChange={(e) => handleChange('humpback_risk_level', e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Tipo/Risco de Perna (ex: O3)</Label>
+            <Input
+              type="text"
+              placeholder="ex: O3, X2"
+              value={formData.leg_risk_type}
+              onChange={(e) => handleChange('leg_risk_type', e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Risco de Pelve (nível 1-5)</Label>
+            <Input
+              type="number"
+              value={formData.pelvis_risk_level}
+              onChange={(e) => handleChange('pelvis_risk_level', e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Risco de Escoliose (nível 1-5)</Label>
+            <Input
+              type="number"
+              value={formData.spine_risk_level}
+              onChange={(e) => handleChange('spine_risk_level', e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Risco de Inclinação de Cabeça (nível 1-5)</Label>
+            <Input
+              type="number"
+              value={formData.head_risk_level}
+              onChange={(e) => handleChange('head_risk_level', e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Risco de Joelho (nível 1-5)</Label>
+            <Input
+              type="number"
+              value={formData.knee_risk_level}
+              onChange={(e) => handleChange('knee_risk_level', e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Risco de Cabeça Projetada (nível 1-5)</Label>
+            <Input
+              type="number"
+              value={formData.front_head_risk_level}
+              onChange={(e) => handleChange('front_head_risk_level', e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Risco de Forma Corporal (nível 1-5)</Label>
+            <Input
+              type="number"
+              value={formData.body_shape_risk_level}
+              onChange={(e) => handleChange('body_shape_risk_level', e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Risco Postural Geral (nível 1-5)</Label>
+            <Input
+              type="number"
+              value={formData.posture_risk_level}
+              onChange={(e) => handleChange('posture_risk_level', e.target.value)}
             />
           </div>
         </CardContent>

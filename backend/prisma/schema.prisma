@@ -321,6 +321,17 @@ model BioimpedanceRecord {
   trunkCurvatureDegrees  Decimal? @db.Decimal(10, 2)
   pelvisTiltDegrees      Decimal? @db.Decimal(10, 2)
   headForwardDegrees     Decimal? @db.Decimal(10, 2)
+  // Classificação de risco postural (nível 1-5, importado automaticamente da Anovator)
+  shoulderRiskLevel      Int?
+  humpbackRiskLevel      Int?
+  legRiskType            String?
+  pelvisRiskLevel        Int?
+  spineRiskLevel         Int?
+  headRiskLevel          Int?
+  kneeRiskLevel          Int?
+  frontHeadRiskLevel     Int?
+  bodyShapeRiskLevel     Int?
+  postureRiskLevel       Int?
   notes                  String?
   sourcePdfUrl           String?
   anovatorExamId         String?

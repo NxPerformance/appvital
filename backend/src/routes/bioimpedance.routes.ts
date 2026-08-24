@@ -70,6 +70,20 @@ const integerFields = {
   aerobic_calories_kcal: "aerobicCaloriesKcal",
   endurance_calories_kcal: "enduranceCaloriesKcal",
   anaerobic_calories_kcal: "anaerobicCaloriesKcal",
+  // Classificação de risco postural (nível 1-5, importado automaticamente da Anovator)
+  shoulder_risk_level: "shoulderRiskLevel",
+  humpback_risk_level: "humpbackRiskLevel",
+  pelvis_risk_level: "pelvisRiskLevel",
+  spine_risk_level: "spineRiskLevel",
+  head_risk_level: "headRiskLevel",
+  knee_risk_level: "kneeRiskLevel",
+  front_head_risk_level: "frontHeadRiskLevel",
+  body_shape_risk_level: "bodyShapeRiskLevel",
+  posture_risk_level: "postureRiskLevel",
+} as const;
+
+const stringFields = {
+  leg_risk_type: "legRiskType",
 } as const;
 
 const numericShape = Object.fromEntries(
@@ -78,6 +92,9 @@ const numericShape = Object.fromEntries(
 const integerShape = Object.fromEntries(
   Object.keys(integerFields).map((key) => [key, z.coerce.number().int().nullable().optional()]),
 );
+const stringShape = Object.fromEntries(
+  Object.keys(stringFields).map((key) => [key, z.string().nullable().optional()]),
+);
 
 const baseSchema = z.object({
   date: z.string().min(1),
@@ -85,6 +102,7 @@ const baseSchema = z.object({
   anovator_exam_id: z.string().nullable().optional(),
   ...numericShape,
   ...integerShape,
+  ...stringShape,
 });
 
 const createSchema = baseSchema.extend({ user_id: z.string().uuid() });
@@ -100,6 +118,9 @@ function toPrismaData(data: Record<string, unknown>) {
     if (snakeKey in data) out[camelKey] = data[snakeKey];
   }
   for (const [snakeKey, camelKey] of Object.entries(integerFields)) {
+    if (snakeKey in data) out[camelKey] = data[snakeKey];
+  }
+  for (const [snakeKey, camelKey] of Object.entries(stringFields)) {
     if (snakeKey in data) out[camelKey] = data[snakeKey];
   }
   if ("notes" in data) out.notes = data.notes;

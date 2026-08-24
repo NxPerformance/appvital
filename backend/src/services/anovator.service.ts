@@ -10,7 +10,8 @@ interface AnovatorApiResponse {
 
 // Campos que a API da Anovator nao cobre - permanecem apenas de preenchimento
 // manual ate existir outra fonte de dados. Sao todos de avaliacao postural:
-// a API so devolve uma classificacao de risco (nivel 1-5) pra isso, nao o
+// a API ja devolve uma classificacao de risco (nivel 1-5) pra essas categorias
+// (ver shoulder_risk_level etc. abaixo, importados automaticamente), mas nao o
 // valor exato em cm/graus mostrado no PDF (que e calculado pela Anovator a
 // partir de coordenadas de imagem, sem formula documentada pra nos replicarmos).
 // (peso muscular, peso da gordura, massa livre de gordura e as medidas
@@ -135,6 +136,17 @@ export async function fetchAnovatorExam(examId: string) {
     aerobic_calories_kcal: d.aerobicGoal ?? null,
     endurance_calories_kcal: d.enduGoal ?? null,
     anaerobic_calories_kcal: d.anaGoal ?? null,
+    // Classificação de risco postural (nível 1-5, importado automaticamente da Anovator)
+    shoulder_risk_level: d.shoulderRisk ?? null,
+    humpback_risk_level: d.humpbackRisk ?? null,
+    leg_risk_type: typeof d.legRisk === "string" ? d.legRisk : null,
+    pelvis_risk_level: d.pelvisRisk ?? null,
+    spine_risk_level: d.spineRisk ?? null,
+    head_risk_level: d.headRisk ?? null,
+    knee_risk_level: d.kneeRisk ?? null,
+    front_head_risk_level: d.frontHeadRisk ?? null,
+    body_shape_risk_level: d.bodyShapeRisk ?? null,
+    posture_risk_level: d.postureRisk ?? null,
     date:
       typeof d.gmtCreate === "number" ? new Date(d.gmtCreate).toISOString().slice(0, 10) : null,
   };
