@@ -12,7 +12,7 @@
 - [ ] **Tela Admin → Configurações de Pagamento** vai quebrar (404) — rotas de `payment-gateway-settings` foram puladas de propósito enquanto pagamento é stub.
 - [ ] Decidir se a branch `claude/dev-server-setup-d37utr` vira a nova `main` (produção) — hoje a Vercel "Production" ainda aponta pra `main` antiga, só o Preview desta branch tem as mudanças novas.
 - [ ] Resolver DNS de `app.vitalissy.com.br` (ou escolher domínio definitivo) e apontar pra VPS/Vercel de fato.
-- [ ] **Integração Anovator (balança de bioimpedância)**: código pronto (`POST /api/bioimpedance/admin/anovator-lookup`, upload de laudo em PDF), mas falta a clínica se cadastrar no time comercial da Anovator (anovator.com/admin) para obter `apiKey`/`gymId` reais e configurar `ANOVATOR_API_KEY`/`ANOVATOR_GYM_ID` no backend. Até lá, a integração responde 501 "não configurada" e o admin continua preenchendo a bioimpedância manualmente (com apoio do PDF do laudo), exatamente como antes.
+- [x] **Integração Anovator (balança de bioimpedância)**: `apiKey`/`gymId` configurados e testados em produção — busca automática funcionando (`POST /api/bioimpedance/admin/anovator-lookup`). Mapeamento expandido pra cobrir quase tudo que o PDF de laudo mostra: composição corporal, análise segmentada por região (braços/tronco/pernas), medidas corporais estendidas (envergadura, larguras, comprimentos), metas de exercício por tipo (aeróbico/resistência/anaeróbico), e classificação de risco postural (10 categorias, nível 1-5). Só ficam de fora: valor exato em cm/graus de postura (a API só dá o nível de risco, não o valor preciso — confirmado direto na resposta bruta) e dado bruto de bioimpedância segmentar em Ω (técnico demais pra exibir ao paciente).
 
 ## Produto / frontend
 
@@ -41,3 +41,5 @@
 - [x] Home redesenhada em torno de injetáveis/evolução/consultas
 - [x] Layout desktop expandido (Home, Workouts, WorkoutForm)
 - [x] Volume persistente de uploads configurado na VPS
+- [x] Integração Anovator ativa em produção, com mapeamento completo de composição corporal, análise segmentada, medidas estendidas, metas de exercício e risco postural
+- [x] Meta de peso + Linha do Tempo + IMC com régua de risco na Evolução
