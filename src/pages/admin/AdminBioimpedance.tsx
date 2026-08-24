@@ -165,7 +165,7 @@ export default function AdminBioimpedance() {
       } else {
         toast({
           title: 'Erro',
-          description: 'Falha ao buscar dados na Anovator',
+          description: error instanceof ApiError ? error.message : 'Falha ao buscar dados na Anovator',
           variant: 'destructive',
         });
       }
