@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { eachDayOfInterval, endOfWeek, format, isSameDay, isToday, startOfWeek } from "date-fns";
+import { eachDayOfInterval, endOfWeek, format, isSameDay, isToday, startOfWeek, subDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Flame } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -10,6 +10,7 @@ interface WeeklyCaloriesChartProps {
 
 const DAY_LETTERS = ["D", "S", "T", "Q", "Q", "S", "S"];
 const BAR_TRACK_HEIGHT = 88;
+const SCALING_WINDOW_DAYS = 56;
 
 export function WeeklyCaloriesChart({ entries }: WeeklyCaloriesChartProps) {
   const today = useMemo(() => new Date(), []);
@@ -28,7 +29,18 @@ export function WeeklyCaloriesChart({ entries }: WeeklyCaloriesChartProps) {
     });
   }, [entries, today]);
 
-  const maxTotal = Math.max(...week.map((d) => d.total), 1);
+  // Escala as barras pelo maior valor das últimas 8 semanas, não só da semana
+  // exibida — senão, com poucos registros, o único dia com dado sempre bate
+  // 100% (ele é "o maior" só por ser o único), toda semana, mesmo sem
+  // significar nada de especial.
+  const scalingMax = useMemo(() => {
+    const windowStart = subDays(today, SCALING_WINDOW_DAYS);
+    const values = entries
+      .filter((entry) => new Date(`${entry.date}T12:00:00`) >= windowStart)
+      .map((entry) => entry.calories ?? 0);
+    return Math.max(...values, 1);
+  }, [entries, today]);
+
   const selected = week.find((d) => isSameDay(d.day, selectedDate)) ?? week[week.length - 1];
 
   return (
@@ -51,7 +63,7 @@ export function WeeklyCaloriesChart({ entries }: WeeklyCaloriesChartProps) {
       <div className="mt-5 flex items-end justify-between gap-1.5">
         {week.map(({ day, total }) => {
           const isSelected = isSameDay(day, selectedDate);
-          const fillHeight = total > 0 ? Math.max(10, Math.round((total / maxTotal) * BAR_TRACK_HEIGHT)) : 0;
+          const fillHeight = total > 0 ? Math.max(10, Math.round((total / scalingMax) * BAR_TRACK_HEIGHT)) : 0;
 
           return (
             <button
