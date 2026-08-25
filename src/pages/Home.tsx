@@ -534,12 +534,12 @@ export default function Home() {
 
         <section className="space-y-3">
           <SectionLabel>Treino</SectionLabel>
-          <div className="rounded-[1.15rem] border border-white/10 bg-card shadow-elegant">
+          <div className="space-y-3">
             {workoutLinks.map((link) => (
               <Link
                 key={link.to}
                 to={link.to}
-                className="group flex items-center gap-4 border-b border-white/10 px-4 py-4 last:border-b-0 transition-transform hover:-translate-y-0.5"
+                className="group flex items-center gap-4 rounded-[1.15rem] border border-white/10 bg-card px-4 py-4 shadow-elegant transition-transform hover:-translate-y-0.5"
               >
                 <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary">
                   <link.icon className="h-5 w-5" />
