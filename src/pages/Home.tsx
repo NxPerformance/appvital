@@ -5,21 +5,16 @@ import {
   BarChart3,
   Bell,
   Camera,
-  CheckCircle2,
   ChevronLeft,
   ChevronRight,
-  Clock,
   Dumbbell,
-  Flame,
   HeartPulse,
   Lock,
   RotateCcw,
-  Syringe,
-  Target,
   Trophy,
   type LucideIcon,
 } from "lucide-react";
-import { differenceInCalendarDays, format, isSameMonth, parseISO } from "date-fns";
+import { differenceInCalendarDays, format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { WeeklyCaloriesChart } from "@/components/home/WeeklyCaloriesChart";
@@ -29,22 +24,6 @@ import { useBodyProgress } from "@/hooks/useBodyProgress";
 import { api, resolveUploadUrl } from "@/lib/api";
 import { fetchStrengthWorkouts, findActiveWorkoutDraft, type ActiveWorkoutDraft } from "@/lib/workoutApi";
 import { cn } from "@/lib/utils";
-
-interface InjectableEntry {
-  id: string;
-  medication: string;
-  dose: string;
-  date: string;
-  time: string;
-  location: string;
-}
-
-interface BioimpedanceRecordApi {
-  id: string;
-  date: string;
-  weightKg: number | string | null;
-  idealWeightKg: number | string | null;
-}
 
 interface AppointmentEntry {
   id: string;
@@ -101,77 +80,12 @@ function formatUnlockedAt(value?: string) {
   return `Desbloqueada há ${days} dias`;
 }
 
-function formatWeight(value: number) {
-  return new Intl.NumberFormat("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(value);
-}
-
-function daysSinceLabel(days: number) {
-  if (days <= 0) return "Aplicada hoje";
-  if (days === 1) return "Há 1 dia";
-  return `Há ${days} dias`;
-}
-
-type Tone = "default" | "positive" | "warning";
-
-const bannerToneClasses: Record<Tone, string> = {
-  default: "border-white/10 bg-card text-foreground",
-  positive: "border-emerald-400/25 bg-emerald-400/10 text-emerald-200",
-  warning: "border-amber-300/25 bg-amber-300/10 text-amber-200",
-};
-
-const goalBadgeToneClasses: Record<Tone, string> = {
-  default: "bg-primary/15 text-primary",
-  positive: "bg-emerald-400/15 text-emerald-300",
-  warning: "bg-amber-300/15 text-amber-300",
-};
-
 function SectionLabel({ children }: { children: string }) {
   return (
     <h2 className="px-1 text-[11px] font-bold uppercase tracking-[0.22em] text-muted-foreground">
       {children}
     </h2>
   );
-}
-
-function getConsistencyInfo(days: number | null): { title: string; subtitle: string; tone: Tone; icon: LucideIcon } {
-  if (days === null) {
-    return {
-      title: "Comece sua jornada",
-      subtitle: "Registre algo pra abrir seu acompanhamento.",
-      tone: "default",
-      icon: Flame,
-    };
-  }
-  if (days <= 0) {
-    return {
-      title: "Você já treinou hoje!",
-      subtitle: "Continue assim, sua consistência importa.",
-      tone: "positive",
-      icon: Flame,
-    };
-  }
-  if (days === 1) {
-    return {
-      title: "Continue firme!",
-      subtitle: "Última atividade foi ontem.",
-      tone: "positive",
-      icon: Flame,
-    };
-  }
-  if (days <= 3) {
-    return {
-      title: "Você está no caminho certo!",
-      subtitle: `Já fazem ${days} dias desde seu último registro.`,
-      tone: "default",
-      icon: Flame,
-    };
-  }
-  return {
-    title: "Vamos retomar?",
-    subtitle: `Já fazem ${days} dias sem nenhum registro.`,
-    tone: "warning",
-    icon: Clock,
-  };
 }
 
 const SLIDE_CLASS =
@@ -188,16 +102,6 @@ export default function Home() {
   useEffect(() => {
     setActiveDraft(findActiveWorkoutDraft());
   }, []);
-
-  const { data: injectables } = useQuery({
-    queryKey: ["home", "injectables"],
-    queryFn: async () => (await api.get<{ injectables: InjectableEntry[] }>("/injectables")).injectables,
-  });
-
-  const { data: bioimpedanceRecords } = useQuery({
-    queryKey: ["home", "bioimpedance"],
-    queryFn: async () => (await api.get<{ records: BioimpedanceRecordApi[] }>("/bioimpedance/mine")).records,
-  });
 
   const { data: appointments } = useQuery({
     queryKey: ["home", "appointments"],
@@ -237,47 +141,6 @@ export default function Home() {
   const initials = getInitials(fullName);
   const greeting = getGreeting(today.getHours());
 
-  const latestInjectable = injectables?.[0];
-  const daysSinceInjectable = latestInjectable
-    ? differenceInCalendarDays(today, parseISO(latestInjectable.date))
-    : null;
-  const injectablesThisMonth = (injectables ?? []).filter((item) => {
-    const date = parseISO(item.date);
-    return !Number.isNaN(date.getTime()) && isSameMonth(date, today);
-  }).length;
-
-  const sortedBioimpedance = [...(bioimpedanceRecords ?? [])].sort(
-    (a, b) => parseISO(b.date).getTime() - parseISO(a.date).getTime(),
-  );
-  const latestWeight = sortedBioimpedance[0]?.weightKg != null ? Number(sortedBioimpedance[0].weightKg) : null;
-  const previousWeight = sortedBioimpedance[1]?.weightKg != null ? Number(sortedBioimpedance[1].weightKg) : null;
-  const weightDelta = latestWeight != null && previousWeight != null ? latestWeight - previousWeight : null;
-  const latestIdealWeight =
-    sortedBioimpedance[0]?.idealWeightKg != null ? Number(sortedBioimpedance[0].idealWeightKg) : null;
-
-  const goalWeight = profile?.weight_goal_kg ?? latestIdealWeight;
-  const weightToGoal = goalWeight != null && latestWeight != null ? latestWeight - goalWeight : null;
-  const atGoal = weightToGoal != null && Math.abs(weightToGoal) < 0.5;
-  const movingTowardGoal =
-    weightDelta != null && weightToGoal != null
-      ? (weightToGoal > 0 && weightDelta < 0) || (weightToGoal < 0 && weightDelta > 0)
-      : null;
-
-  let goalValue = "--";
-  let goalTone: Tone = "default";
-  let GoalIcon: LucideIcon = Target;
-
-  if (weightToGoal != null) {
-    if (atGoal) {
-      goalValue = "Na meta!";
-      goalTone = "positive";
-      GoalIcon = CheckCircle2;
-    } else {
-      goalValue = `${formatWeight(Math.abs(weightToGoal))} kg para a meta`;
-      goalTone = movingTowardGoal === false ? "warning" : "default";
-    }
-  }
-
   const nextAppointment = (appointments ?? [])
     .filter((appointment) => appointment.status !== "cancelled" && appointment.status !== "completed")
     .sort((a, b) => {
@@ -287,16 +150,6 @@ export default function Home() {
     })[0];
 
   const latestPhoto = photos[0] ?? null;
-
-  const lastActivityTimestamps = [latestInjectable?.date, sortedBioimpedance[0]?.date, latestPhoto?.taken_at]
-    .filter((value): value is string => Boolean(value))
-    .map((value) => parseISO(value).getTime())
-    .filter((time) => !Number.isNaN(time));
-  const daysSinceActivity =
-    lastActivityTimestamps.length > 0
-      ? differenceInCalendarDays(today, new Date(Math.max(...lastActivityTimestamps)))
-      : null;
-  const consistency = getConsistencyInfo(daysSinceActivity);
 
   const unlockedAchievementIds = new Set(userAchievements.map((ua) => ua.achievement_id));
   const nextAchievement = [...achievements]
@@ -356,23 +209,6 @@ export default function Home() {
           entries={(strengthWorkouts ?? []).map((workout) => ({ date: workout.date, calories: workout.calories }))}
         />
 
-        <Link
-          to="/body-progress"
-          className={cn(
-            "flex items-center gap-4 rounded-[1rem] border px-4 py-3 transition-transform hover:-translate-y-0.5",
-            bannerToneClasses[consistency.tone],
-          )}
-        >
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-2 border-current/30">
-            <consistency.icon className="h-5 w-5" />
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block text-sm font-extrabold leading-snug">{consistency.title}</span>
-            <span className="mt-0.5 block truncate text-xs opacity-80">{consistency.subtitle}</span>
-          </span>
-          <ChevronRight className="h-4 w-4 shrink-0 opacity-60" />
-        </Link>
-
         <section className="space-y-3">
           <SectionLabel>Seu resumo</SectionLabel>
           <div className="relative">
@@ -380,35 +216,6 @@ export default function Home() {
               ref={summaryCarouselRef}
               className="hide-scrollbar flex gap-3 overflow-x-auto pb-1 snap-x snap-mandatory"
             >
-            <div className={cn(SLIDE_CLASS, "relative overflow-hidden bg-gradient-primary px-5 py-5 text-primary-foreground")}>
-              <span className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-primary-foreground/10" aria-hidden="true" />
-              <div className="relative">
-                <p className="text-[11px] font-extrabold uppercase tracking-[0.22em] text-primary-foreground/75">
-                  {latestInjectable ? "Última aplicação" : "Injetáveis"}
-                </p>
-
-                {latestInjectable ? (
-                  <>
-                    <h2 className="mt-1 truncate text-2xl font-black leading-tight">{latestInjectable.medication}</h2>
-                    <p className="mt-1 text-sm font-semibold text-primary-foreground/85">
-                      {daysSinceLabel(daysSinceInjectable ?? 0)} · {latestInjectable.dose}
-                    </p>
-                    <p className="mt-1 text-xs text-primary-foreground/70">{injectablesThisMonth} aplicações este mês</p>
-                  </>
-                ) : (
-                  <h2 className="mt-1 text-2xl font-black leading-tight">Registre sua primeira aplicação</h2>
-                )}
-
-                <Link
-                  to="/injectables/new"
-                  className="mt-4 inline-flex h-10 items-center gap-2 rounded-xl bg-primary-foreground px-4 text-xs font-black text-primary"
-                >
-                  <Syringe className="h-4 w-4" />
-                  Registrar aplicação
-                </Link>
-              </div>
-            </div>
-
             <Link
               to="/body-progress"
               className={cn(SLIDE_CLASS, "flex flex-col justify-between gap-4 border border-white/10 bg-card p-5")}
@@ -438,21 +245,6 @@ export default function Home() {
                 {latestPhoto ? "Compare com fotos anteriores" : "Acompanhe visualmente sua mudança ao longo do tempo"}
               </p>
             </Link>
-
-            <div className={cn(SLIDE_CLASS, "flex flex-col justify-between gap-4 border border-white/10 bg-card p-5")}>
-              <div className="flex items-center gap-4">
-                <span className={cn("flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl", goalBadgeToneClasses[goalTone])}>
-                  <GoalIcon className="h-6 w-6" />
-                </span>
-                <div className="min-w-0">
-                  <p className="text-[11px] font-extrabold uppercase tracking-[0.22em] text-primary">Rumo à meta</p>
-                  <p className="mt-1 truncate text-lg font-black text-foreground">{goalValue}</p>
-                </div>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                {latestWeight != null ? `Peso atual: ${formatWeight(latestWeight)} kg` : "Registre seu peso pra acompanhar"}
-              </p>
-            </div>
 
             <Link
               to="/appointments"
