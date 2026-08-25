@@ -373,7 +373,8 @@ export default function Home() {
 
         <section className="space-y-3">
           <SectionLabel>Seu resumo</SectionLabel>
-          <div className="-mx-5 flex gap-3 overflow-x-auto px-5 pb-1 snap-x snap-mandatory md:-mx-7 md:px-7">
+          <div className="relative">
+            <div className="hide-scrollbar -mx-5 flex gap-3 overflow-x-auto px-5 pb-1 snap-x snap-mandatory md:-mx-7 md:px-7">
             <div className={cn(SLIDE_CLASS, "relative overflow-hidden bg-gradient-primary px-5 py-5 text-primary-foreground")}>
               <span className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-primary-foreground/10" aria-hidden="true" />
               <div className="relative">
@@ -515,6 +516,13 @@ export default function Home() {
                   : nextAchievement?.description ?? "Registre uma aplicação ou um treino para começar sua sequência."}
               </p>
             </Link>
+            </div>
+            <div
+              className="pointer-events-none absolute inset-y-0 right-0 flex w-10 items-center justify-end bg-gradient-to-l from-[hsl(var(--background))] to-transparent md:from-[hsl(var(--background))]"
+              aria-hidden="true"
+            >
+              <ChevronRight className="h-4 w-4 text-muted-foreground/50" />
+            </div>
           </div>
         </section>
 
