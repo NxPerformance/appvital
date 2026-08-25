@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -182,6 +182,7 @@ export default function Home() {
   const { photos } = useBodyProgress();
   const today = useMemo(() => new Date(), []);
   const [activeDraft, setActiveDraft] = useState<ActiveWorkoutDraft | null>(null);
+  const summaryCarouselRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setActiveDraft(findActiveWorkoutDraft());
@@ -374,7 +375,10 @@ export default function Home() {
         <section className="space-y-3">
           <SectionLabel>Seu resumo</SectionLabel>
           <div className="relative">
-            <div className="hide-scrollbar -mx-5 flex gap-3 overflow-x-auto px-5 pb-1 snap-x snap-mandatory md:-mx-7 md:px-7">
+            <div
+              ref={summaryCarouselRef}
+              className="hide-scrollbar -mx-5 flex gap-3 overflow-x-auto px-5 pb-1 snap-x snap-mandatory md:-mx-7 md:px-7"
+            >
             <div className={cn(SLIDE_CLASS, "relative overflow-hidden bg-gradient-primary px-5 py-5 text-primary-foreground")}>
               <span className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-primary-foreground/10" aria-hidden="true" />
               <div className="relative">
@@ -517,23 +521,25 @@ export default function Home() {
               </p>
             </Link>
             </div>
-            <div
-              className="pointer-events-none absolute inset-y-0 right-0 flex w-10 items-center justify-end bg-gradient-to-l from-[hsl(var(--background))] to-transparent md:from-[hsl(var(--background))]"
-              aria-hidden="true"
+            <button
+              type="button"
+              onClick={() => summaryCarouselRef.current?.scrollBy({ left: 260, behavior: "smooth" })}
+              aria-label="Ver mais no resumo"
+              className="absolute right-1 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-white/10 bg-card text-foreground shadow-elegant"
             >
-              <ChevronRight className="h-4 w-4 text-muted-foreground/50" />
-            </div>
+              <ChevronRight className="h-4 w-4" />
+            </button>
           </div>
         </section>
 
         <section className="space-y-3">
           <SectionLabel>Treino</SectionLabel>
-          <div className="rounded-[1.15rem] border border-white/10 bg-card shadow-elegant">
+          <div className="space-y-3">
             {workoutLinks.map((link) => (
               <Link
                 key={link.to}
                 to={link.to}
-                className="group flex items-center gap-4 border-b border-white/10 px-4 py-4 last:border-b-0 transition-transform hover:-translate-y-0.5"
+                className="group flex items-center gap-4 rounded-[1.15rem] border border-white/10 bg-card px-4 py-4 shadow-elegant transition-transform hover:-translate-y-0.5"
               >
                 <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary">
                   <link.icon className="h-5 w-5" />
