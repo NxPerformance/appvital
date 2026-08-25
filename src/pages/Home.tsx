@@ -374,10 +374,10 @@ export default function Home() {
                       <img
                         src={resolveUploadUrl(photo.image_url) ?? undefined}
                         alt="Foto de evolução"
-                        className="h-28 w-full rounded-xl object-cover"
+                        className="aspect-[4/5] w-full rounded-xl object-cover"
                       />
                     ) : (
-                      <div className="flex h-28 w-full items-center justify-center rounded-xl border border-dashed border-white/15 text-muted-foreground">
+                      <div className="flex aspect-[4/5] w-full items-center justify-center rounded-xl border border-dashed border-white/15 text-muted-foreground">
                         <Camera className="h-5 w-5" />
                       </div>
                     )}
