@@ -205,9 +205,16 @@ export default function Home() {
   const weightDelta = latestWeight != null && previousWeight != null ? latestWeight - previousWeight : null;
   const weightGoal = profile?.weight_goal_kg ?? null;
   const movingTowardGoal =
-    weightDelta != null && weightGoal != null && latestWeight != null
-      ? (latestWeight > weightGoal && weightDelta < 0) || (latestWeight < weightGoal && weightDelta > 0)
-      : null;
+    weightDelta == null
+      ? null
+      : weightGoal != null && latestWeight != null
+        ? (latestWeight > weightGoal && weightDelta < 0) || (latestWeight < weightGoal && weightDelta > 0)
+        // Sem meta cadastrada, perda de peso já conta como progresso (maioria dos pacientes
+        // está em acompanhamento de emagrecimento); ganho de peso fica neutro, já que não
+        // sabemos se o paciente está buscando ganho de massa.
+        : weightDelta < 0
+          ? true
+          : null;
 
   const workoutLinks: WorkoutLink[] = [
     { to: "/workouts", label: "Caderno de exercícios", description: "Registro de musculação", icon: Dumbbell },
