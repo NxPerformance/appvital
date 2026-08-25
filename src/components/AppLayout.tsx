@@ -55,8 +55,8 @@ export function AppLayout() {
   };
 
   return (
-    <div className="app-container md:bg-[#24102e] md:p-2">
-      <aside className="hidden w-[330px] shrink-0 rounded-[2rem] border border-white/5 bg-[#24102e] md:flex md:flex-col md:justify-between md:px-7 md:py-6">
+    <div className="app-container md:bg-[hsl(var(--sidebar-background))] md:p-2">
+      <aside className="hidden w-[330px] shrink-0 rounded-[2rem] border border-white/5 bg-[hsl(var(--sidebar-background))] md:flex md:flex-col md:justify-between md:px-7 md:py-6">
         <div className="space-y-10">
           <div className="flex items-center gap-3">
             <div className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-primary text-primary-foreground shadow-glow">
@@ -106,7 +106,7 @@ export function AppLayout() {
           <button
             type="button"
             onClick={() => void handleSignOut()}
-            className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl border border-red-400/30 bg-[#2d123b]/70 px-4 text-sm font-medium text-red-300 transition-colors hover:bg-[#3a174d] hover:text-red-200"
+            className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl border border-red-400/30 bg-[hsl(var(--sidebar-accent))]/70 px-4 text-sm font-medium text-red-300 transition-colors hover:bg-[hsl(var(--sidebar-accent))] hover:text-red-200"
           >
             <LogOut className="h-4 w-4" />
             Sair
