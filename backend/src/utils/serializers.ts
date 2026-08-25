@@ -36,6 +36,7 @@ export function serializeProfile(
     height_cm: profile.heightCm,
     weight_kg: Number(profile.weightKg),
     weight_goal_kg: profile.weightGoalKg != null ? Number(profile.weightGoalKg) : null,
+    weekly_workout_goal: profile.weeklyWorkoutGoal,
     is_premium: profile.isPremium,
     account_type: profile.accountType,
     selected_plan: profile.selectedPlan,
@@ -81,7 +82,10 @@ export const APPOINTMENT_STATUS_TO_CLIENT: Record<string, string> = {
 export function serializeAppointment(
   appointment: Appointment,
   profile?: { fullName: string; user: { email: string } } & { phone?: string | null } | null,
+  options?: { patientView?: boolean },
 ) {
+  const hideNotes = (options?.patientView ?? false) && !appointment.notesVisibleToPatient;
+
   return {
     id: appointment.id,
     user_id: appointment.userId,
@@ -89,7 +93,9 @@ export function serializeAppointment(
     status: APPOINTMENT_STATUS_TO_CLIENT[appointment.status] ?? appointment.status,
     scheduled_date: appointment.scheduledDate,
     scheduled_time: appointment.scheduledTime,
-    admin_notes: appointment.adminNotes,
+    admin_notes: hideNotes ? null : appointment.adminNotes,
+    notes_visible_to_patient: appointment.notesVisibleToPatient,
+    updated_at: appointment.updatedAt,
     created_at: appointment.createdAt,
     profiles: profile
       ? {

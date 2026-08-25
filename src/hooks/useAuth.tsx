@@ -8,6 +8,7 @@ interface RegisterPayload {
   age: number;
   height_cm: number;
   weight_kg: number;
+  weekly_workout_goal?: number | null;
   password: string;
   terms_accepted: boolean;
   account_type?: 'client' | 'personal';

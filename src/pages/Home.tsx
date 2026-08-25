@@ -8,19 +8,25 @@ import {
   ChevronLeft,
   ChevronRight,
   Dumbbell,
+  Flame,
   HeartPulse,
   Lock,
+  MessageCircle,
   RotateCcw,
+  Target,
+  TrendingDown,
+  TrendingUp,
   Trophy,
   type LucideIcon,
 } from "lucide-react";
-import { differenceInCalendarDays, format, parseISO } from "date-fns";
+import { differenceInCalendarDays, endOfWeek, format, parseISO, startOfWeek } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { WeeklyCaloriesChart } from "@/components/home/WeeklyCaloriesChart";
 import { useAchievements } from "@/hooks/useAchievements";
 import { useProfile } from "@/hooks/useProfile";
 import { useBodyProgress } from "@/hooks/useBodyProgress";
+import { useBioimpedance } from "@/hooks/useBioimpedance";
 import { api, resolveUploadUrl } from "@/lib/api";
 import { fetchStrengthWorkouts, findActiveWorkoutDraft, type ActiveWorkoutDraft } from "@/lib/workoutApi";
 import { cn } from "@/lib/utils";
@@ -31,6 +37,8 @@ interface AppointmentEntry {
   status: string;
   scheduled_date: string | null;
   scheduled_time: string | null;
+  admin_notes: string | null;
+  updated_at: string;
 }
 
 const appointmentTypeLabels: Record<string, string> = {
@@ -68,6 +76,10 @@ function formatHomeDate(date: Date) {
   return formatted.charAt(0).toUpperCase() + formatted.slice(1);
 }
 
+function formatWeight(value: number) {
+  return new Intl.NumberFormat("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(value);
+}
+
 function formatUnlockedAt(value?: string) {
   if (!value) return "Continue cuidando da sua saúde";
 
@@ -78,6 +90,16 @@ function formatUnlockedAt(value?: string) {
   if (days <= 0) return "Desbloqueada hoje";
   if (days === 1) return "Desbloqueada há 1 dia";
   return `Desbloqueada há ${days} dias`;
+}
+
+function formatUpdatedAgo(value: string) {
+  const updatedAt = parseISO(value);
+  if (Number.isNaN(updatedAt.getTime())) return "";
+
+  const days = differenceInCalendarDays(new Date(), updatedAt);
+  if (days <= 0) return "Atualizado hoje";
+  if (days === 1) return "Atualizado há 1 dia";
+  return `Atualizado há ${days} dias`;
 }
 
 function SectionLabel({ children }: { children: string }) {
@@ -95,6 +117,7 @@ export default function Home() {
   const { profile, loading, error: profileError } = useProfile();
   const { achievements, userAchievements, latestAchievement } = useAchievements();
   const { photos } = useBodyProgress();
+  const { latestRecord: latestBio, previousRecord: previousBio } = useBioimpedance();
   const today = useMemo(() => new Date(), []);
   const [activeDraft, setActiveDraft] = useState<ActiveWorkoutDraft | null>(null);
   const summaryCarouselRef = useRef<HTMLDivElement>(null);
@@ -160,6 +183,32 @@ export default function Home() {
     : null;
   const showRecentAchievement = latestAchievement != null && daysSinceAchievement != null && daysSinceAchievement <= 3;
 
+  const weekStart = startOfWeek(today, { weekStartsOn: 0 });
+  const weekEnd = endOfWeek(today, { weekStartsOn: 0 });
+  const last30Start = new Date(today);
+  last30Start.setDate(last30Start.getDate() - 29);
+
+  const workoutDates = (strengthWorkouts ?? []).map((workout) => parseISO(`${workout.date}T12:00:00`));
+  const dateKey = (date: Date) => format(date, "yyyy-MM-dd");
+
+  const weekWorkoutDays = new Set(
+    workoutDates.filter((date) => date >= weekStart && date <= weekEnd).map(dateKey),
+  ).size;
+  const weeklyGoal = profile?.weekly_workout_goal ?? null;
+  const weeklyGoalPercent = weeklyGoal ? Math.min(100, Math.round((weekWorkoutDays / weeklyGoal) * 100)) : null;
+
+  const workoutsLast30 = workoutDates.filter((date) => date >= last30Start && date <= today);
+  const activeDaysLast30 = new Set(workoutsLast30.map(dateKey)).size;
+
+  const latestWeight = latestBio?.weight_kg ?? null;
+  const previousWeight = previousBio?.weight_kg ?? null;
+  const weightDelta = latestWeight != null && previousWeight != null ? latestWeight - previousWeight : null;
+  const weightGoal = profile?.weight_goal_kg ?? null;
+  const movingTowardGoal =
+    weightDelta != null && weightGoal != null && latestWeight != null
+      ? (latestWeight > weightGoal && weightDelta < 0) || (latestWeight < weightGoal && weightDelta > 0)
+      : null;
+
   const workoutLinks: WorkoutLink[] = [
     { to: "/workouts", label: "Caderno de exercícios", description: "Registro de musculação", icon: Dumbbell },
     { to: "/workouts/dashboard", label: "Desempenho", description: "Estatísticas e progresso", icon: BarChart3 },
@@ -205,9 +254,92 @@ export default function Home() {
           </div>
         </header>
 
+        {weeklyGoal ? (
+          <div className="rounded-[1.15rem] border border-white/10 bg-card p-4 shadow-elegant">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary">
+                  <Target className="h-4 w-4" />
+                </span>
+                <p className="text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground">Sua semana</p>
+              </div>
+              <span className="shrink-0 text-sm font-extrabold text-foreground">
+                {weekWorkoutDays} de {weeklyGoal} treinos
+              </span>
+            </div>
+            <div className="mt-3 h-2 overflow-hidden rounded-full bg-secondary/50">
+              <div
+                className="h-full rounded-full bg-gradient-primary transition-all"
+                style={{ width: `${weeklyGoalPercent}%` }}
+              />
+            </div>
+            <Link
+              to="/settings?edit=weekly_goal"
+              className="mt-2 inline-block text-[11px] font-semibold text-muted-foreground/70 hover:text-muted-foreground"
+            >
+              Alterar meta
+            </Link>
+          </div>
+        ) : null}
+
         <WeeklyCaloriesChart
           entries={(strengthWorkouts ?? []).map((workout) => ({ date: workout.date, calories: workout.calories }))}
         />
+
+        <div className="grid grid-cols-2 gap-3">
+          <Link
+            to="/workouts/dashboard"
+            className="flex flex-col gap-2 rounded-[1.15rem] border border-white/10 bg-card p-4 shadow-elegant transition-transform hover:-translate-y-0.5"
+          >
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/15 text-primary">
+              <Flame className="h-4 w-4" />
+            </span>
+            <p className="text-[11px] font-extrabold uppercase tracking-[0.14em] text-muted-foreground">Consistência</p>
+            <p className="text-lg font-black leading-tight text-foreground">
+              {activeDaysLast30} {activeDaysLast30 === 1 ? "dia ativo" : "dias ativos"}
+            </p>
+            <p className="text-[11px] text-muted-foreground">
+              {workoutsLast30.length} {workoutsLast30.length === 1 ? "treino" : "treinos"} nos últimos 30 dias
+            </p>
+          </Link>
+
+          <Link
+            to="/body-progress"
+            className="flex flex-col gap-2 rounded-[1.15rem] border border-white/10 bg-card p-4 shadow-elegant transition-transform hover:-translate-y-0.5"
+          >
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/15 text-primary">
+              {weightDelta != null && weightDelta < 0 ? (
+                <TrendingDown className="h-4 w-4" />
+              ) : (
+                <TrendingUp className="h-4 w-4" />
+              )}
+            </span>
+            <p className="text-[11px] font-extrabold uppercase tracking-[0.14em] text-muted-foreground">Evolução</p>
+            {latestWeight != null ? (
+              <>
+                <p className="text-lg font-black leading-tight text-foreground">{formatWeight(latestWeight)} kg</p>
+                {weightDelta != null ? (
+                  <p
+                    className={cn(
+                      "text-[11px] font-semibold",
+                      movingTowardGoal == null
+                        ? "text-muted-foreground"
+                        : movingTowardGoal
+                          ? "text-emerald-300"
+                          : "text-amber-300",
+                    )}
+                  >
+                    {weightDelta < 0 ? "↓" : weightDelta > 0 ? "↑" : "="} {formatWeight(Math.abs(weightDelta))} kg desde a última pesagem
+                  </p>
+                ) : (
+                  <p className="text-[11px] text-muted-foreground">Ainda sem comparação</p>
+                )}
+              </>
+            ) : (
+              <p className="text-sm font-bold leading-snug text-foreground">Registre seu peso pra acompanhar</p>
+            )}
+          </Link>
+        </div>
 
         <section className="space-y-3">
           <SectionLabel>Seu resumo</SectionLabel>
@@ -276,6 +408,18 @@ export default function Home() {
                   ? nextAppointment.scheduled_time
                   : "Toque para agendar com a Dra. Gabriela"}
               </p>
+              {nextAppointment?.admin_notes ? (
+                <div className="mt-1 rounded-xl border border-dashed border-primary/45 bg-primary/10 p-2.5">
+                  <p className="flex items-center gap-1.5 text-[10.5px] font-extrabold uppercase tracking-[0.1em] text-primary">
+                    <MessageCircle className="h-3 w-3" />
+                    Recado da consulta
+                  </p>
+                  <p className="mt-1 line-clamp-3 text-xs leading-relaxed text-foreground">
+                    "{nextAppointment.admin_notes}"
+                  </p>
+                  <p className="mt-1 text-[10px] text-muted-foreground">{formatUpdatedAgo(nextAppointment.updated_at)}</p>
+                </div>
+              ) : null}
             </Link>
 
             <Link

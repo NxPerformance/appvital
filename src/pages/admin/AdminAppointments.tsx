@@ -14,6 +14,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
 import { formatDateSafe, parseDateValue } from '@/lib/dateUtils';
 import {
   Select,
@@ -58,6 +59,7 @@ export default function AdminAppointments() {
   const [formTime, setFormTime] = useState('');
   const [formStatus, setFormStatus] = useState('');
   const [formNotes, setFormNotes] = useState('');
+  const [formNotesVisible, setFormNotesVisible] = useState(false);
 
   const openEditDialog = (appointment: Appointment) => {
     const scheduledDate = parseDateValue(appointment.scheduled_date, { noon: true });
@@ -67,6 +69,7 @@ export default function AdminAppointments() {
     setFormTime(appointment.scheduled_time?.slice(0, 5) || '');
     setFormStatus(appointment.status);
     setFormNotes(appointment.admin_notes || '');
+    setFormNotesVisible(appointment.notes_visible_to_patient ?? false);
   };
 
   const handleSave = async () => {
@@ -79,6 +82,7 @@ export default function AdminAppointments() {
         scheduled_time: formTime || null,
         status: formStatus,
         admin_notes: formNotes || null,
+        notes_visible_to_patient: formNotesVisible,
       });
 
       toast({
@@ -317,6 +321,16 @@ export default function AdminAppointments() {
                 placeholder="Notas internas..."
                 rows={3}
               />
+            </div>
+
+            <div className="flex items-center justify-between gap-3 rounded-lg border border-border p-3">
+              <div>
+                <Label>Visível para o paciente</Label>
+                <p className="text-xs text-muted-foreground">
+                  Se ativado, essa observação aparece como recado da consulta pro paciente.
+                </p>
+              </div>
+              <Switch checked={formNotesVisible} onCheckedChange={setFormNotesVisible} />
             </div>
 
             {/* Actions */}

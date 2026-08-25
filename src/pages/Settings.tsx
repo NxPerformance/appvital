@@ -83,10 +83,12 @@ export default function Settings() {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [highlightBMI, setHighlightBMI] = useState(false);
+  const [highlightWeeklyGoal, setHighlightWeeklyGoal] = useState(false);
   const [notificationSettings, setNotificationSettings] = useState({
     ...defaultNotificationSettings,
   });
   const bmiFieldsRef = useRef<HTMLDivElement>(null);
+  const weeklyGoalFieldRef = useRef<HTMLDivElement>(null);
   const [formData, setFormData] = useState({
     full_name: '',
     phone: '',
@@ -94,11 +96,13 @@ export default function Settings() {
     height_cm: '',
     weight_kg: '',
     weight_goal_kg: '',
+    weekly_workout_goal: '',
   });
 
-  // Auto-edit when coming from BMI card
+  // Auto-edit when coming from a deep-link (BMI card, "Alterar meta" na Home)
   useEffect(() => {
-    if (searchParams.get('edit') === 'bmi' && profile && !loading) {
+    const editTarget = searchParams.get('edit');
+    if ((editTarget === 'bmi' || editTarget === 'weekly_goal') && profile && !loading) {
       setFormData({
         full_name: profile.full_name,
         phone: profile.phone || '',
@@ -106,17 +110,21 @@ export default function Settings() {
         height_cm: String(profile.height_cm),
         weight_kg: String(profile.weight_kg),
         weight_goal_kg: profile.weight_goal_kg != null ? String(profile.weight_goal_kg) : '',
+        weekly_workout_goal: profile.weekly_workout_goal != null ? String(profile.weekly_workout_goal) : '',
       });
       setEditing(true);
-      setHighlightBMI(true);
       // Clear the query param
       setSearchParams({});
-      // Scroll to BMI fields after a short delay
+
+      const targetRef = editTarget === 'bmi' ? bmiFieldsRef : weeklyGoalFieldRef;
+      const setHighlight = editTarget === 'bmi' ? setHighlightBMI : setHighlightWeeklyGoal;
+      setHighlight(true);
+      // Scroll to the target field after a short delay
       setTimeout(() => {
-        bmiFieldsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        targetRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }, 100);
       // Remove highlight after animation
-      setTimeout(() => setHighlightBMI(false), 2000);
+      setTimeout(() => setHighlight(false), 2000);
     }
   }, [searchParams, profile, loading, setSearchParams]);
 
@@ -138,6 +146,7 @@ export default function Settings() {
         height_cm: String(profile.height_cm),
         weight_kg: String(profile.weight_kg),
         weight_goal_kg: profile.weight_goal_kg != null ? String(profile.weight_goal_kg) : '',
+        weekly_workout_goal: profile.weekly_workout_goal != null ? String(profile.weekly_workout_goal) : '',
       });
     }
     setEditing(true);
@@ -157,6 +166,7 @@ export default function Settings() {
         height_cm: Number(formData.height_cm),
         weight_kg: parseDecimalInput(formData.weight_kg),
         weight_goal_kg: formData.weight_goal_kg.trim() ? parseDecimalInput(formData.weight_goal_kg) : null,
+        weekly_workout_goal: formData.weekly_workout_goal.trim() ? Number(formData.weekly_workout_goal) : null,
       });
 
       if (error) throw new Error(error);
@@ -381,6 +391,26 @@ export default function Settings() {
                 </button>
               ) : null}
             </div>
+            <div
+              ref={weeklyGoalFieldRef}
+              className={cn(
+                'space-y-2 p-2 -m-2 rounded-xl transition-all duration-500',
+                highlightWeeklyGoal && 'ring-2 ring-primary bg-primary/10'
+              )}
+            >
+              <Label htmlFor="weekly_workout_goal">Meta de treinos por semana</Label>
+              <Input
+                id="weekly_workout_goal"
+                type="text"
+                inputMode="numeric"
+                maxLength={2}
+                placeholder="Opcional"
+                value={formData.weekly_workout_goal}
+                onKeyDown={handleIntegerKeyDown}
+                onChange={(e) => setFormData((prev) => ({ ...prev, weekly_workout_goal: sanitizeInteger(e.target.value) }))}
+                className="h-14 rounded-xl border-white/5 bg-secondary/70 text-base focus-visible:ring-offset-0"
+              />
+            </div>
             <div className="flex gap-3">
               <Button
                 variant="outline"
@@ -409,6 +439,10 @@ export default function Settings() {
             <DetailRow label="Altura" value={profile?.height_cm ? `${profile.height_cm} cm` : null} />
             <DetailRow label="Peso" value={profile?.weight_kg ? `${profile.weight_kg} kg` : null} />
             <DetailRow label="Meta de peso" value={profile?.weight_goal_kg != null ? `${profile.weight_goal_kg} kg` : null} />
+            <DetailRow
+              label="Meta de treinos por semana"
+              value={profile?.weekly_workout_goal != null ? `${profile.weekly_workout_goal}x por semana` : null}
+            />
           </div>
         )}
       </section>
