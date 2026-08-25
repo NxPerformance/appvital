@@ -103,7 +103,7 @@ export function WeeklyCaloriesChart({ entries }: WeeklyCaloriesChartProps) {
 
       <div className="mt-4 h-32 md:h-40">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={week} margin={{ top: 34, right: 4, left: -20, bottom: 0 }} barCategoryGap="18%" barSize={36}>
+          <BarChart data={week} margin={{ top: 34, right: 4, left: 0, bottom: 0 }} barCategoryGap="18%" barSize={36}>
             <defs>
               <linearGradient id="calorieBarDefault" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor="hsl(270, 45%, 62%)" />
@@ -122,7 +122,7 @@ export function WeeklyCaloriesChart({ entries }: WeeklyCaloriesChartProps) {
               axisLine={false}
               tickLine={false}
               tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
-              width={32}
+              width={36}
             />
             <XAxis
               dataKey="dayLabel"
