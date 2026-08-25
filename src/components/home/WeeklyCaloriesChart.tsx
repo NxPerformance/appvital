@@ -9,7 +9,7 @@ interface WeeklyCaloriesChartProps {
 }
 
 const DAY_LETTERS = ["D", "S", "T", "Q", "Q", "S", "S"];
-const BAR_TRACK_HEIGHT = 64;
+const BAR_TRACK_HEIGHT = 88;
 
 export function WeeklyCaloriesChart({ entries }: WeeklyCaloriesChartProps) {
   const today = useMemo(() => new Date(), []);
@@ -48,10 +48,10 @@ export function WeeklyCaloriesChart({ entries }: WeeklyCaloriesChartProps) {
         <p className="text-[11px] text-muted-foreground">Calorias na semana</p>
       </div>
 
-      <div className="mt-5 flex items-end justify-between gap-2">
+      <div className="mt-5 flex items-end justify-between gap-1.5">
         {week.map(({ day, total }) => {
           const isSelected = isSameDay(day, selectedDate);
-          const fillHeight = total > 0 ? Math.max(8, Math.round((total / maxTotal) * BAR_TRACK_HEIGHT)) : 0;
+          const fillHeight = total > 0 ? Math.max(10, Math.round((total / maxTotal) * BAR_TRACK_HEIGHT)) : 0;
 
           return (
             <button
@@ -63,14 +63,14 @@ export function WeeklyCaloriesChart({ entries }: WeeklyCaloriesChartProps) {
             >
               <div
                 className={cn(
-                  "relative w-3 overflow-hidden rounded-[4px] sm:w-3.5",
+                  "relative w-full overflow-hidden rounded-2xl",
                   isSelected ? "bg-primary/20" : "bg-white/[0.06]",
                 )}
                 style={{ height: BAR_TRACK_HEIGHT }}
               >
                 <div
                   className={cn(
-                    "absolute inset-x-0 bottom-0 rounded-[4px] transition-all",
+                    "absolute inset-x-0 bottom-0 rounded-2xl transition-all",
                     isSelected ? "bg-primary" : isToday(day) ? "bg-primary/55" : "bg-muted-foreground/40",
                   )}
                   style={{ height: fillHeight }}
