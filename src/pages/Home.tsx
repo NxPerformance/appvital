@@ -6,6 +6,7 @@ import {
   Bell,
   Camera,
   CheckCircle2,
+  ChevronLeft,
   ChevronRight,
   Clock,
   Dumbbell,
@@ -377,7 +378,7 @@ export default function Home() {
           <div className="relative">
             <div
               ref={summaryCarouselRef}
-              className="hide-scrollbar -mx-5 flex gap-3 overflow-x-auto px-5 pb-1 snap-x snap-mandatory md:-mx-7 md:px-7"
+              className="hide-scrollbar flex gap-3 overflow-x-auto pb-1 snap-x snap-mandatory"
             >
             <div className={cn(SLIDE_CLASS, "relative overflow-hidden bg-gradient-primary px-5 py-5 text-primary-foreground")}>
               <span className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-primary-foreground/10" aria-hidden="true" />
@@ -521,6 +522,14 @@ export default function Home() {
               </p>
             </Link>
             </div>
+            <button
+              type="button"
+              onClick={() => summaryCarouselRef.current?.scrollBy({ left: -260, behavior: "smooth" })}
+              aria-label="Ver anterior no resumo"
+              className="absolute left-1 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-white/10 bg-card text-foreground shadow-elegant"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
             <button
               type="button"
               onClick={() => summaryCarouselRef.current?.scrollBy({ left: 260, behavior: "smooth" })}
