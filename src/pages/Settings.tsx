@@ -4,13 +4,16 @@ import {
   AlertTriangle,
   ArrowLeft,
   Bell,
+  Check,
   Edit,
   LogOut,
   Mail,
   MessageCircle,
+  Moon,
   Save,
   ShieldCheck,
   Smartphone,
+  Sparkles,
   Watch,
   X,
 } from 'lucide-react';
@@ -22,6 +25,7 @@ import { Switch } from '@/components/ui/switch';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
 import { useBioimpedance } from '@/hooks/useBioimpedance';
+import { useTheme, type AppTheme } from '@/hooks/useTheme';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { handleIntegerKeyDown, handleDecimalKeyDown, sanitizeInteger, sanitizeDecimal } from '@/lib/inputValidation';
@@ -32,6 +36,11 @@ type NotificationPreference = {
   description: string;
   icon: ElementType;
 };
+
+const themeOptions: Array<{ value: AppTheme; label: string; description: string; icon: ElementType }> = [
+  { value: 'roxo', label: 'Roxo', description: 'Visual clássico da Vitalissy', icon: Sparkles },
+  { value: 'preto', label: 'Preto', description: 'Fundo escuro, mesmo destaque dourado', icon: Moon },
+];
 
 const notificationPreferences: NotificationPreference[] = [
   { key: 'updates', label: 'Novidades', description: 'Conteúdos e melhorias do app', icon: Bell },
@@ -67,6 +76,7 @@ export default function Settings() {
   const { signOut } = useAuth();
   const { profile, loading, updateProfile } = useProfile();
   const { latestRecord: latestBioimpedance } = useBioimpedance();
+  const { theme, setTheme } = useTheme();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -401,6 +411,41 @@ export default function Settings() {
             <DetailRow label="Meta de peso" value={profile?.weight_goal_kg != null ? `${profile.weight_goal_kg} kg` : null} />
           </div>
         )}
+      </section>
+
+      <section className="space-y-3">
+        <div>
+          <h2 className="text-lg font-semibold">Aparência</h2>
+          <p className="text-sm text-muted-foreground">Escolha o visual do app neste aparelho.</p>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          {themeOptions.map((option) => {
+            const Icon = option.icon;
+            const isActive = theme === option.value;
+            return (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => setTheme(option.value)}
+                className={cn(
+                  'relative flex flex-col items-start gap-2 rounded-2xl border px-4 py-4 text-left transition-colors',
+                  isActive ? 'border-primary bg-card' : 'border-white/5 bg-card/85',
+                )}
+              >
+                {isActive && (
+                  <span className="absolute right-3 top-3 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                    <Check className="h-3 w-3" />
+                  </span>
+                )}
+                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-secondary/80 text-primary">
+                  <Icon className="h-5 w-5" />
+                </span>
+                <span className="text-sm font-semibold">{option.label}</span>
+                <span className="text-xs text-muted-foreground">{option.description}</span>
+              </button>
+            );
+          })}
+        </div>
       </section>
 
       <section className="space-y-3">

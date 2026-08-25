@@ -28,6 +28,16 @@
   </head>
 
   <body>
+    <script>
+      (function () {
+        try {
+          var theme = window.localStorage.getItem('vitalissy-theme');
+          if (theme === 'preto') {
+            document.documentElement.setAttribute('data-theme', 'preto');
+          }
+        } catch (e) {}
+      })();
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
