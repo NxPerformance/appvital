@@ -126,7 +126,11 @@ export function PhotosTab() {
   }, [photos, selectedPose]);
 
   const selectedPhoto = filteredPhotos.find((photo) => photo.id === selectedPhotoId) ?? filteredPhotos[0] ?? null;
-  const comparePool = filteredPhotos.filter((photo) => photo.id !== selectedPhoto?.id);
+  // Sempre compara a mesma pose (frente com frente, lado com lado...), mesmo quando o filtro é "Todas" —
+  // comparar ângulos diferentes não mostra evolução nenhuma.
+  const comparePool = selectedPhoto
+    ? photos.filter((photo) => photo.pose === selectedPhoto.pose && photo.id !== selectedPhoto.id)
+    : [];
   const comparePhoto = comparePool.find((photo) => photo.id === comparePhotoId) ?? comparePool[0] ?? null;
 
   const handleUpload = async () => {
@@ -492,22 +496,23 @@ export function PhotosTab() {
         </div>
 
         {filteredPhotos.length ? (
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <div className="-mx-1 flex snap-x snap-mandatory gap-4 overflow-x-auto px-1 pb-2 md:mx-0 md:grid md:grid-cols-2 md:overflow-visible md:px-0 md:pb-0 xl:grid-cols-3">
             {filteredPhotos.map((photo) => (
-              <PhotoCard
-                key={photo.id}
-                photo={photo}
-                selected={photo.id === selectedPhoto?.id || photo.id === comparePhoto?.id}
-                onSelect={() => {
-                  if (!selectedPhoto || photo.id === selectedPhoto.id) {
-                    setSelectedPhotoId(photo.id);
-                    return;
-                  }
+              <div key={photo.id} className="w-[78%] flex-shrink-0 snap-center sm:w-[45%] md:w-auto md:flex-shrink md:snap-align-none">
+                <PhotoCard
+                  photo={photo}
+                  selected={photo.id === selectedPhoto?.id || photo.id === comparePhoto?.id}
+                  onSelect={() => {
+                    if (!selectedPhoto || photo.id === selectedPhoto.id) {
+                      setSelectedPhotoId(photo.id);
+                      return;
+                    }
 
-                  setComparePhotoId(photo.id);
-                }}
-                onDelete={() => void handleDelete(photo.id)}
-              />
+                    setComparePhotoId(photo.id);
+                  }}
+                  onDelete={() => void handleDelete(photo.id)}
+                />
+              </div>
             ))}
           </div>
         ) : (
