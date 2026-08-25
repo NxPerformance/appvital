@@ -326,17 +326,16 @@ export default function Home() {
               <>
                 <p className="text-lg font-black leading-tight text-foreground">{formatWeight(latestWeight)} kg</p>
                 {weightDelta != null ? (
-                  <p
-                    className={cn(
-                      "text-[11px] font-semibold",
-                      movingTowardGoal == null
-                        ? "text-muted-foreground"
-                        : movingTowardGoal
-                          ? "text-emerald-300"
-                          : "text-amber-300",
-                    )}
-                  >
-                    {weightDelta < 0 ? "↓" : weightDelta > 0 ? "↑" : "="} {formatWeight(Math.abs(weightDelta))} kg desde a última pesagem
+                  <p className="text-[11px] font-semibold text-muted-foreground">
+                    {weightDelta < 0 ? "↓" : weightDelta > 0 ? "↑" : "="}{" "}
+                    <span
+                      className={cn(
+                        movingTowardGoal == null ? "" : movingTowardGoal ? "text-emerald-300" : "text-amber-300",
+                      )}
+                    >
+                      {formatWeight(Math.abs(weightDelta))}
+                    </span>{" "}
+                    kg desde a última pesagem
                   </p>
                 ) : (
                   <p className="text-[11px] text-muted-foreground">Ainda sem comparação</p>
