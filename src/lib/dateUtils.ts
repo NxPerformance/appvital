@@ -9,7 +9,7 @@ interface SafeFormatOptions {
 
 const DATE_ONLY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
-export function isValidDate(date: Date) {
+function isValidDate(date: Date) {
   return !Number.isNaN(date.getTime());
 }
 
