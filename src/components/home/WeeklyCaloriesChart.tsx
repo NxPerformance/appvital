@@ -30,6 +30,7 @@ interface CalloutProps {
 export function WeeklyCaloriesChart({ entries }: WeeklyCaloriesChartProps) {
   const today = useMemo(() => new Date(), []);
   const [selectedDate, setSelectedDate] = useState<Date>(today);
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
 
   const week = useMemo(() => {
     const start = startOfWeek(today, { weekStartsOn: 0 });
@@ -54,7 +55,7 @@ export function WeeklyCaloriesChart({ entries }: WeeklyCaloriesChartProps) {
   const renderSelectedCallout = (props: CalloutProps) => {
     const { x, y, width, index } = props;
     const entry = week[index];
-    if (!entry || !isSameDay(entry.day, selectedDate)) return <g key={`callout-${index}`} />;
+    if (!entry || index !== activeIndex) return <g key={`callout-${index}`} />;
 
     const label = `${entry.calories} kcal`;
     const boxWidth = Math.max(56, label.length * 7 + 20);
@@ -109,7 +110,13 @@ export function WeeklyCaloriesChart({ entries }: WeeklyCaloriesChartProps) {
 
       <div className="mt-4 h-32 md:h-40">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={week} margin={{ top: 34, right: 4, left: 0, bottom: 0 }} barCategoryGap="18%" barSize={36}>
+          <BarChart
+            data={week}
+            margin={{ top: 34, right: 4, left: 0, bottom: 0 }}
+            barCategoryGap="18%"
+            barSize={36}
+            onMouseLeave={() => setActiveIndex(null)}
+          >
             <defs>
               <linearGradient id="calorieBarDefault" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor="hsl(270, 45%, 62%)" />
@@ -154,17 +161,22 @@ export function WeeklyCaloriesChart({ entries }: WeeklyCaloriesChartProps) {
             <Bar
               dataKey="calories"
               radius={[8, 8, 8, 8]}
-              onClick={(data: { day: Date }) => setSelectedDate(data.day)}
+              onClick={(data: { day: Date }, index: number) => {
+                setSelectedDate(data.day);
+                setActiveIndex(index);
+              }}
               cursor="pointer"
               isAnimationActive={false}
               label={renderSelectedCallout}
             >
-              {week.map((entry) => {
+              {week.map((entry, index) => {
                 const isSelected = isSameDay(entry.day, selectedDate);
                 return (
                   <Cell
                     key={entry.day.toISOString()}
                     fill={isSelected ? "url(#calorieBarSelected)" : "url(#calorieBarDefault)"}
+                    onMouseEnter={() => setActiveIndex(index)}
+                    onMouseLeave={() => setActiveIndex(null)}
                   />
                 );
               })}
