@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft,
@@ -540,6 +541,15 @@ export default function WorkoutForm() {
       toast.success("Treino salvo com sucesso!");
       setSaveFeedback({ type: "success", message: "Treino salvo com sucesso." });
       clearDraft();
+      // Clear the fields that drive hasUnsavedChanges synchronously, so the
+      // navigation right after this doesn't trip useBlocker and reopen the
+      // unsaved-changes dialog on an already-saved workout (which caused
+      // duplicate saves if the user pressed "Salvar" on that dialog too).
+      flushSync(() => {
+        setObjective("");
+        setAddedExercises([]);
+        setCalories("");
+      });
       return true;
     } catch (error: any) {
       const message = `Não foi possível salvar o treino: ${error?.message || "tente novamente em alguns instantes"}`;

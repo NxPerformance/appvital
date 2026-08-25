@@ -48,10 +48,10 @@ export function WeeklyCaloriesChart({ entries }: WeeklyCaloriesChartProps) {
         <p className="text-[11px] text-muted-foreground">Calorias na semana</p>
       </div>
 
-      <div className="mt-5 flex items-end justify-between gap-1 border-b border-white/10 pb-0">
+      <div className="mt-5 flex items-end justify-between gap-2">
         {week.map(({ day, total }) => {
           const isSelected = isSameDay(day, selectedDate);
-          const barHeight = total > 0 ? Math.max(6, Math.round((total / maxTotal) * BAR_TRACK_HEIGHT)) : 3;
+          const fillHeight = total > 0 ? Math.max(8, Math.round((total / maxTotal) * BAR_TRACK_HEIGHT)) : 0;
 
           return (
             <button
@@ -61,18 +61,24 @@ export function WeeklyCaloriesChart({ entries }: WeeklyCaloriesChartProps) {
               className="flex flex-1 flex-col items-center gap-2"
               aria-label={`${format(day, "EEEE, d 'de' MMMM", { locale: ptBR })}: ${total} kcal`}
             >
-              <div className="flex h-16 w-full items-end justify-center">
+              <div
+                className={cn(
+                  "relative w-3 overflow-hidden rounded-[4px] sm:w-3.5",
+                  isSelected ? "bg-primary/20" : "bg-white/[0.06]",
+                )}
+                style={{ height: BAR_TRACK_HEIGHT }}
+              >
                 <div
                   className={cn(
-                    "w-2 rounded-t-[3px] transition-colors sm:w-2.5",
-                    isSelected ? "bg-primary" : isToday(day) ? "bg-primary/45" : "bg-muted-foreground/25",
+                    "absolute inset-x-0 bottom-0 rounded-[4px] transition-all",
+                    isSelected ? "bg-primary" : isToday(day) ? "bg-primary/55" : "bg-muted-foreground/40",
                   )}
-                  style={{ height: barHeight }}
+                  style={{ height: fillHeight }}
                 />
               </div>
               <span
                 className={cn(
-                  "pb-1 text-[11px] font-bold",
+                  "text-[11px] font-bold",
                   isSelected ? "text-primary" : "text-muted-foreground",
                 )}
               >
