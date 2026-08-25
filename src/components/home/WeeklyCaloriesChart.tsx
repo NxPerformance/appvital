@@ -15,8 +15,9 @@ const DAY_LETTERS = ["D", "S", "T", "Q", "Q", "S", "S"];
 // o que não significa nada. É o mesmo princípio de meta fixa que apps como
 // Apple Fitness/Fitbit usam: a barra enche em relação a um alvo, não a um
 // recorde pessoal. 500 kcal é uma sessão de musculação de intensidade
-// razoável para a maioria dos pacientes; dias acima disso só mostram a
-// barra cheia (o valor real continua certo no texto).
+// razoável para a maioria dos pacientes. Esse valor é apenas o PISO da escala
+// (Math.max com o maior total real da semana) — dias acima do alvo continuam
+// escalando corretamente, em vez de terem a barra cortada em 500.
 const DAILY_CALORIE_TARGET = 500;
 
 interface CalloutProps {
@@ -44,6 +45,11 @@ export function WeeklyCaloriesChart({ entries }: WeeklyCaloriesChartProps) {
   }, [entries, today]);
 
   const selected = week.find((d) => isSameDay(d.day, selectedDate)) ?? week[week.length - 1];
+
+  const chartMax = useMemo(
+    () => Math.max(DAILY_CALORIE_TARGET, ...week.map((d) => d.calories)),
+    [week]
+  );
 
   const renderSelectedCallout = (props: CalloutProps) => {
     const { x, y, width, index } = props;
@@ -116,8 +122,7 @@ export function WeeklyCaloriesChart({ entries }: WeeklyCaloriesChartProps) {
             </defs>
             <CartesianGrid vertical={false} stroke="hsl(var(--border))" strokeDasharray="3 4" />
             <YAxis
-              domain={[0, DAILY_CALORIE_TARGET]}
-              allowDataOverflow
+              domain={[0, chartMax]}
               tickCount={6}
               axisLine={false}
               tickLine={false}
