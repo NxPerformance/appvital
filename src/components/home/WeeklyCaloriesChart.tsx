@@ -55,9 +55,9 @@ export function WeeklyCaloriesChart({ entries }: WeeklyCaloriesChartProps) {
         <p className="text-[11px] text-muted-foreground">Calorias na semana</p>
       </div>
 
-      <div className="mt-3 h-24 md:mx-auto md:h-32 md:max-w-sm">
+      <div className="mt-3 h-24 md:h-32">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={week} margin={{ top: 4, right: 0, left: 0, bottom: 0 }} barCategoryGap="18%">
+          <BarChart data={week} margin={{ top: 4, right: 0, left: 0, bottom: 0 }} barCategoryGap="18%" barSize={36}>
             <YAxis hide domain={[0, DAILY_CALORIE_TARGET]} allowDataOverflow />
             <XAxis
               dataKey="dayLabel"
