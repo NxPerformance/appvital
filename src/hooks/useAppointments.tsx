@@ -11,6 +11,8 @@ export interface Appointment {
   scheduled_date: string | null;
   scheduled_time: string | null;
   admin_notes: string | null;
+  notes_visible_to_patient: boolean;
+  updated_at: string;
   created_at: string;
   profiles?: {
     full_name: string;
@@ -31,6 +33,10 @@ type RawAppointment = {
   scheduledTime?: string | null;
   admin_notes?: string | null;
   adminNotes?: string | null;
+  notes_visible_to_patient?: boolean;
+  notesVisibleToPatient?: boolean;
+  updated_at?: string;
+  updatedAt?: string;
   created_at?: string;
   createdAt?: string;
   profiles?: Appointment['profiles'];
@@ -47,6 +53,8 @@ function normalizeAppointment(appointment: RawAppointment): Appointment {
     scheduled_date: scheduledDate ? toDateOnlyString(scheduledDate) : null,
     scheduled_time: appointment.scheduled_time ?? appointment.scheduledTime ?? null,
     admin_notes: appointment.admin_notes ?? appointment.adminNotes ?? null,
+    notes_visible_to_patient: appointment.notes_visible_to_patient ?? appointment.notesVisibleToPatient ?? false,
+    updated_at: appointment.updated_at ?? appointment.updatedAt ?? '',
     created_at: appointment.created_at ?? appointment.createdAt ?? '',
     profiles: appointment.profiles,
   };
@@ -119,24 +127,28 @@ export function useUpdateAppointment() {
       scheduled_time,
       status,
       admin_notes,
+      notes_visible_to_patient,
     }: {
       id: string;
       scheduled_date?: string | null;
       scheduled_time?: string | null;
       status?: string;
       admin_notes?: string | null;
+      notes_visible_to_patient?: boolean;
     }) => {
       const payload: {
         scheduled_date?: string | null;
         scheduled_time?: string | null;
         status?: string;
         admin_notes?: string | null;
+        notes_visible_to_patient?: boolean;
       } = {};
 
       if (scheduled_date !== undefined) payload.scheduled_date = scheduled_date;
       if (scheduled_time !== undefined) payload.scheduled_time = scheduled_time;
       if (status !== undefined) payload.status = status;
       if (admin_notes !== undefined) payload.admin_notes = admin_notes;
+      if (notes_visible_to_patient !== undefined) payload.notes_visible_to_patient = notes_visible_to_patient;
 
       const response = await api.patch<{ appointment: RawAppointment }>(`/appointments/admin/${id}`, payload);
       return normalizeAppointment(response.appointment);

@@ -23,7 +23,9 @@ appointmentsRouter.get(
       where: { userId: req.auth!.userId },
       orderBy: { createdAt: "desc" },
     });
-    res.json({ appointments: appointments.map((appointment) => serializeAppointment(appointment)) });
+    res.json({
+      appointments: appointments.map((appointment) => serializeAppointment(appointment, null, { patientView: true })),
+    });
   }),
 );
 
@@ -44,7 +46,7 @@ appointmentsRouter.post(
       },
     });
 
-    res.status(201).json({ appointment: serializeAppointment(appointment) });
+    res.status(201).json({ appointment: serializeAppointment(appointment, null, { patientView: true }) });
   }),
 );
 
@@ -88,6 +90,7 @@ const updateSchema = z.object({
   scheduled_time: z.string().nullable().optional(),
   status: z.enum(["pending", "confirmed", "completed", "cancelled"]).optional(),
   admin_notes: z.string().nullable().optional(),
+  notes_visible_to_patient: z.boolean().optional(),
 });
 
 appointmentsRouter.patch(
@@ -109,6 +112,7 @@ appointmentsRouter.patch(
         scheduledTime: data.scheduled_time,
         status: data.status ? APPOINTMENT_STATUS_TO_DB[data.status] : undefined,
         adminNotes: data.admin_notes,
+        notesVisibleToPatient: data.notes_visible_to_patient,
       },
     });
 

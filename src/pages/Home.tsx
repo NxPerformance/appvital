@@ -11,6 +11,7 @@ import {
   Flame,
   HeartPulse,
   Lock,
+  MessageCircle,
   RotateCcw,
   Target,
   TrendingDown,
@@ -36,6 +37,8 @@ interface AppointmentEntry {
   status: string;
   scheduled_date: string | null;
   scheduled_time: string | null;
+  admin_notes: string | null;
+  updated_at: string;
 }
 
 const appointmentTypeLabels: Record<string, string> = {
@@ -87,6 +90,16 @@ function formatUnlockedAt(value?: string) {
   if (days <= 0) return "Desbloqueada hoje";
   if (days === 1) return "Desbloqueada há 1 dia";
   return `Desbloqueada há ${days} dias`;
+}
+
+function formatUpdatedAgo(value: string) {
+  const updatedAt = parseISO(value);
+  if (Number.isNaN(updatedAt.getTime())) return "";
+
+  const days = differenceInCalendarDays(new Date(), updatedAt);
+  if (days <= 0) return "Atualizado hoje";
+  if (days === 1) return "Atualizado há 1 dia";
+  return `Atualizado há ${days} dias`;
 }
 
 function SectionLabel({ children }: { children: string }) {
@@ -395,6 +408,18 @@ export default function Home() {
                   ? nextAppointment.scheduled_time
                   : "Toque para agendar com a Dra. Gabriela"}
               </p>
+              {nextAppointment?.admin_notes ? (
+                <div className="mt-1 rounded-xl border border-dashed border-primary/45 bg-primary/10 p-2.5">
+                  <p className="flex items-center gap-1.5 text-[10.5px] font-extrabold uppercase tracking-[0.1em] text-primary">
+                    <MessageCircle className="h-3 w-3" />
+                    Recado da consulta
+                  </p>
+                  <p className="mt-1 line-clamp-3 text-xs leading-relaxed text-foreground">
+                    "{nextAppointment.admin_notes}"
+                  </p>
+                  <p className="mt-1 text-[10px] text-muted-foreground">{formatUpdatedAgo(nextAppointment.updated_at)}</p>
+                </div>
+              ) : null}
             </Link>
 
             <Link
