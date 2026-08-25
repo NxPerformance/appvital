@@ -10,8 +10,8 @@
 - [ ] **Segredo de criptografia dedicado**: tokens de wearables hoje derivam a chave AES do próprio `JWT_SECRET` — separar em `ENCRYPTION_KEY` próprio.
 - [ ] **Trocar credenciais do admin de seed** (`admin@vitalissy.dev` / `VitalissyDev2026!`) antes de considerar o ambiente "produção real".
 - [ ] **Tela Admin → Configurações de Pagamento** vai quebrar (404) — rotas de `payment-gateway-settings` foram puladas de propósito enquanto pagamento é stub.
-- [ ] Decidir se a branch `claude/dev-server-setup-d37utr` vira a nova `main` (produção) — hoje a Vercel "Production" ainda aponta pra `main` antiga, só o Preview desta branch tem as mudanças novas.
-- [ ] Resolver DNS de `app.vitalissy.com.br` (ou escolher domínio definitivo) e apontar pra VPS/Vercel de fato.
+- [x] `claude/dev-server-setup-d37utr` mergeada em `main` via PR #1 — Vercel "Production" agora publica as mudanças novas.
+- [x] DNS de `app.vitalissy.com.br` (frontend, Vercel) e `api.vitalissy.com.br` (backend, Easypanel) resolvidos via Cloudflare. `VITE_API_URL`/`CORS_ORIGIN`/`APP_URL` configurados de acordo. Login confirmado funcionando em produção, de múltiplos dispositivos.
 - [x] **Integração Anovator (balança de bioimpedância)**: `apiKey`/`gymId` configurados e testados em produção — busca automática funcionando (`POST /api/bioimpedance/admin/anovator-lookup`). Mapeamento expandido pra cobrir quase tudo que o PDF de laudo mostra: composição corporal, análise segmentada por região (braços/tronco/pernas), medidas corporais estendidas (envergadura, larguras, comprimentos), metas de exercício por tipo (aeróbico/resistência/anaeróbico), e classificação de risco postural (10 categorias, nível 1-5). Só ficam de fora: valor exato em cm/graus de postura (a API só dá o nível de risco, não o valor preciso — confirmado direto na resposta bruta) e dado bruto de bioimpedância segmentar em Ω (técnico demais pra exibir ao paciente).
 
 ## Produto / frontend
