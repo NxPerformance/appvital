@@ -360,7 +360,7 @@ export default function Home() {
           <div className="relative">
             <div
               ref={summaryCarouselRef}
-              className="hide-scrollbar flex items-start gap-3 overflow-x-auto pb-1 snap-x snap-mandatory"
+              className="hide-scrollbar flex gap-3 overflow-x-auto pb-1 snap-x snap-mandatory"
             >
             <Link
               to="/body-progress"
