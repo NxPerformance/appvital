@@ -2,11 +2,9 @@ import { useRef, useState } from 'react';
 import type { ElementType } from 'react';
 import {
   ArrowLeft,
-  BarChart3,
   Camera,
   ChevronRight,
   Crown,
-  Dumbbell,
   LogOut,
   Settings as SettingsIcon,
   Trophy,
@@ -31,13 +29,8 @@ type AccountAction = {
 
 const accountActions: AccountAction[] = [
   { to: '/settings', label: 'Dados pessoais', description: 'Editar conta, meta de peso e notificações', icon: User },
-  { to: '/notifications', label: 'Notificações', description: 'Alertas e novidades', icon: SettingsIcon },
-];
-
-const trainingActions: AccountAction[] = [
-  { to: '/workouts', label: 'Caderno de exercícios', description: 'Registro de musculação (complemento)', icon: Dumbbell },
-  { to: '/workouts/dashboard', label: 'Desempenho', description: 'Estatísticas e progresso', icon: BarChart3 },
   { to: '/wearables', label: 'Relógio e saúde', description: 'Sincronização e alertas', icon: Watch },
+  { to: '/notifications', label: 'Notificações', description: 'Alertas e novidades', icon: SettingsIcon },
 ];
 
 function AccountActionRow({ action }: { action: AccountAction }) {
@@ -225,11 +218,6 @@ export default function Profile() {
       <div className="space-y-3">
         <SectionLabel>Conta</SectionLabel>
         <AccountGroup actions={accountActions} />
-      </div>
-
-      <div className="space-y-3">
-        <SectionLabel>Treino & Saúde</SectionLabel>
-        <AccountGroup actions={trainingActions} />
       </div>
 
       <Button
