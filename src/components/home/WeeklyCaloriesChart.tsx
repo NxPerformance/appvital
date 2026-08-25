@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { eachDayOfInterval, endOfWeek, format, isSameDay, isToday, startOfWeek, subDays } from "date-fns";
+import { eachDayOfInterval, endOfWeek, format, isSameDay, isToday, startOfWeek } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Flame } from "lucide-react";
 
@@ -9,7 +9,15 @@ interface WeeklyCaloriesChartProps {
 }
 
 const DAY_LETTERS = ["D", "S", "T", "Q", "Q", "S", "S"];
-const SCALING_WINDOW_DAYS = 56;
+
+// Referência fixa de "sessão cheia", não o maior valor do próprio histórico —
+// senão o primeiro registro que existir sempre bate 100% só por ser único,
+// o que não significa nada. É o mesmo princípio de meta fixa que apps como
+// Apple Fitness/Fitbit usam: a barra enche em relação a um alvo, não a um
+// recorde pessoal. 500 kcal é uma sessão de musculação de intensidade
+// razoável para a maioria dos pacientes; dias acima disso só mostram a
+// barra cheia (o valor real continua certo no texto).
+const DAILY_CALORIE_TARGET = 500;
 
 export function WeeklyCaloriesChart({ entries }: WeeklyCaloriesChartProps) {
   const today = useMemo(() => new Date(), []);
@@ -26,18 +34,6 @@ export function WeeklyCaloriesChart({ entries }: WeeklyCaloriesChartProps) {
       }, 0);
       return { day, dayLabel: DAY_LETTERS[day.getDay()], calories: total };
     });
-  }, [entries, today]);
-
-  // Escala as barras pelo maior valor das últimas 8 semanas, não só da semana
-  // exibida — senão, com poucos registros, o único dia com dado sempre bate
-  // 100% (ele é "o maior" só por ser o único), toda semana, mesmo sem
-  // significar nada de especial.
-  const scalingMax = useMemo(() => {
-    const windowStart = subDays(today, SCALING_WINDOW_DAYS);
-    const values = entries
-      .filter((entry) => new Date(`${entry.date}T12:00:00`) >= windowStart)
-      .map((entry) => entry.calories ?? 0);
-    return Math.max(...values, 1);
   }, [entries, today]);
 
   const selected = week.find((d) => isSameDay(d.day, selectedDate)) ?? week[week.length - 1];
@@ -62,7 +58,7 @@ export function WeeklyCaloriesChart({ entries }: WeeklyCaloriesChartProps) {
       <div className="mt-3 h-24">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={week} margin={{ top: 4, right: 0, left: 0, bottom: 0 }} barCategoryGap="18%">
-            <YAxis hide domain={[0, scalingMax]} />
+            <YAxis hide domain={[0, DAILY_CALORIE_TARGET]} allowDataOverflow />
             <XAxis
               dataKey="dayLabel"
               axisLine={false}
