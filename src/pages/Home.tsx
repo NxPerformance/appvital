@@ -132,20 +132,45 @@ function SectionLabel({ children }: { children: string }) {
   );
 }
 
-function getConsistencyInfo(days: number | null): { title: string; tone: Tone; icon: LucideIcon } {
+function getConsistencyInfo(days: number | null): { title: string; subtitle: string; tone: Tone; icon: LucideIcon } {
   if (days === null) {
-    return { title: "Comece hoje o seu acompanhamento — registre algo pra abrir sua jornada", tone: "default", icon: Flame };
+    return {
+      title: "Comece sua jornada",
+      subtitle: "Registre algo pra abrir seu acompanhamento.",
+      tone: "default",
+      icon: Flame,
+    };
   }
   if (days <= 0) {
-    return { title: "Você já registrou algo hoje. Continue assim!", tone: "positive", icon: Flame };
+    return {
+      title: "Você já treinou hoje!",
+      subtitle: "Continue assim, sua consistência importa.",
+      tone: "positive",
+      icon: Flame,
+    };
   }
   if (days === 1) {
-    return { title: "Última atividade: ontem. Bora manter o ritmo hoje?", tone: "positive", icon: Flame };
+    return {
+      title: "Continue firme!",
+      subtitle: "Última atividade foi ontem.",
+      tone: "positive",
+      icon: Flame,
+    };
   }
   if (days <= 3) {
-    return { title: `Já fazem ${days} dias desde seu último registro`, tone: "default", icon: Flame };
+    return {
+      title: "Você está no caminho certo!",
+      subtitle: `Já fazem ${days} dias desde seu último registro.`,
+      tone: "default",
+      icon: Flame,
+    };
   }
-  return { title: `Já fazem ${days} dias sem nenhum registro — vamos retomar?`, tone: "warning", icon: Clock };
+  return {
+    title: "Vamos retomar?",
+    subtitle: `Já fazem ${days} dias sem nenhum registro.`,
+    tone: "warning",
+    icon: Clock,
+  };
 }
 
 const SLIDE_CLASS =
@@ -332,12 +357,17 @@ export default function Home() {
         <Link
           to="/body-progress"
           className={cn(
-            "flex items-center gap-3 rounded-[1rem] border px-4 py-3 transition-transform hover:-translate-y-0.5",
+            "flex items-center gap-4 rounded-[1rem] border px-4 py-3 transition-transform hover:-translate-y-0.5",
             bannerToneClasses[consistency.tone],
           )}
         >
-          <consistency.icon className="h-5 w-5 shrink-0" />
-          <span className="min-w-0 flex-1 text-xs font-semibold leading-snug">{consistency.title}</span>
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-2 border-current/30">
+            <consistency.icon className="h-5 w-5" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-extrabold leading-snug">{consistency.title}</span>
+            <span className="mt-0.5 block truncate text-xs opacity-80">{consistency.subtitle}</span>
+          </span>
           <ChevronRight className="h-4 w-4 shrink-0 opacity-60" />
         </Link>
 

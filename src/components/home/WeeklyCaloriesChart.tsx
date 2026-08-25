@@ -1,8 +1,8 @@
 import { useMemo, useState } from "react";
-import { Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, XAxis, YAxis } from "recharts";
 import { eachDayOfInterval, endOfWeek, format, isSameDay, isToday, startOfWeek } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Flame } from "lucide-react";
+import { CalendarDays, Flame } from "lucide-react";
 
 interface WeeklyCaloriesChartProps {
   entries: Array<{ date: string; calories: number | null }>;
@@ -18,6 +18,13 @@ const DAY_LETTERS = ["D", "S", "T", "Q", "Q", "S", "S"];
 // razoável para a maioria dos pacientes; dias acima disso só mostram a
 // barra cheia (o valor real continua certo no texto).
 const DAILY_CALORIE_TARGET = 500;
+
+interface CalloutProps {
+  x: number;
+  y: number;
+  width: number;
+  index: number;
+}
 
 export function WeeklyCaloriesChart({ entries }: WeeklyCaloriesChartProps) {
   const today = useMemo(() => new Date(), []);
@@ -38,6 +45,42 @@ export function WeeklyCaloriesChart({ entries }: WeeklyCaloriesChartProps) {
 
   const selected = week.find((d) => isSameDay(d.day, selectedDate)) ?? week[week.length - 1];
 
+  const renderSelectedCallout = (props: CalloutProps) => {
+    const { x, y, width, index } = props;
+    const entry = week[index];
+    if (!entry || !isSameDay(entry.day, selectedDate)) return <g key={`callout-${index}`} />;
+
+    const label = `${entry.calories} kcal`;
+    const boxWidth = Math.max(56, label.length * 7 + 20);
+    const boxHeight = 26;
+    const cx = x + width / 2;
+    const boxY = y - boxHeight - 8;
+
+    return (
+      <g key={`callout-${index}`}>
+        <rect
+          x={cx - boxWidth / 2}
+          y={boxY}
+          width={boxWidth}
+          height={boxHeight}
+          rx={8}
+          fill="hsl(var(--card))"
+          stroke="hsl(var(--border))"
+        />
+        <text
+          x={cx}
+          y={boxY + boxHeight / 2 + 4}
+          textAnchor="middle"
+          fontSize={12}
+          fontWeight={700}
+          fill="hsl(var(--primary))"
+        >
+          {label}
+        </text>
+      </g>
+    );
+  };
+
   return (
     <div className="rounded-[1.15rem] border border-white/10 bg-card p-4 shadow-elegant">
       <div className="flex items-center justify-between gap-3">
@@ -47,18 +90,40 @@ export function WeeklyCaloriesChart({ entries }: WeeklyCaloriesChartProps) {
           </span>
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground">
-              {isToday(selected.day) ? "Hoje" : format(selected.day, "EEEE", { locale: ptBR })}
+              {isToday(selected.day) ? "Calorias hoje" : format(selected.day, "EEEE", { locale: ptBR })}
             </p>
             <p className="text-lg font-extrabold leading-none text-foreground">{selected.calories} kcal</p>
           </div>
         </div>
-        <p className="text-[11px] text-muted-foreground">Calorias na semana</p>
+        <span className="flex shrink-0 items-center gap-1.5 rounded-full border border-white/10 bg-secondary/40 px-3 py-1.5 text-[11px] font-semibold text-muted-foreground">
+          <CalendarDays className="h-3.5 w-3.5" />
+          Calorias na semana
+        </span>
       </div>
 
-      <div className="mt-3 h-24 md:h-32">
+      <div className="mt-4 h-32 md:h-40">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={week} margin={{ top: 4, right: 0, left: 0, bottom: 0 }} barCategoryGap="18%" barSize={36}>
-            <YAxis hide domain={[0, DAILY_CALORIE_TARGET]} allowDataOverflow />
+          <BarChart data={week} margin={{ top: 34, right: 4, left: -20, bottom: 0 }} barCategoryGap="18%" barSize={36}>
+            <defs>
+              <linearGradient id="calorieBarDefault" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="hsl(270, 45%, 62%)" />
+                <stop offset="100%" stopColor="hsl(270, 40%, 42%)" />
+              </linearGradient>
+              <linearGradient id="calorieBarSelected" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={1} />
+                <stop offset="100%" stopColor="hsl(var(--primary-strong))" stopOpacity={1} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid vertical={false} stroke="hsl(var(--border))" strokeDasharray="3 4" />
+            <YAxis
+              domain={[0, DAILY_CALORIE_TARGET]}
+              allowDataOverflow
+              tickCount={6}
+              axisLine={false}
+              tickLine={false}
+              tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+              width={32}
+            />
             <XAxis
               dataKey="dayLabel"
               axisLine={false}
@@ -81,35 +146,22 @@ export function WeeklyCaloriesChart({ entries }: WeeklyCaloriesChartProps) {
                 );
               }}
             />
-            <Tooltip
-              cursor={false}
-              separator=""
-              contentStyle={{
-                backgroundColor: "hsl(var(--card))",
-                border: "1px solid hsl(var(--border))",
-                borderRadius: "8px",
-                padding: "6px 10px",
-              }}
-              labelStyle={{ display: "none" }}
-              itemStyle={{ color: "hsl(var(--foreground))", fontSize: 12, fontWeight: 700 }}
-              formatter={(value: number) => [`${value} kcal`, ""]}
-            />
             <Bar
               dataKey="calories"
               radius={[8, 8, 8, 8]}
-              background={{ fill: "hsl(var(--muted-foreground) / 0.08)", radius: 8 }}
               onClick={(data: { day: Date }) => setSelectedDate(data.day)}
               cursor="pointer"
               isAnimationActive={false}
+              label={renderSelectedCallout}
             >
               {week.map((entry) => {
                 const isSelected = isSameDay(entry.day, selectedDate);
-                const fill = isSelected
-                  ? "hsl(var(--primary))"
-                  : isToday(entry.day)
-                    ? "hsl(var(--primary) / 0.55)"
-                    : "hsl(var(--muted-foreground) / 0.4)";
-                return <Cell key={entry.day.toISOString()} fill={fill} />;
+                return (
+                  <Cell
+                    key={entry.day.toISOString()}
+                    fill={isSelected ? "url(#calorieBarSelected)" : "url(#calorieBarDefault)"}
+                  />
+                );
               })}
             </Bar>
           </BarChart>
