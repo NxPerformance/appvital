@@ -42,6 +42,7 @@ export default function Register() {
     age: '',
     height_cm: '',
     weight_kg: '',
+    weekly_workout_goal: '',
     password: '',
     confirmPassword: '',
     cref: '',
@@ -207,6 +208,9 @@ export default function Register() {
         payload.append('age', String(Number(formData.age)));
         payload.append('height_cm', String(Number(formData.height_cm)));
         payload.append('weight_kg', String(weightValue));
+        if (formData.weekly_workout_goal) {
+          payload.append('weekly_workout_goal', formData.weekly_workout_goal);
+        }
         payload.append('password', formData.password);
         payload.append('terms_accepted', String(termsAccepted));
         payload.append('account_type', accountType);
@@ -226,6 +230,7 @@ export default function Register() {
         age: Number(formData.age),
         height_cm: Number(formData.height_cm),
         weight_kg: weightValue,
+        weekly_workout_goal: formData.weekly_workout_goal ? Number(formData.weekly_workout_goal) : null,
         password: formData.password,
         terms_accepted: termsAccepted,
         account_type: accountType,
@@ -428,6 +433,21 @@ export default function Register() {
                 className="h-14 rounded-xl border-white/5 bg-secondary/70 text-base focus-visible:ring-offset-0"
               />
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="weekly_workout_goal">Meta de treinos por semana (opcional)</Label>
+            <Input
+              id="weekly_workout_goal"
+              name="weekly_workout_goal"
+              type="text"
+              inputMode="numeric"
+              maxLength={2}
+              placeholder="Ex: 4"
+              value={formData.weekly_workout_goal}
+              onChange={(e) => handleNumericInput(e, 'weekly_workout_goal', 14)}
+              className="h-14 rounded-xl border-white/5 bg-secondary/70 text-base focus-visible:ring-offset-0"
+            />
           </div>
 
           <div className="space-y-2">

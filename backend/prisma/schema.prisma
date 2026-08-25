@@ -148,6 +148,7 @@ model Profile {
   heightCm  Int
   weightKg  Decimal   @db.Decimal(10, 2)
   weightGoalKg Decimal? @db.Decimal(10, 2)
+  weeklyWorkoutGoal Int?
   isPremium Boolean   @default(false)
   accountType String   @default("client")
   selectedPlan String?
