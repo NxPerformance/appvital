@@ -238,7 +238,7 @@ export default function Home() {
           <div className="min-w-0">
             <p className="mt-1 text-xs text-muted-foreground">{formatHomeDate(today)}</p>
             <h1 className="mt-1 truncate text-[21px] font-extrabold leading-tight text-foreground">
-              {greeting}, {firstName} <span aria-hidden="true">👋</span>
+              {greeting}, {firstName}
             </h1>
           </div>
 
