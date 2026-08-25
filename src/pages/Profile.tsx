@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { ElementType } from 'react';
 import {
   ArrowLeft,
@@ -82,6 +82,12 @@ export default function Profile() {
   const [signingOut, setSigningOut] = useState(false);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (window.location.hash === '#conquistas') {
+      document.getElementById('conquistas')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, []);
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -231,7 +237,7 @@ export default function Profile() {
       </Button>
 
       {/* Conquistas Section */}
-      <div className="space-y-3">
+      <div id="conquistas" className="space-y-3 scroll-mt-6">
         <h2 className="text-lg font-semibold flex items-center gap-2">
           <Trophy className="w-5 h-5 text-primary" />
           Conquistas

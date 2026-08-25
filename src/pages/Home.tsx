@@ -4,12 +4,13 @@ import { useQuery } from "@tanstack/react-query";
 import {
   BarChart3,
   Bell,
+  Calendar,
   Camera,
   ChevronLeft,
   ChevronRight,
+  Clock,
   Dumbbell,
   Flame,
-  HeartPulse,
   Lock,
   MessageCircle,
   RotateCcw,
@@ -45,6 +46,13 @@ const appointmentTypeLabels: Record<string, string> = {
   consulta_online: "Consulta online",
   consulta_presencial: "Consulta presencial",
   bioimpedancia: "Bioimpedância",
+};
+
+const appointmentStatusLabels: Record<string, { label: string; className: string }> = {
+  pending: { label: "Aguardando contato", className: "bg-yellow-500/15 text-yellow-300" },
+  confirmed: { label: "Agendado", className: "bg-emerald-400/15 text-emerald-300" },
+  completed: { label: "Concluído", className: "bg-sky-400/15 text-sky-300" },
+  cancelled: { label: "Cancelado", className: "bg-red-400/15 text-red-300" },
 };
 
 interface WorkoutLink {
@@ -173,6 +181,7 @@ export default function Home() {
     })[0];
 
   const latestPhoto = photos[0] ?? null;
+  const previousPhoto = photos[1] ?? null;
 
   const unlockedAchievementIds = new Set(userAchievements.map((ua) => ua.achievement_id));
   const nextAchievement = [...achievements]
@@ -351,70 +360,83 @@ export default function Home() {
           <div className="relative">
             <div
               ref={summaryCarouselRef}
-              className="hide-scrollbar flex gap-3 overflow-x-auto pb-1 snap-x snap-mandatory"
+              className="hide-scrollbar flex items-start gap-3 overflow-x-auto pb-1 snap-x snap-mandatory"
             >
             <Link
               to="/body-progress"
-              className={cn(SLIDE_CLASS, "flex flex-col justify-between gap-4 border border-white/10 bg-card p-5")}
+              className={cn(SLIDE_CLASS, "flex flex-col gap-3 border border-white/10 bg-card p-5")}
             >
-              <div className="flex items-center gap-4">
-                {latestPhoto ? (
-                  <img
-                    src={resolveUploadUrl(latestPhoto.image_url) ?? undefined}
-                    alt="Última foto de evolução"
-                    className="h-14 w-14 shrink-0 rounded-2xl object-cover"
-                  />
-                ) : (
-                  <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-primary/15 text-primary">
-                    <Camera className="h-6 w-6" />
-                  </span>
-                )}
-                <div className="min-w-0">
-                  <p className="text-[11px] font-extrabold uppercase tracking-[0.22em] text-primary">
-                    {latestPhoto ? format(parseISO(latestPhoto.taken_at), "d 'de' MMMM", { locale: ptBR }) : "Evolução visual"}
-                  </p>
-                  <p className="mt-1 truncate text-lg font-black text-foreground">
-                    {latestPhoto ? "Ver sua evolução" : "Registre sua primeira foto"}
-                  </p>
-                </div>
+              <p className="text-[11px] font-extrabold uppercase tracking-[0.22em] text-primary">Evolução visual</p>
+              <div className="grid grid-cols-2 gap-2">
+                {[previousPhoto, latestPhoto].map((photo, index) => (
+                  <div key={photo?.id ?? `empty-${index}`} className="space-y-1.5">
+                    {photo ? (
+                      <img
+                        src={resolveUploadUrl(photo.image_url) ?? undefined}
+                        alt="Foto de evolução"
+                        className="h-28 w-full rounded-xl object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-28 w-full items-center justify-center rounded-xl border border-dashed border-white/15 text-muted-foreground">
+                        <Camera className="h-5 w-5" />
+                      </div>
+                    )}
+                    <p className="text-center text-[10px] font-semibold text-muted-foreground">
+                      {photo ? format(parseISO(photo.taken_at), "d MMM", { locale: ptBR }) : "Sem foto"}
+                    </p>
+                  </div>
+                ))}
               </div>
               <p className="text-xs text-muted-foreground">
-                {latestPhoto ? "Compare com fotos anteriores" : "Acompanhe visualmente sua mudança ao longo do tempo"}
+                {latestPhoto ? "Compare com fotos anteriores" : "Registre sua primeira foto de evolução"}
               </p>
             </Link>
 
             <Link
               to="/appointments"
-              className={cn(SLIDE_CLASS, "flex flex-col justify-between gap-4 border border-white/10 bg-card p-5")}
+              className={cn(SLIDE_CLASS, "flex flex-col gap-3 border border-white/10 bg-card p-5")}
             >
-              <div className="flex items-center gap-4">
-                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary/15 text-primary">
-                  <HeartPulse className="h-6 w-6" />
-                </span>
-                <div className="min-w-0">
-                  {nextAppointment ? (
-                    <>
-                      <p className="text-[11px] font-extrabold uppercase tracking-[0.22em] text-primary">
-                        {nextAppointment.scheduled_date
-                          ? format(parseISO(nextAppointment.scheduled_date), "d 'de' MMMM", { locale: ptBR })
-                          : "Aguardando confirmação"}
-                      </p>
-                      <p className="mt-1 truncate text-lg font-black text-foreground">
-                        {appointmentTypeLabels[nextAppointment.type] ?? nextAppointment.type}
-                      </p>
-                    </>
-                  ) : (
-                    <p className="mt-1 truncate text-lg font-black text-foreground">Nenhuma consulta agendada</p>
-                  )}
-                </div>
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-[11px] font-extrabold uppercase tracking-[0.22em] text-primary">Próxima consulta</p>
+                {nextAppointment ? (
+                  <span
+                    className={cn(
+                      "shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold",
+                      appointmentStatusLabels[nextAppointment.status]?.className ?? appointmentStatusLabels.pending.className,
+                    )}
+                  >
+                    {appointmentStatusLabels[nextAppointment.status]?.label ?? "Pendente"}
+                  </span>
+                ) : null}
               </div>
-              <p className="text-xs text-muted-foreground">
-                {nextAppointment && nextAppointment.scheduled_time
-                  ? nextAppointment.scheduled_time
-                  : "Toque para agendar com a Dra. Gabriela"}
-              </p>
+
+              {nextAppointment ? (
+                <>
+                  <p className="text-lg font-black leading-tight text-foreground">
+                    {appointmentTypeLabels[nextAppointment.type] ?? nextAppointment.type}
+                  </p>
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                    <span className="flex items-center gap-1.5">
+                      <Calendar className="h-3.5 w-3.5" />
+                      {nextAppointment.scheduled_date
+                        ? format(parseISO(nextAppointment.scheduled_date), "d 'de' MMMM", { locale: ptBR })
+                        : "Data a combinar"}
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <Clock className="h-3.5 w-3.5" />
+                      {nextAppointment.scheduled_time ?? "Horário a combinar"}
+                    </span>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p className="text-lg font-black leading-tight text-foreground">Nenhuma consulta agendada</p>
+                  <p className="text-xs text-muted-foreground">Toque para agendar com a Dra. Gabriela</p>
+                </>
+              )}
+
               {nextAppointment?.admin_notes ? (
-                <div className="mt-1 rounded-xl border border-dashed border-primary/45 bg-primary/10 p-2.5">
+                <div className="rounded-xl border border-dashed border-primary/45 bg-primary/10 p-2.5">
                   <p className="flex items-center gap-1.5 text-[10.5px] font-extrabold uppercase tracking-[0.1em] text-primary">
                     <MessageCircle className="h-3 w-3" />
                     Recado da consulta
@@ -428,8 +450,8 @@ export default function Home() {
             </Link>
 
             <Link
-              to="/profile"
-              className={cn(SLIDE_CLASS, "flex flex-col justify-between gap-4 border border-primary bg-card p-5")}
+              to="/profile#conquistas"
+              className={cn(SLIDE_CLASS, "flex flex-col gap-3 border border-primary bg-card p-5")}
             >
               <div className="flex items-center gap-4">
                 {showRecentAchievement ? (
@@ -460,6 +482,9 @@ export default function Home() {
                 {showRecentAchievement
                   ? latestAchievement?.achievement.description
                   : nextAchievement?.description ?? "Registre uma aplicação ou um treino para começar sua sequência."}
+              </p>
+              <p className="text-[11px] font-semibold text-primary/80">
+                {unlockedAchievementIds.size} de {achievements.length} conquistas · Ver todas
               </p>
             </Link>
             </div>
