@@ -2,10 +2,12 @@ import { useMemo } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
+  BarChart3,
   Camera,
   CheckCircle2,
   ChevronRight,
   Clock,
+  Dumbbell,
   Flame,
   HeartPulse,
   Lock,
@@ -53,6 +55,18 @@ const appointmentTypeLabels: Record<string, string> = {
   consulta_presencial: "Consulta presencial",
   bioimpedancia: "Bioimpedância",
 };
+
+interface WorkoutLink {
+  to: string;
+  label: string;
+  description: string;
+  icon: LucideIcon;
+}
+
+const workoutLinks: WorkoutLink[] = [
+  { to: "/workouts", label: "Caderno de exercícios", description: "Registro de musculação", icon: Dumbbell },
+  { to: "/workouts/dashboard", label: "Desempenho", description: "Estatísticas e progresso", icon: BarChart3 },
+];
 
 function getInitials(name?: string | null): string {
   return (
@@ -382,6 +396,28 @@ export default function Home() {
             </span>
             <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground/45" />
           </Link>
+        </section>
+
+        <section className="space-y-3">
+          <SectionLabel>Treino</SectionLabel>
+          <div className="rounded-[1.15rem] border border-white/10 bg-card shadow-elegant">
+            {workoutLinks.map((link) => (
+              <Link
+                key={link.to}
+                to={link.to}
+                className="group flex items-center gap-4 border-b border-white/10 px-4 py-4 last:border-b-0 transition-transform hover:-translate-y-0.5"
+              >
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary">
+                  <link.icon className="h-5 w-5" />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-extrabold text-foreground">{link.label}</span>
+                  <span className="block truncate text-[11px] text-muted-foreground">{link.description}</span>
+                </span>
+                <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/45 transition-transform group-hover:translate-x-0.5" />
+              </Link>
+            ))}
+          </div>
         </section>
 
         <section className="space-y-3">

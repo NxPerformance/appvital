@@ -15,7 +15,7 @@ export function useWorkoutDraft<T extends object>(workoutType: string) {
     try {
       localStorage.setItem(key, JSON.stringify(draft));
     } catch (e) {
-      console.log('Erro ao salvar rascunho local');
+      console.error('Erro ao salvar rascunho local', e);
     }
   }, [key]);
 
@@ -42,7 +42,7 @@ export function useWorkoutDraft<T extends object>(workoutType: string) {
     try {
       localStorage.removeItem(key);
     } catch (e) {
-      console.log('Erro ao limpar rascunho');
+      console.error('Erro ao limpar rascunho', e);
     }
   }, [key]);
 
