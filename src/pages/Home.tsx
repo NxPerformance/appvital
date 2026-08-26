@@ -463,7 +463,7 @@ export default function Home() {
               ) : null}
 
               {nextAppointment && daysUntilAppointment != null && daysUntilAppointment >= 0 ? (
-                <p className="flex items-center gap-1.5 text-[10.5px] text-muted-foreground">
+                <p className="flex items-center justify-center gap-1.5 text-center text-[10.5px] text-muted-foreground">
                   <Bell className="h-3.5 w-3.5 shrink-0 text-primary" />
                   {daysUntilAppointment === 0 ? (
                     <span className="font-bold text-foreground">Hoje é sua consulta!</span>
