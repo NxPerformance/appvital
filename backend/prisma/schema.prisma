@@ -637,3 +637,25 @@ model AuditLog {
   @@index([entityType])
   @@index([createdAt])
 }
+
+// Catálogo de exercícios importado do free-exercise-db (github.com/yuhonas/free-exercise-db,
+// MIT license). nameEn é preservado como fonte da verdade; namePt é uma tradução automática
+// por vocabulário, revisável aos poucos sem precisar reimportar o dataset inteiro.
+model LibraryExercise {
+  id               String   @id
+  nameEn           String
+  namePt           String
+  force            String?
+  level            String?
+  mechanic         String?
+  equipment        String?
+  category         String
+  primaryMuscles   String[]
+  secondaryMuscles String[]
+  instructions     String[]
+  images           String[]
+  createdAt        DateTime @default(now())
+
+  @@index([category])
+  @@index([equipment])
+}
