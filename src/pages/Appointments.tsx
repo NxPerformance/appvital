@@ -8,6 +8,7 @@ import {
   Clock,
   Mail,
   MapPin,
+  MessageCircle,
   Phone,
   Scale,
   Trash2,
@@ -339,6 +340,19 @@ export default function Appointments() {
                         )}
                       </div>
                     </div>
+
+                    {appointment.admin_notes ? (
+                      <div className="mt-3 rounded-xl border border-dashed border-primary/45 bg-primary/10 p-3">
+                        <p className="flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-[0.1em] text-primary">
+                          <MessageCircle className="h-3.5 w-3.5" />
+                          Recado da consulta
+                        </p>
+                        <p className="mt-1.5 text-sm leading-relaxed text-foreground">"{appointment.admin_notes}"</p>
+                        <p className="mt-1.5 text-xs text-muted-foreground">
+                          Atualizado em {formatDate(appointment.updated_at)}
+                        </p>
+                      </div>
+                    ) : null}
                   </div>
                 );
               })}
