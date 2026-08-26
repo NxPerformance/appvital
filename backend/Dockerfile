@@ -21,4 +21,4 @@ COPY --from=build /app/prisma ./prisma
 
 EXPOSE 3001
 
-CMD ["sh", "-c", "npm run prisma:deploy && npm run prisma:seed && npm run start"]
+CMD ["sh", "-c", "npm run prisma:deploy && npm run prisma:seed && npm run prisma:seed:exercises && npm run start"]

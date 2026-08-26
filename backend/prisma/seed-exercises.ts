@@ -1,9 +1,12 @@
 // Importa/atualiza o catálogo de exercícios (LibraryExercise) a partir de
 // prisma/seed-data/exercises.json — dataset traduzido do free-exercise-db
-// (github.com/yuhonas/free-exercise-db, MIT license). Seguro rodar de novo:
-// substitui o conteúdo da tabela por completo a cada execução.
+// (github.com/yuhonas/free-exercise-db, MIT license). Roda automaticamente
+// a cada deploy (ver backend/Dockerfile); por padrão pula se a tabela já
+// estiver populada, para não custar uma escrita de ~900 linhas a cada boot.
 //
-// Uso: npx tsx prisma/seed-exercises.ts
+// Uso: npx tsx prisma/seed-exercises.ts [--force]
+//   --force reimporta mesmo se a tabela já tiver dados (use depois de
+//   atualizar o dicionário de tradução ou o dataset de origem).
 
 import { PrismaClient } from "@prisma/client";
 import { readFileSync } from "fs";
@@ -29,6 +32,14 @@ interface TranslatedExercise {
 }
 
 async function main() {
+  const force = process.argv.includes("--force");
+
+  const existingCount = await prisma.libraryExercise.count();
+  if (existingCount > 0 && !force) {
+    console.log(`LibraryExercise já populada (${existingCount} exercícios), pulando importação.`);
+    return;
+  }
+
   const raw = readFileSync(join(__dirname, "seed-data", "exercises.json"), "utf-8");
   const exercises: TranslatedExercise[] = JSON.parse(raw);
 
