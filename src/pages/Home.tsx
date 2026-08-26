@@ -6,11 +6,13 @@ import {
   Bell,
   Calendar,
   Camera,
+  CheckCircle2,
   ChevronLeft,
   ChevronRight,
   Clock,
   Dumbbell,
   Flame,
+  History,
   Lock,
   MessageCircle,
   RotateCcw,
@@ -18,6 +20,7 @@ import {
   TrendingDown,
   TrendingUp,
   Trophy,
+  XCircle,
   type LucideIcon,
 } from "lucide-react";
 import { differenceInCalendarDays, endOfWeek, format, parseISO, startOfWeek } from "date-fns";
@@ -48,11 +51,11 @@ const appointmentTypeLabels: Record<string, string> = {
   bioimpedancia: "Bioimpedância",
 };
 
-const appointmentStatusLabels: Record<string, { label: string; className: string }> = {
-  pending: { label: "Aguardando contato", className: "bg-yellow-500/15 text-yellow-300" },
-  confirmed: { label: "Agendado", className: "bg-emerald-400/15 text-emerald-300" },
-  completed: { label: "Concluído", className: "bg-sky-400/15 text-sky-300" },
-  cancelled: { label: "Cancelado", className: "bg-red-400/15 text-red-300" },
+const appointmentStatusLabels: Record<string, { label: string; className: string; icon: LucideIcon }> = {
+  pending: { label: "Aguardando contato", className: "bg-yellow-500/15 text-yellow-300", icon: Clock },
+  confirmed: { label: "Agendado", className: "bg-emerald-400/15 text-emerald-300", icon: CheckCircle2 },
+  completed: { label: "Concluído", className: "bg-sky-400/15 text-sky-300", icon: CheckCircle2 },
+  cancelled: { label: "Cancelado", className: "bg-red-400/15 text-red-300", icon: XCircle },
 };
 
 interface WorkoutLink {
@@ -179,6 +182,10 @@ export default function Home() {
       if (!b.scheduled_date) return -1;
       return parseISO(a.scheduled_date).getTime() - parseISO(b.scheduled_date).getTime();
     })[0];
+
+  const daysUntilAppointment = nextAppointment?.scheduled_date
+    ? differenceInCalendarDays(parseISO(nextAppointment.scheduled_date), today)
+    : null;
 
   const latestPhoto = photos[0] ?? null;
   const previousPhoto = photos[1] ?? null;
@@ -394,20 +401,34 @@ export default function Home() {
 
             <Link
               to="/appointments"
-              className={cn(SLIDE_CLASS, "flex flex-col gap-3 border border-white/10 bg-card p-5")}
+              className={cn(SLIDE_CLASS, "flex flex-col gap-2.5 border border-white/10 bg-card p-5")}
             >
               <div className="flex items-center justify-between gap-2">
-                <p className="text-[11px] font-extrabold uppercase tracking-[0.22em] text-primary">Próxima consulta</p>
-                {nextAppointment ? (
-                  <span
-                    className={cn(
-                      "shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold",
-                      appointmentStatusLabels[nextAppointment.status]?.className ?? appointmentStatusLabels.pending.className,
-                    )}
-                  >
-                    {appointmentStatusLabels[nextAppointment.status]?.label ?? "Pendente"}
+                <div className="flex min-w-0 items-center gap-2">
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary">
+                    <Calendar className="h-4 w-4" />
                   </span>
-                ) : null}
+                  <p className="truncate text-[10.5px] font-extrabold uppercase tracking-[0.16em] text-primary">
+                    Próxima consulta
+                  </p>
+                </div>
+                {nextAppointment
+                  ? (() => {
+                      const status = appointmentStatusLabels[nextAppointment.status] ?? appointmentStatusLabels.pending;
+                      const StatusIcon = status.icon;
+                      return (
+                        <span
+                          className={cn(
+                            "flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-bold",
+                            status.className,
+                          )}
+                        >
+                          <StatusIcon className="h-3 w-3" />
+                          {status.label}
+                        </span>
+                      );
+                    })()
+                  : null}
               </div>
 
               {nextAppointment ? (
@@ -415,17 +436,28 @@ export default function Home() {
                   <p className="text-lg font-black leading-tight text-foreground">
                     {appointmentTypeLabels[nextAppointment.type] ?? nextAppointment.type}
                   </p>
-                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                    <span className="flex items-center gap-1.5">
-                      <Calendar className="h-3.5 w-3.5" />
-                      {nextAppointment.scheduled_date
-                        ? format(parseISO(nextAppointment.scheduled_date), "d 'de' MMMM", { locale: ptBR })
-                        : "Data a combinar"}
-                    </span>
-                    <span className="flex items-center gap-1.5">
-                      <Clock className="h-3.5 w-3.5" />
-                      {nextAppointment.scheduled_time ?? "Horário a combinar"}
-                    </span>
+                  <div className="flex items-center rounded-xl bg-secondary/40 px-3 py-2">
+                    <div className="flex min-w-0 flex-1 items-center gap-1.5">
+                      <Calendar className="h-3.5 w-3.5 shrink-0 text-primary" />
+                      <div className="min-w-0">
+                        <p className="text-[9px] font-bold uppercase tracking-[0.1em] text-muted-foreground">Data</p>
+                        <p className="truncate text-xs font-bold text-foreground">
+                          {nextAppointment.scheduled_date
+                            ? format(parseISO(nextAppointment.scheduled_date), "d 'de' MMMM", { locale: ptBR })
+                            : "A combinar"}
+                        </p>
+                      </div>
+                    </div>
+                    <span className="mx-2.5 h-6 w-px shrink-0 bg-white/10" />
+                    <div className="flex min-w-0 flex-1 items-center gap-1.5">
+                      <Clock className="h-3.5 w-3.5 shrink-0 text-primary" />
+                      <div className="min-w-0">
+                        <p className="text-[9px] font-bold uppercase tracking-[0.1em] text-muted-foreground">Horário</p>
+                        <p className="truncate text-xs font-bold text-foreground">
+                          {nextAppointment.scheduled_time ?? "A combinar"}
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 </>
               ) : (
@@ -436,16 +468,35 @@ export default function Home() {
               )}
 
               {nextAppointment?.admin_notes ? (
-                <div className="rounded-xl border border-dashed border-primary/45 bg-primary/10 p-2.5">
-                  <p className="flex items-center gap-1.5 text-[10.5px] font-extrabold uppercase tracking-[0.1em] text-primary">
+                <div className="relative mt-2.5 rounded-xl border border-dashed border-primary/45 bg-primary/10 px-2.5 pb-2.5 pt-4">
+                  <span className="absolute -top-3 left-1/2 flex h-6 w-6 -translate-x-1/2 items-center justify-center rounded-full bg-primary text-primary-foreground">
                     <MessageCircle className="h-3 w-3" />
+                  </span>
+                  <p className="text-center text-[9.5px] font-extrabold uppercase tracking-[0.1em] text-primary">
                     Recado da consulta
                   </p>
-                  <p className="mt-1 line-clamp-3 text-xs leading-relaxed text-foreground">
+                  <p className="mt-1 line-clamp-2 text-center text-xs font-semibold leading-relaxed text-foreground">
                     "{nextAppointment.admin_notes}"
                   </p>
-                  <p className="mt-1 text-[10px] text-muted-foreground">{formatUpdatedAgo(nextAppointment.updated_at)}</p>
+                  <p className="mt-1 flex items-center justify-center gap-1 text-[9px] text-muted-foreground">
+                    <History className="h-2.5 w-2.5" />
+                    {formatUpdatedAgo(nextAppointment.updated_at)}
+                  </p>
                 </div>
+              ) : null}
+
+              {nextAppointment && daysUntilAppointment != null && daysUntilAppointment >= 0 ? (
+                <p className="flex items-center gap-1.5 text-[10.5px] text-muted-foreground">
+                  <Bell className="h-3 w-3 shrink-0 text-primary" />
+                  {daysUntilAppointment === 0 ? (
+                    <span className="font-bold text-foreground">Hoje é sua consulta!</span>
+                  ) : (
+                    <>
+                      Faltam {daysUntilAppointment} {daysUntilAppointment === 1 ? "dia" : "dias"} ·{" "}
+                      <span className="font-bold text-foreground">Estamos te esperando!</span>
+                    </>
+                  )}
+                </p>
               ) : null}
             </Link>
 
