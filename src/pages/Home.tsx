@@ -455,25 +455,30 @@ export default function Home() {
                 </>
               )}
 
-              {nextAppointment?.admin_notes ? (
-                <p className="mt-1 flex items-center gap-1.5 text-[10.5px] font-bold text-primary">
-                  <MessageCircle className="h-3.5 w-3.5 shrink-0" />
-                  Novo recado da consulta
-                </p>
-              ) : null}
+              {nextAppointment?.admin_notes ||
+              (nextAppointment && daysUntilAppointment != null && daysUntilAppointment >= 0) ? (
+                <div className="mt-auto flex flex-col gap-1">
+                  {nextAppointment?.admin_notes ? (
+                    <p className="flex items-center gap-1.5 text-[10.5px] font-bold text-primary">
+                      <MessageCircle className="h-3.5 w-3.5 shrink-0" />
+                      Novo recado da consulta
+                    </p>
+                  ) : null}
 
-              {nextAppointment && daysUntilAppointment != null && daysUntilAppointment >= 0 ? (
-                <p className="flex items-center justify-center gap-1.5 text-center text-[10.5px] text-muted-foreground">
-                  <Bell className="h-3.5 w-3.5 shrink-0 text-primary" />
-                  {daysUntilAppointment === 0 ? (
-                    <span className="font-bold text-foreground">Hoje é sua consulta!</span>
-                  ) : (
-                    <>
-                      Faltam {daysUntilAppointment} {daysUntilAppointment === 1 ? "dia" : "dias"} ·{" "}
-                      <span className="font-bold text-foreground">Estamos te esperando!</span>
-                    </>
-                  )}
-                </p>
+                  {nextAppointment && daysUntilAppointment != null && daysUntilAppointment >= 0 ? (
+                    <p className="flex items-center justify-center gap-1.5 text-center text-[10.5px] text-muted-foreground">
+                      <Bell className="h-3.5 w-3.5 shrink-0 text-primary" />
+                      {daysUntilAppointment === 0 ? (
+                        <span className="font-bold text-foreground">Hoje é sua consulta!</span>
+                      ) : (
+                        <>
+                          Faltam {daysUntilAppointment} {daysUntilAppointment === 1 ? "dia" : "dias"} ·{" "}
+                          <span className="font-bold text-foreground">Estamos te esperando!</span>
+                        </>
+                      )}
+                    </p>
+                  ) : null}
+                </div>
               ) : null}
             </Link>
 
