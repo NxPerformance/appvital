@@ -12,7 +12,6 @@ import {
   Clock,
   Dumbbell,
   Flame,
-  History,
   Lock,
   MessageCircle,
   RotateCcw,
@@ -42,7 +41,6 @@ interface AppointmentEntry {
   scheduled_date: string | null;
   scheduled_time: string | null;
   admin_notes: string | null;
-  updated_at: string;
 }
 
 const appointmentTypeLabels: Record<string, string> = {
@@ -101,16 +99,6 @@ function formatUnlockedAt(value?: string) {
   if (days <= 0) return "Desbloqueada hoje";
   if (days === 1) return "Desbloqueada há 1 dia";
   return `Desbloqueada há ${days} dias`;
-}
-
-function formatUpdatedAgo(value: string) {
-  const updatedAt = parseISO(value);
-  if (Number.isNaN(updatedAt.getTime())) return "";
-
-  const days = differenceInCalendarDays(new Date(), updatedAt);
-  if (days <= 0) return "Atualizado hoje";
-  if (days === 1) return "Atualizado há 1 dia";
-  return `Atualizado há ${days} dias`;
 }
 
 function SectionLabel({ children }: { children: string }) {
@@ -433,7 +421,7 @@ export default function Home() {
 
               {nextAppointment ? (
                 <>
-                  <p className="text-lg font-black leading-tight text-foreground">
+                  <p className="text-center text-lg font-black leading-tight text-foreground">
                     {appointmentTypeLabels[nextAppointment.type] ?? nextAppointment.type}
                   </p>
                   <div className="flex items-center rounded-xl bg-secondary/40 px-3 py-2">
@@ -468,21 +456,10 @@ export default function Home() {
               )}
 
               {nextAppointment?.admin_notes ? (
-                <div className="relative mt-2.5 rounded-xl border border-dashed border-primary/45 bg-primary/10 px-2.5 pb-2.5 pt-4">
-                  <span className="absolute -top-3 left-1/2 flex h-6 w-6 -translate-x-1/2 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                    <MessageCircle className="h-3 w-3" />
-                  </span>
-                  <p className="text-center text-[9.5px] font-extrabold uppercase tracking-[0.1em] text-primary">
-                    Recado da consulta
-                  </p>
-                  <p className="mt-1 line-clamp-2 text-center text-xs font-semibold leading-relaxed text-foreground">
-                    "{nextAppointment.admin_notes}"
-                  </p>
-                  <p className="mt-1 flex items-center justify-center gap-1 text-[9px] text-muted-foreground">
-                    <History className="h-2.5 w-2.5" />
-                    {formatUpdatedAgo(nextAppointment.updated_at)}
-                  </p>
-                </div>
+                <p className="flex items-center gap-1.5 text-[10.5px] font-bold text-primary">
+                  <MessageCircle className="h-3.5 w-3.5 shrink-0" />
+                  Novo recado da consulta
+                </p>
               ) : null}
 
               {nextAppointment && daysUntilAppointment != null && daysUntilAppointment >= 0 ? (
