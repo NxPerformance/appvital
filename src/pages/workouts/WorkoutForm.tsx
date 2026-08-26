@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import {
   ArrowLeft,
   Check,
@@ -14,6 +15,7 @@ import {
   PersonStanding,
   Plus,
   Repeat2,
+  Search,
   Trophy,
   type LucideIcon,
 } from "lucide-react";
@@ -23,6 +25,7 @@ import { useUnsavedChangesWarning } from "@/hooks/useUnsavedChangesWarning";
 import { useWorkoutDraft } from "@/hooks/useWorkoutDraft";
 import { UnsavedChangesDialog } from "@/components/UnsavedChangesDialog";
 import { normalizeWorkoutStartState, type WorkoutStartExercise } from "@/lib/workoutStart";
+import { fetchExerciseLibrary, fetchExerciseEquipmentOptions, type LibraryExerciseApi } from "@/lib/exerciseLibrary";
 import { toast } from "sonner";
 
 interface ExerciseSet {
@@ -69,6 +72,23 @@ function createExerciseFromWorkoutStart(exercise: WorkoutStartExercise): Exercis
       reps: Math.round(Number(set.reps)) || 0,
       completed: Boolean(set.completed),
     })),
+  };
+}
+
+function capitalize(value: string) {
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+function createExerciseFromLibraryItem(item: LibraryExerciseApi): Exercise {
+  return {
+    name: item.name,
+    group: item.primary_muscles.map(capitalize).join(" · ") || undefined,
+    category: item.equipment ? capitalize(item.equipment) : undefined,
+    sets: [
+      { weight: 0, reps: 0, completed: false },
+      { weight: 0, reps: 0, completed: false },
+      { weight: 0, reps: 0, completed: false },
+    ],
   };
 }
 
@@ -145,9 +165,32 @@ export default function WorkoutForm() {
   const [isResting, setIsResting] = useState(false);
   const [endTime, setEndTime] = useState<number | null>(null);
   const [exercisePickerOpen, setExercisePickerOpen] = useState(false);
+  const [pickerQuery, setPickerQuery] = useState("");
+  const [pickerEquipment, setPickerEquipment] = useState<string | null>(null);
+  const [selectedLibraryIds, setSelectedLibraryIds] = useState<Set<string>>(new Set());
+  const [brokenImageIds, setBrokenImageIds] = useState<Set<string>>(new Set());
   const [numpadTarget, setNumpadTarget] = useState<NumpadTarget | null>(null);
   const [numpadValue, setNumpadValue] = useState("");
   const savePressLockRef = useRef(false);
+
+  const [debouncedPickerQuery, setDebouncedPickerQuery] = useState("");
+  useEffect(() => {
+    const timeout = window.setTimeout(() => setDebouncedPickerQuery(pickerQuery.trim()), 300);
+    return () => window.clearTimeout(timeout);
+  }, [pickerQuery]);
+
+  const { data: equipmentOptions } = useQuery({
+    queryKey: ["exercise-equipment-options"],
+    queryFn: fetchExerciseEquipmentOptions,
+    enabled: exercisePickerOpen,
+    staleTime: Infinity,
+  });
+
+  const { data: libraryResults, isLoading: libraryLoading } = useQuery({
+    queryKey: ["exercise-library", debouncedPickerQuery, pickerEquipment],
+    queryFn: () => fetchExerciseLibrary({ search: debouncedPickerQuery || undefined, equipment: pickerEquipment || undefined }),
+    enabled: exercisePickerOpen,
+  });
 
   useEffect(() => {
     const interval = window.setInterval(() => {
@@ -328,7 +371,32 @@ export default function WorkoutForm() {
   };
 
   const openExercisePicker = () => {
+    setPickerQuery("");
+    setPickerEquipment(null);
+    setSelectedLibraryIds(new Set());
     setExercisePickerOpen(true);
+  };
+
+  const toggleLibrarySelection = (id: string) => {
+    setSelectedLibraryIds((current) => {
+      const next = new Set(current);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const confirmExerciseSelection = () => {
+    const alreadyAddedNames = new Set(addedExercises.map((exercise) => exercise.name));
+    const toAdd = (libraryResults ?? [])
+      .filter((item) => selectedLibraryIds.has(item.id) && !alreadyAddedNames.has(item.name))
+      .map(createExerciseFromLibraryItem);
+
+    setAddedExercises((current) => [...current, ...toAdd]);
+    setExercisePickerOpen(false);
   };
 
   const handleSaveWorkout = async (durationMinutes: number) => {
@@ -433,17 +501,117 @@ export default function WorkoutForm() {
             <span />
           </header>
 
-          <div className="flex flex-1 flex-col items-center justify-center gap-3 rounded-[1.5rem] border border-dashed border-white/10 bg-card/60 p-8 text-center">
-            <span className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/15 text-primary">
-              <Dumbbell className="h-6 w-6" />
-            </span>
-            <p className="text-sm font-black text-foreground">Catálogo de exercícios em breve</p>
-            <p className="text-xs text-muted-foreground">
-              Estamos preparando uma lista completa de exercícios. Por enquanto, os exercícios já adicionados ao
-              seu treino continuam disponíveis para editar normalmente.
-            </p>
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <input
+              value={pickerQuery}
+              onChange={(event) => setPickerQuery(event.target.value)}
+              placeholder="Pesquisar exercício..."
+              className="h-12 w-full rounded-xl border border-white/10 bg-card pl-11 pr-4 text-sm font-semibold outline-none placeholder:text-muted-foreground focus:border-primary"
+            />
           </div>
+
+          <div className="flex gap-2 overflow-x-auto pb-1 hide-scrollbar">
+            <button
+              type="button"
+              onClick={() => setPickerEquipment(null)}
+              className={`h-9 shrink-0 rounded-full border px-4 text-xs font-black capitalize transition-colors ${
+                pickerEquipment === null
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "border-white/10 bg-card text-muted-foreground"
+              }`}
+            >
+              Todos
+            </button>
+            {(equipmentOptions ?? []).map((option) => (
+              <button
+                key={option}
+                type="button"
+                onClick={() => setPickerEquipment(option)}
+                className={`h-9 shrink-0 rounded-full border px-4 text-xs font-black capitalize transition-colors ${
+                  pickerEquipment === option
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-white/10 bg-card text-muted-foreground"
+                }`}
+              >
+                {option}
+              </button>
+            ))}
+          </div>
+
+          {libraryLoading ? (
+            <p className="py-8 text-center text-sm text-muted-foreground">Carregando exercícios...</p>
+          ) : (libraryResults ?? []).length === 0 ? (
+            <p className="py-8 text-center text-sm text-muted-foreground">Nenhum exercício encontrado.</p>
+          ) : (
+            <section className="grid grid-cols-2 gap-3">
+              {(libraryResults ?? []).map((exercise) => {
+                const selected = selectedLibraryIds.has(exercise.id);
+                const alreadyAdded = addedExercises.some((added) => added.name === exercise.name);
+
+                return (
+                  <button
+                    key={exercise.id}
+                    type="button"
+                    disabled={alreadyAdded}
+                    onClick={() => toggleLibrarySelection(exercise.id)}
+                    className={`relative overflow-hidden rounded-[1rem] border bg-card text-left shadow-elegant transition-transform ${
+                      alreadyAdded ? "opacity-40" : "hover:-translate-y-0.5"
+                    } ${selected ? "border-primary" : "border-white/10"}`}
+                  >
+                    {exercise.images[0] && !brokenImageIds.has(exercise.id) ? (
+                      <img
+                        src={exercise.images[0]}
+                        alt={exercise.name}
+                        loading="lazy"
+                        className="h-20 w-full object-cover"
+                        onError={() => setBrokenImageIds((current) => new Set(current).add(exercise.id))}
+                      />
+                    ) : (
+                      <div className="flex h-20 items-center justify-center bg-secondary/40 text-muted-foreground">
+                        <Dumbbell className="h-6 w-6" />
+                      </div>
+                    )}
+                    <span
+                      className={`absolute right-3 top-3 flex h-6 w-6 items-center justify-center rounded-full ${
+                        selected ? "bg-primary text-primary-foreground" : "bg-primary/15 text-primary/50"
+                      }`}
+                    >
+                      <Check className="h-3.5 w-3.5" />
+                    </span>
+                    <div className="p-3">
+                      {exercise.equipment ? (
+                        <span className="inline-flex rounded-full bg-primary/15 px-2 py-1 text-[8px] font-black uppercase tracking-[0.12em] text-primary">
+                          {exercise.equipment}
+                        </span>
+                      ) : null}
+                      <h3 className="mt-2 text-sm font-black leading-tight text-foreground">{exercise.name}</h3>
+                      {exercise.primary_muscles.length > 0 ? (
+                        <p className="mt-1 truncate text-[11px] text-muted-foreground">
+                          {exercise.primary_muscles.join(", ")}
+                        </p>
+                      ) : null}
+                      {alreadyAdded ? (
+                        <p className="mt-1 text-[10px] font-bold text-primary">Já no treino</p>
+                      ) : null}
+                    </div>
+                  </button>
+                );
+              })}
+            </section>
+          )}
         </div>
+
+        {selectedLibraryIds.size > 0 ? (
+          <button
+            type="button"
+            onClick={confirmExerciseSelection}
+            className="fixed bottom-[calc(env(safe-area-inset-bottom,0px)+4.6rem)] left-1/2 z-50 flex h-12 w-[calc(100%-2.5rem)] max-w-[390px] -translate-x-1/2 items-center justify-center gap-2 rounded-xl border border-white/10 bg-[hsl(var(--background-strong)/0.96)] text-sm font-black text-foreground shadow-elegant backdrop-blur"
+          >
+            <Plus className="h-5 w-5 text-primary" />
+            Adicionar ao treino — {selectedLibraryIds.size} exercício(s)
+          </button>
+        ) : null}
       </div>
     );
   }
