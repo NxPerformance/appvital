@@ -389,7 +389,7 @@ export default function Home() {
 
             <Link
               to="/appointments"
-              className={cn(SLIDE_CLASS, "flex flex-col gap-2.5 border border-white/10 bg-card p-5")}
+              className={cn(SLIDE_CLASS, "flex flex-col gap-3 border border-white/10 bg-card p-5")}
             >
               <div className="flex items-center justify-between gap-2">
                 <div className="flex min-w-0 items-center gap-2">
@@ -456,7 +456,7 @@ export default function Home() {
               )}
 
               {nextAppointment?.admin_notes ? (
-                <p className="flex items-center gap-1.5 text-[10.5px] font-bold text-primary">
+                <p className="mt-1 flex items-center gap-1.5 text-[10.5px] font-bold text-primary">
                   <MessageCircle className="h-3.5 w-3.5 shrink-0" />
                   Novo recado da consulta
                 </p>
@@ -464,7 +464,7 @@ export default function Home() {
 
               {nextAppointment && daysUntilAppointment != null && daysUntilAppointment >= 0 ? (
                 <p className="flex items-center gap-1.5 text-[10.5px] text-muted-foreground">
-                  <Bell className="h-3 w-3 shrink-0 text-primary" />
+                  <Bell className="h-3.5 w-3.5 shrink-0 text-primary" />
                   {daysUntilAppointment === 0 ? (
                     <span className="font-bold text-foreground">Hoje é sua consulta!</span>
                   ) : (
