@@ -14,9 +14,7 @@ import {
   PersonStanding,
   Plus,
   Repeat2,
-  Search,
   Trophy,
-  X,
   type LucideIcon,
 } from "lucide-react";
 import { api } from "@/lib/api";
@@ -42,18 +40,6 @@ interface Exercise {
   sets: ExerciseSet[];
 }
 
-interface ExerciseCatalogItem {
-  id: string;
-  name: string;
-  group: string;
-  category: "Barra" | "Halter" | "Máquina" | "Polia" | "Peso corpo";
-  location: string;
-  focus: string;
-  tone: string;
-  previous: string[];
-  defaultSets: ExerciseSet[];
-}
-
 interface WorkoutDraftData {
   objective: string;
   addedExercises: Exercise[];
@@ -71,117 +57,6 @@ const workoutTypeConfig: Record<string, { label: string; icon: LucideIcon; defau
   calistenia: { label: "Calistenia", icon: PersonStanding, defaultFocus: "Peso corporal" },
 };
 
-const exerciseCatalog: ExerciseCatalogItem[] = [
-  {
-    id: "supino-reto-barra",
-    name: "Supino Reto (barra)",
-    group: "Peitoral · Tríceps",
-    category: "Barra",
-    location: "Academia",
-    focus: "Peitoral · Tríceps",
-    tone: "from-[#192d42] to-[#341338]",
-    previous: ["80×10", "80×10", "80×9"],
-    defaultSets: [
-      { weight: 80, reps: 10, completed: true },
-      { weight: 80, reps: 10, completed: true },
-      { weight: 82, reps: 8, completed: true },
-    ],
-  },
-  {
-    id: "crucifixo-halteres",
-    name: "Crucifixo (halteres)",
-    group: "Peitoral",
-    category: "Halter",
-    location: "Academia",
-    focus: "Peitoral",
-    tone: "from-[#3b1226] to-[#301039]",
-    previous: ["18×12", "18×12", "18×10"],
-    defaultSets: [
-      { weight: 20, reps: 12, completed: true },
-      { weight: 20, reps: 0, completed: false },
-      { weight: 0, reps: 0, completed: false },
-    ],
-  },
-  {
-    id: "supino-inclinado-halter",
-    name: "Supino Inclinado (halter)",
-    group: "Peitoral · Ombros",
-    category: "Halter",
-    location: "Academia",
-    focus: "Peitoral · Ombros",
-    tone: "from-[#092333] to-[#32123c]",
-    previous: ["24×10", "24×10", "22×12"],
-    defaultSets: [
-      { weight: 24, reps: 10, completed: false },
-      { weight: 24, reps: 10, completed: false },
-      { weight: 22, reps: 12, completed: false },
-    ],
-  },
-  {
-    id: "crossover-polia",
-    name: "Crossover (polia)",
-    group: "Peitoral",
-    category: "Polia",
-    location: "Academia",
-    focus: "Peitoral",
-    tone: "from-[#571417] to-[#32123c]",
-    previous: ["18×12", "18×12", "16×15"],
-    defaultSets: [
-      { weight: 18, reps: 12, completed: false },
-      { weight: 18, reps: 12, completed: false },
-      { weight: 16, reps: 15, completed: false },
-    ],
-  },
-  {
-    id: "flexao-braco",
-    name: "Flexão de braço",
-    group: "Peitoral · Tríceps",
-    category: "Peso corpo",
-    location: "Em casa",
-    focus: "Peitoral · Tríceps",
-    tone: "from-[#073b20] to-[#241035]",
-    previous: ["15 reps", "12 reps", "10 reps"],
-    defaultSets: [
-      { weight: 0, reps: 15, completed: false },
-      { weight: 0, reps: 12, completed: false },
-      { weight: 0, reps: 10, completed: false },
-    ],
-  },
-  {
-    id: "supino-declinado-barra",
-    name: "Supino Declinado (barra)",
-    group: "Peitoral inferior",
-    category: "Barra",
-    location: "Academia",
-    focus: "Peitoral inferior",
-    tone: "from-[#4b2b08] to-[#2b103a]",
-    previous: ["70×10", "70×10", "68×12"],
-    defaultSets: [
-      { weight: 70, reps: 10, completed: false },
-      { weight: 70, reps: 10, completed: false },
-      { weight: 68, reps: 12, completed: false },
-    ],
-  },
-];
-
-const exerciseFilters = ["Todos", "Barra", "Halter", "Máquina", "Polia"] as const;
-
-const defaultExercises = [
-  createExerciseFromCatalog(exerciseCatalog[0]),
-  createExerciseFromCatalog(exerciseCatalog[1]),
-];
-
-function createExerciseFromCatalog(item: ExerciseCatalogItem): Exercise {
-  return {
-    name: item.name,
-    group: item.group,
-    category: item.category,
-    location: item.location,
-    previous: item.previous,
-    sets: item.defaultSets.map((set) => ({ ...set })),
-  };
-}
-
 function createExerciseFromWorkoutStart(exercise: WorkoutStartExercise): Exercise {
   return {
     name: exercise.name,
@@ -195,10 +70,6 @@ function createExerciseFromWorkoutStart(exercise: WorkoutStartExercise): Exercis
       completed: Boolean(set.completed),
     })),
   };
-}
-
-function getExerciseMeta(exercise: Exercise) {
-  return exerciseCatalog.find((item) => item.name === exercise.name);
 }
 
 function getCompletedSets(exercise: Exercise) {
@@ -244,18 +115,6 @@ function getMaxWeight(exercises: Exercise[]) {
   }, 0);
 }
 
-function ExerciseIllustration({ tone }: { tone: string }) {
-  return (
-    <div className={`relative h-20 overflow-hidden rounded-t-[1rem] bg-gradient-to-br ${tone}`}>
-      <div className="absolute left-1/2 top-7 h-8 w-14 -translate-x-1/2 rounded-[50%] bg-[#6b3a25]" />
-      <div className="absolute left-1/2 top-4 h-6 w-6 -translate-x-1/2 rounded-full bg-[#5b1a69]" />
-      <div className="absolute left-[22%] top-10 h-2 w-[58%] -rotate-6 rounded-full bg-primary/60" />
-      <div className="absolute left-[19%] top-9 h-4 w-4 rounded-full bg-primary/65" />
-      <div className="absolute right-[19%] top-8 h-4 w-4 rounded-full bg-primary/65" />
-    </div>
-  );
-}
-
 function MetaIcon({ icon: Icon, children }: { icon: LucideIcon; children: React.ReactNode }) {
   return (
     <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
@@ -276,7 +135,7 @@ export default function WorkoutForm() {
   const { saveDraft, loadDraft, clearDraft } = useWorkoutDraft<WorkoutDraftData>(type);
   const [draftLoaded, setDraftLoaded] = useState(false);
   const [objective, setObjective] = useState(config.defaultFocus);
-  const [addedExercises, setAddedExercises] = useState<Exercise[]>(defaultExercises);
+  const [addedExercises, setAddedExercises] = useState<Exercise[]>([]);
   const [calories, setCalories] = useState<number | "">("");
   const [saving, setSaving] = useState(false);
   const [saveFeedback, setSaveFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
@@ -286,9 +145,6 @@ export default function WorkoutForm() {
   const [isResting, setIsResting] = useState(false);
   const [endTime, setEndTime] = useState<number | null>(null);
   const [exercisePickerOpen, setExercisePickerOpen] = useState(false);
-  const [pickerQuery, setPickerQuery] = useState("");
-  const [pickerFilter, setPickerFilter] = useState<(typeof exerciseFilters)[number]>("Todos");
-  const [selectedExerciseIds, setSelectedExerciseIds] = useState<string[]>([]);
   const [numpadTarget, setNumpadTarget] = useState<NumpadTarget | null>(null);
   const [numpadValue, setNumpadValue] = useState("");
   const savePressLockRef = useRef(false);
@@ -369,17 +225,6 @@ export default function WorkoutForm() {
   const maxWeight = getMaxWeight(addedExercises);
   const completedExerciseCount = addedExercises.filter((exercise) => getCompletedSets(exercise).length > 0).length;
   const title = `${objective || config.defaultFocus} — Treino livre`;
-  const selectedIds = new Set(selectedExerciseIds);
-
-  const filteredCatalog = useMemo(() => {
-    const query = pickerQuery.trim().toLowerCase();
-
-    return exerciseCatalog.filter((exercise) => {
-      const matchesFilter = pickerFilter === "Todos" || exercise.category === pickerFilter;
-      const matchesQuery = !query || `${exercise.name} ${exercise.group} ${exercise.category}`.toLowerCase().includes(query);
-      return matchesFilter && matchesQuery;
-    });
-  }, [pickerFilter, pickerQuery]);
 
   const startRest = () => {
     setEndTime(Date.now() + restTime * 1000);
@@ -483,21 +328,7 @@ export default function WorkoutForm() {
   };
 
   const openExercisePicker = () => {
-    const ids = addedExercises
-      .map((exercise) => exerciseCatalog.find((item) => item.name === exercise.name)?.id)
-      .filter(Boolean) as string[];
-    setSelectedExerciseIds(ids);
     setExercisePickerOpen(true);
-  };
-
-  const confirmExerciseSelection = () => {
-    const existingByName = new Map(addedExercises.map((exercise) => [exercise.name, exercise]));
-    const selectedExercises = exerciseCatalog
-      .filter((item) => selectedExerciseIds.includes(item.id))
-      .map((item) => existingByName.get(item.name) || createExerciseFromCatalog(item));
-
-    setAddedExercises(selectedExercises);
-    setExercisePickerOpen(false);
   };
 
   const handleSaveWorkout = async (durationMinutes: number) => {
@@ -589,7 +420,7 @@ export default function WorkoutForm() {
     return (
       <div className="min-h-full bg-[hsl(var(--background))]">
         <div className="mx-auto flex min-h-full w-full max-w-[430px] flex-col gap-4 px-5 pb-40 pt-6 md:max-w-[1180px] md:px-7">
-          <header className="grid grid-cols-[42px_1fr_64px] items-center gap-3">
+          <header className="grid grid-cols-[42px_1fr_42px] items-center gap-3">
             <button
               type="button"
               onClick={() => setExercisePickerOpen(false)}
@@ -599,99 +430,20 @@ export default function WorkoutForm() {
               <ArrowLeft className="h-5 w-5" />
             </button>
             <h1 className="text-center text-xl font-black">Exercícios</h1>
-            <button type="button" className="text-right text-sm font-black text-primary">
-              + Criar
-            </button>
+            <span />
           </header>
 
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => setObjective(config.defaultFocus)}
-              className="inline-flex h-9 items-center gap-2 rounded-full border border-primary bg-primary/10 px-4 text-xs font-black text-primary"
-            >
-              <X className="h-3 w-3" />
-              {objective || config.defaultFocus}
-            </button>
-            <span className="text-xs text-muted-foreground">24 exercícios</span>
+          <div className="flex flex-1 flex-col items-center justify-center gap-3 rounded-[1.5rem] border border-dashed border-white/10 bg-card/60 p-8 text-center">
+            <span className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/15 text-primary">
+              <Dumbbell className="h-6 w-6" />
+            </span>
+            <p className="text-sm font-black text-foreground">Catálogo de exercícios em breve</p>
+            <p className="text-xs text-muted-foreground">
+              Estamos preparando uma lista completa de exercícios. Por enquanto, os exercícios já adicionados ao
+              seu treino continuam disponíveis para editar normalmente.
+            </p>
           </div>
-
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <input
-              value={pickerQuery}
-              onChange={(event) => setPickerQuery(event.target.value)}
-              placeholder="Pesquisar exercício..."
-              className="h-12 w-full rounded-xl border border-white/10 bg-card pl-11 pr-4 text-sm font-semibold outline-none placeholder:text-muted-foreground focus:border-primary"
-            />
-          </div>
-
-          <div className="flex gap-2 overflow-x-auto pb-1 hide-scrollbar">
-            {exerciseFilters.map((filter) => (
-              <button
-                key={filter}
-                type="button"
-                onClick={() => setPickerFilter(filter)}
-                className={`h-9 shrink-0 rounded-full border px-4 text-xs font-black transition-colors ${
-                  pickerFilter === filter
-                    ? "border-primary bg-primary text-primary-foreground"
-                    : "border-white/10 bg-card text-muted-foreground"
-                }`}
-              >
-                {filter}
-              </button>
-            ))}
-          </div>
-
-          <section className="grid grid-cols-2 gap-3">
-            {filteredCatalog.map((exercise) => {
-              const selected = selectedIds.has(exercise.id);
-
-              return (
-                <button
-                  key={exercise.id}
-                  type="button"
-                  onClick={() => {
-                    setSelectedExerciseIds((current) =>
-                      current.includes(exercise.id)
-                        ? current.filter((id) => id !== exercise.id)
-                        : [...current, exercise.id],
-                    );
-                  }}
-                  className={`relative overflow-hidden rounded-[1rem] border bg-card text-left shadow-elegant transition-transform hover:-translate-y-0.5 ${
-                    selected ? "border-primary" : "border-white/10"
-                  }`}
-                >
-                  <ExerciseIllustration tone={exercise.tone} />
-                  <span className={`absolute right-3 top-3 flex h-6 w-6 items-center justify-center rounded-full ${
-                    selected ? "bg-primary text-primary-foreground" : "bg-primary/15 text-primary/50"
-                  }`}>
-                    <Check className="h-3.5 w-3.5" />
-                  </span>
-                  <div className="p-3">
-                    <span className="inline-flex rounded-full bg-primary/15 px-2 py-1 text-[8px] font-black uppercase tracking-[0.12em] text-primary">
-                      {exercise.focus}
-                    </span>
-                    <h3 className="mt-3 text-sm font-black leading-tight text-foreground">{exercise.name}</h3>
-                    <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1">
-                      <MetaIcon icon={Dumbbell}>{exercise.category}</MetaIcon>
-                      <MetaIcon icon={PersonStanding}>{exercise.location}</MetaIcon>
-                    </div>
-                  </div>
-                </button>
-              );
-            })}
-          </section>
         </div>
-
-        <button
-          type="button"
-          onClick={confirmExerciseSelection}
-          className="fixed bottom-[calc(env(safe-area-inset-bottom,0px)+4.6rem)] left-1/2 z-50 flex h-12 w-[calc(100%-2.5rem)] max-w-[390px] -translate-x-1/2 items-center justify-center gap-2 rounded-xl border border-white/10 bg-[hsl(var(--background-strong)/0.96)] text-sm font-black text-foreground shadow-elegant backdrop-blur"
-        >
-          <Plus className="h-5 w-5 text-primary" />
-          Adicionar ao treino — {selectedExerciseIds.length} exercício(s)
-        </button>
       </div>
     );
   }
@@ -772,7 +524,7 @@ export default function WorkoutForm() {
                     </span>
                     <div className="min-w-0 flex-1">
                       <h2 className="truncate text-sm font-black text-foreground">{exercise.name}</h2>
-                      <p className="mt-0.5 truncate text-[11px] text-muted-foreground">{exercise.group || getExerciseMeta(exercise)?.group || objective}</p>
+                      <p className="mt-0.5 truncate text-[11px] text-muted-foreground">{exercise.group || objective}</p>
                     </div>
                     <span className="rounded-full bg-primary/10 px-3 py-1 text-[10px] font-black text-primary">
                       Máx: {max ? `${formatWeight(max)}kg` : "—"}
