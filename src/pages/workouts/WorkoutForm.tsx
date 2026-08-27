@@ -164,7 +164,7 @@ function ExerciseThumbnail({ images, alt }: { images: string[]; alt: string }) {
 
   if (!currentUrl) {
     return (
-      <div className="flex h-20 items-center justify-center bg-secondary/40 text-muted-foreground">
+      <div className="flex aspect-[3/2] items-center justify-center bg-secondary/40 text-muted-foreground">
         <Dumbbell className="h-6 w-6" />
       </div>
     );
@@ -175,7 +175,7 @@ function ExerciseThumbnail({ images, alt }: { images: string[]; alt: string }) {
       src={currentUrl}
       alt={alt}
       loading="lazy"
-      className="h-20 w-full object-cover"
+      className="aspect-[3/2] w-full object-cover"
       onError={() => setBrokenUrls((current) => new Set(current).add(currentUrl))}
     />
   );
@@ -626,7 +626,7 @@ export default function WorkoutForm() {
           </div>
         </div>
 
-        <footer className="fixed bottom-0 left-1/2 z-50 w-full max-w-[430px] -translate-x-1/2 border-t border-white/10 bg-[hsl(var(--background-strong)/0.98)] px-5 pb-[calc(env(safe-area-inset-bottom,0px)+1rem)] pt-3 backdrop-blur md:max-w-[1180px] md:px-7">
+        <footer className="fixed bottom-0 left-1/2 z-50 w-full max-w-[430px] -translate-x-1/2 border-t border-white/10 bg-[hsl(var(--background-strong)/0.98)] px-5 pb-[calc(env(safe-area-inset-bottom,0px)+1rem)] pt-3 backdrop-blur md:max-w-[1180px] md:rounded-t-[1.5rem] md:px-7">
           <button
             type="button"
             onClick={proceedToExercisePicker}
@@ -1024,7 +1024,7 @@ export default function WorkoutForm() {
         </main>
       </div>
 
-      <footer className="fixed bottom-0 left-1/2 z-50 w-full max-w-[430px] -translate-x-1/2 border-t border-white/10 bg-[hsl(var(--background-strong)/0.98)] px-5 pb-[calc(env(safe-area-inset-bottom,0px)+1rem)] pt-3 backdrop-blur md:max-w-[1180px] md:px-7">
+      <footer className="fixed bottom-0 left-1/2 z-50 w-full max-w-[430px] -translate-x-1/2 border-t border-white/10 bg-[hsl(var(--background-strong)/0.98)] px-5 pb-[calc(env(safe-area-inset-bottom,0px)+1rem)] pt-3 backdrop-blur md:max-w-[1180px] md:rounded-t-[1.5rem] md:px-7">
         <button
           type="button"
           onClick={finishWorkout}
