@@ -39,7 +39,7 @@ type NotificationPreference = {
 
 const themeOptions: Array<{ value: AppTheme; label: string; description: string; icon: ElementType }> = [
   { value: 'roxo', label: 'Roxo', description: 'Visual clássico da Vitalissy', icon: Sparkles },
-  { value: 'preto', label: 'Preto', description: 'Fundo escuro, mesmo destaque dourado', icon: Moon },
+  { value: 'preto', label: 'Preto', description: 'Fundo escuro, destaque roxo', icon: Moon },
 ];
 
 const notificationPreferences: NotificationPreference[] = [
