@@ -16,6 +16,7 @@ import {
   Plus,
   Repeat2,
   Search,
+  Target,
   Trophy,
   type LucideIcon,
 } from "lucide-react";
@@ -25,7 +26,12 @@ import { useUnsavedChangesWarning } from "@/hooks/useUnsavedChangesWarning";
 import { useWorkoutDraft } from "@/hooks/useWorkoutDraft";
 import { UnsavedChangesDialog } from "@/components/UnsavedChangesDialog";
 import { normalizeWorkoutStartState, type WorkoutStartExercise } from "@/lib/workoutStart";
-import { fetchExerciseLibrary, fetchExerciseEquipmentOptions, type LibraryExerciseApi } from "@/lib/exerciseLibrary";
+import {
+  fetchExerciseLibrary,
+  fetchExerciseEquipmentOptions,
+  MUSCLE_GROUP_OPTIONS,
+  type LibraryExerciseApi,
+} from "@/lib/exerciseLibrary";
 import { toast } from "sonner";
 
 interface ExerciseSet {
@@ -52,6 +58,8 @@ interface WorkoutDraftData {
 type NumpadTarget =
   | { kind: "set"; exerciseIndex: number; setIndex: number; field: "weight" | "reps" }
   | { kind: "calories" };
+
+type FlowPhase = "muscle-select" | "exercise-picker" | "logging";
 
 const workoutTypeConfig: Record<string, { label: string; icon: LucideIcon; defaultFocus: string }> = {
   academia: { label: "Academia", icon: Dumbbell, defaultFocus: "Peitoral" },
@@ -164,6 +172,8 @@ export default function WorkoutForm() {
   const [timeLeft, setTimeLeft] = useState(0);
   const [isResting, setIsResting] = useState(false);
   const [endTime, setEndTime] = useState<number | null>(null);
+  const [flowPhase, setFlowPhase] = useState<FlowPhase>("muscle-select");
+  const [selectedMuscleGroups, setSelectedMuscleGroups] = useState<Set<string>>(new Set());
   const [exercisePickerOpen, setExercisePickerOpen] = useState(false);
   const [pickerQuery, setPickerQuery] = useState("");
   const [pickerEquipment, setPickerEquipment] = useState<string | null>(null);
@@ -173,6 +183,9 @@ export default function WorkoutForm() {
   const [numpadValue, setNumpadValue] = useState("");
   const savePressLockRef = useRef(false);
 
+  const isInitialPickerFlow = flowPhase === "exercise-picker";
+  const pickerVisible = isInitialPickerFlow || exercisePickerOpen;
+
   const [debouncedPickerQuery, setDebouncedPickerQuery] = useState("");
   useEffect(() => {
     const timeout = window.setTimeout(() => setDebouncedPickerQuery(pickerQuery.trim()), 300);
@@ -180,31 +193,40 @@ export default function WorkoutForm() {
   }, [pickerQuery]);
 
   const { data: equipmentOptions } = useQuery({
-    queryKey: ["exercise-equipment-options"],
-    queryFn: fetchExerciseEquipmentOptions,
-    enabled: exercisePickerOpen,
+    queryKey: ["exercise-equipment-options", type],
+    queryFn: () => fetchExerciseEquipmentOptions(type),
+    enabled: pickerVisible,
     staleTime: Infinity,
   });
 
   const { data: libraryResults, isLoading: libraryLoading } = useQuery({
-    queryKey: ["exercise-library", debouncedPickerQuery, pickerEquipment],
-    queryFn: () => fetchExerciseLibrary({ search: debouncedPickerQuery || undefined, equipment: pickerEquipment || undefined }),
-    enabled: exercisePickerOpen,
+    queryKey: ["exercise-library", type, debouncedPickerQuery, pickerEquipment, Array.from(selectedMuscleGroups).sort().join(",")],
+    queryFn: () =>
+      fetchExerciseLibrary({
+        search: debouncedPickerQuery || undefined,
+        equipment: pickerEquipment || undefined,
+        workoutType: type,
+        muscleGroups: selectedMuscleGroups.size > 0 ? Array.from(selectedMuscleGroups) : undefined,
+      }),
+    enabled: pickerVisible,
   });
 
   useEffect(() => {
+    if (flowPhase !== "logging") return;
+
     const interval = window.setInterval(() => {
       setElapsedSeconds((current) => current + 1);
     }, 1000);
 
     return () => window.clearInterval(interval);
-  }, []);
+  }, [flowPhase]);
 
   useEffect(() => {
     if (workoutStartState) {
       setObjective(workoutStartState.objective || config.defaultFocus);
       setAddedExercises(workoutStartState.exercises.map(createExerciseFromWorkoutStart));
       setCalories(workoutStartState.calories || "");
+      setFlowPhase("logging");
       clearDraft();
       setDraftLoaded(true);
       toast.success(
@@ -220,6 +242,7 @@ export default function WorkoutForm() {
       setObjective(draft.objective || config.defaultFocus);
       if (draft.addedExercises?.length) {
         setAddedExercises(draft.addedExercises);
+        setFlowPhase("logging");
       }
       setCalories(draft.calories || "");
       toast.info("Rascunho recuperado automaticamente");
@@ -373,8 +396,28 @@ export default function WorkoutForm() {
   const openExercisePicker = () => {
     setPickerQuery("");
     setPickerEquipment(null);
+    setSelectedMuscleGroups(new Set());
     setSelectedLibraryIds(new Set());
     setExercisePickerOpen(true);
+  };
+
+  const proceedToExercisePicker = () => {
+    setPickerQuery("");
+    setPickerEquipment(null);
+    setSelectedLibraryIds(new Set());
+    setFlowPhase("exercise-picker");
+  };
+
+  const toggleMuscleGroup = (slug: string) => {
+    setSelectedMuscleGroups((current) => {
+      const next = new Set(current);
+      if (next.has(slug)) {
+        next.delete(slug);
+      } else {
+        next.add(slug);
+      }
+      return next;
+    });
   };
 
   const toggleLibrarySelection = (id: string) => {
@@ -389,6 +432,14 @@ export default function WorkoutForm() {
     });
   };
 
+  const selectAllVisibleExercises = () => {
+    const alreadyAddedNames = new Set(addedExercises.map((exercise) => exercise.name));
+    const selectableIds = (libraryResults ?? [])
+      .filter((item) => !alreadyAddedNames.has(item.name))
+      .map((item) => item.id);
+    setSelectedLibraryIds(new Set(selectableIds));
+  };
+
   const confirmExerciseSelection = () => {
     const alreadyAddedNames = new Set(addedExercises.map((exercise) => exercise.name));
     const toAdd = (libraryResults ?? [])
@@ -396,7 +447,13 @@ export default function WorkoutForm() {
       .map(createExerciseFromLibraryItem);
 
     setAddedExercises((current) => [...current, ...toAdd]);
-    setExercisePickerOpen(false);
+    setSelectedLibraryIds(new Set());
+
+    if (isInitialPickerFlow) {
+      setFlowPhase("logging");
+    } else {
+      setExercisePickerOpen(false);
+    }
   };
 
   const handleSaveWorkout = async (durationMinutes: number) => {
@@ -484,14 +541,83 @@ export default function WorkoutForm() {
     proceed();
   };
 
-  if (exercisePickerOpen) {
+  if (flowPhase === "muscle-select") {
+    return (
+      <div className="min-h-full bg-[hsl(var(--background))]">
+        <div className="mx-auto flex min-h-full w-full max-w-[430px] flex-col gap-5 px-5 pb-40 pt-6 md:max-w-[1180px] md:px-7">
+          <header className="grid grid-cols-[42px_1fr_42px] items-center gap-3">
+            <Link
+              to="/workouts"
+              className="flex h-10 w-10 items-center justify-center rounded-xl bg-secondary text-primary"
+              aria-label="Cancelar"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Link>
+            <h1 className="text-center text-xl font-black">{config.label}</h1>
+            <span />
+          </header>
+
+          <div className="flex flex-col items-center gap-2 text-center">
+            <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+              <Target className="h-7 w-7" />
+            </span>
+            <h2 className="text-lg font-black text-foreground">Qual grupo você vai treinar?</h2>
+            <p className="max-w-[280px] text-sm text-muted-foreground">
+              Selecione um ou mais grupos musculares para ver os exercícios certos.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            {MUSCLE_GROUP_OPTIONS.map((group) => {
+              const selected = selectedMuscleGroups.has(group.slug);
+              return (
+                <button
+                  key={group.slug}
+                  type="button"
+                  onClick={() => toggleMuscleGroup(group.slug)}
+                  className={`flex h-14 items-center justify-center rounded-[1rem] border px-3 text-sm font-black transition-colors ${
+                    selected ? "border-primary bg-primary/15 text-primary" : "border-white/10 bg-card text-foreground"
+                  }`}
+                >
+                  {group.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <footer className="fixed bottom-0 left-1/2 z-50 w-full max-w-[430px] -translate-x-1/2 border-t border-white/10 bg-[hsl(var(--background-strong)/0.98)] px-5 pb-[calc(env(safe-area-inset-bottom,0px)+1rem)] pt-3 backdrop-blur md:max-w-[1180px] md:px-7">
+          <button
+            type="button"
+            onClick={proceedToExercisePicker}
+            disabled={selectedMuscleGroups.size === 0}
+            className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-black text-primary-foreground disabled:opacity-40"
+          >
+            Continuar
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setSelectedMuscleGroups(new Set());
+              proceedToExercisePicker();
+            }}
+            className="mt-2 h-9 w-full text-center text-xs font-bold text-muted-foreground"
+          >
+            Ver todos os exercícios
+          </button>
+        </footer>
+      </div>
+    );
+  }
+
+  if (pickerVisible) {
     return (
       <div className="min-h-full bg-[hsl(var(--background))]">
         <div className="mx-auto flex min-h-full w-full max-w-[430px] flex-col gap-4 px-5 pb-40 pt-6 md:max-w-[1180px] md:px-7">
           <header className="grid grid-cols-[42px_1fr_42px] items-center gap-3">
             <button
               type="button"
-              onClick={() => setExercisePickerOpen(false)}
+              onClick={() => (isInitialPickerFlow ? setFlowPhase("muscle-select") : setExercisePickerOpen(false))}
               className="flex h-10 w-10 items-center justify-center rounded-xl bg-secondary text-primary"
               aria-label="Voltar"
             >
@@ -509,6 +635,24 @@ export default function WorkoutForm() {
               placeholder="Pesquisar exercício..."
               className="h-12 w-full rounded-xl border border-white/10 bg-card pl-11 pr-4 text-sm font-semibold outline-none placeholder:text-muted-foreground focus:border-primary"
             />
+          </div>
+
+          <div className="flex gap-2 overflow-x-auto pb-1 hide-scrollbar">
+            {MUSCLE_GROUP_OPTIONS.map((group) => {
+              const selected = selectedMuscleGroups.has(group.slug);
+              return (
+                <button
+                  key={group.slug}
+                  type="button"
+                  onClick={() => toggleMuscleGroup(group.slug)}
+                  className={`h-9 shrink-0 rounded-full border px-4 text-xs font-black transition-colors ${
+                    selected ? "border-primary bg-primary text-primary-foreground" : "border-white/10 bg-card text-muted-foreground"
+                  }`}
+                >
+                  {group.label}
+                </button>
+              );
+            })}
           </div>
 
           <div className="flex gap-2 overflow-x-auto pb-1 hide-scrollbar">
@@ -544,7 +688,13 @@ export default function WorkoutForm() {
           ) : (libraryResults ?? []).length === 0 ? (
             <p className="py-8 text-center text-sm text-muted-foreground">Nenhum exercício encontrado.</p>
           ) : (
-            <section className="grid grid-cols-2 gap-3">
+            <>
+              <div className="flex justify-end">
+                <button type="button" onClick={selectAllVisibleExercises} className="text-xs font-bold text-primary">
+                  Selecionar todos
+                </button>
+              </div>
+              <section className="grid grid-cols-2 gap-3">
               {(libraryResults ?? []).map((exercise) => {
                 const selected = selectedLibraryIds.has(exercise.id);
                 const alreadyAdded = addedExercises.some((added) => added.name === exercise.name);
@@ -598,7 +748,8 @@ export default function WorkoutForm() {
                   </button>
                 );
               })}
-            </section>
+              </section>
+            </>
           )}
         </div>
 
