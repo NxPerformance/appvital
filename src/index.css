@@ -95,29 +95,30 @@
     --ring: 45 100% 70%;
   }
 
-  /* Tema alternativo "Preto" — inspirado na paleta do UI kit Sporter
-     (Figma): fundo quase preto com tom azulado neutro (em vez do preto
-     puxado pro roxo de antes) e roxo vívido como destaque, no lugar do
-     dourado. O tema "Roxo" (:root acima) continua intocado. */
+  /* Tema alternativo "Preto": fundo derivado do roxo da marca (#2c123b,
+     hsl 278 53% 15%) em vez do preto azulado neutro do UI kit Sporter —
+     mais escuro que o tema "Roxo" (:root acima, que fica intocado), mas
+     na mesma família de cor da marca em vez de um tom emprestado do kit.
+     O roxo vívido de destaque (--primary etc.) continua o do kit. */
   [data-theme="preto"] {
-    --background: 221 39% 11%;
-    --background-strong: 222 42% 7%;
+    --background: 278 53% 10%;
+    --background-strong: 278 55% 6%;
     --foreground: 220 14% 96%;
 
-    --card: 215 28% 17%;
+    --card: 278 53% 15%;
     --card-foreground: 220 14% 96%;
 
-    --popover: 215 28% 17%;
+    --popover: 278 53% 15%;
     --popover-foreground: 220 14% 96%;
 
     --primary: 255 80% 60%;
     --primary-strong: 255 82% 52%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 217 22% 20%;
+    --secondary: 278 35% 20%;
     --secondary-foreground: 220 14% 96%;
 
-    --muted: 220 15% 16%;
+    --muted: 278 28% 16%;
     --muted-foreground: 220 9% 62%;
 
     --accent: 255 80% 60%;
@@ -126,17 +127,17 @@
     --destructive: 0 84% 60%;
     --destructive-foreground: 45 100% 95%;
 
-    --border: 217 20% 22%;
-    --input: 220 15% 16%;
+    --border: 278 28% 22%;
+    --input: 278 28% 16%;
     --ring: 255 80% 60%;
 
-    --sidebar-background: 222 42% 8%;
+    --sidebar-background: 278 55% 7%;
     --sidebar-foreground: 220 14% 96%;
     --sidebar-primary: 255 80% 60%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 217 22% 20%;
+    --sidebar-accent: 278 35% 20%;
     --sidebar-accent-foreground: 220 14% 96%;
-    --sidebar-border: 217 20% 22%;
+    --sidebar-border: 278 28% 22%;
     --sidebar-ring: 255 80% 60%;
   }
 }
