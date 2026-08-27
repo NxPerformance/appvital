@@ -626,12 +626,16 @@ export default function WorkoutForm() {
           </div>
         </div>
 
-        <footer className="fixed bottom-0 left-1/2 z-50 w-full max-w-[430px] -translate-x-1/2 border-t border-white/10 bg-[hsl(var(--background-strong)/0.98)] px-5 pb-[calc(env(safe-area-inset-bottom,0px)+1rem)] pt-3 backdrop-blur md:max-w-[1180px] md:rounded-t-[1.5rem] md:px-7">
+        <footer className="fixed bottom-0 left-1/2 z-50 w-full max-w-[430px] -translate-x-1/2 border-t border-white/10 bg-[hsl(var(--background))] px-5 pb-[calc(env(safe-area-inset-bottom,0px)+1rem)] pt-3 backdrop-blur md:max-w-[1180px] md:rounded-t-[1.5rem] md:px-7">
           <button
             type="button"
             onClick={proceedToExercisePicker}
             disabled={selectedMuscleGroups.size === 0}
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-black text-primary-foreground disabled:opacity-40"
+            className={`flex h-12 w-full items-center justify-center gap-2 rounded-xl text-sm font-black transition-colors ${
+              selectedMuscleGroups.size === 0
+                ? "cursor-not-allowed bg-secondary text-muted-foreground"
+                : "bg-primary text-primary-foreground"
+            }`}
           >
             Continuar
           </button>
@@ -1024,7 +1028,7 @@ export default function WorkoutForm() {
         </main>
       </div>
 
-      <footer className="fixed bottom-0 left-1/2 z-50 w-full max-w-[430px] -translate-x-1/2 border-t border-white/10 bg-[hsl(var(--background-strong)/0.98)] px-5 pb-[calc(env(safe-area-inset-bottom,0px)+1rem)] pt-3 backdrop-blur md:max-w-[1180px] md:rounded-t-[1.5rem] md:px-7">
+      <footer className="fixed bottom-0 left-1/2 z-50 w-full max-w-[430px] -translate-x-1/2 border-t border-white/10 bg-[hsl(var(--background))] px-5 pb-[calc(env(safe-area-inset-bottom,0px)+1rem)] pt-3 backdrop-blur md:max-w-[1180px] md:rounded-t-[1.5rem] md:px-7">
         <button
           type="button"
           onClick={finishWorkout}
