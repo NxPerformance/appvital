@@ -95,12 +95,9 @@
     --ring: 45 100% 70%;
   }
 
-  /* Tema alternativo "Preto": fundo preto azulado neutro (do UI kit
-     Sporter), com o roxo de destaque derivado do roxo da marca (#2c123b,
-     hsl 278 53% 15%) em vez do roxo genérico do kit — clareado/saturado
-     pra funcionar como cor de destaque (botões, ícones ativos) contra um
-     fundo escuro, já que o hex da marca sozinho é escuro demais pra isso.
-     O tema "Roxo" (:root acima) continua intocado. */
+  /* Tema alternativo "Preto": fundo preto azulado neutro e roxo de
+     destaque, ambos direto do UI kit Sporter (Figma), sem adaptação de
+     marca. O tema "Roxo" (:root acima) continua intocado. */
   [data-theme="preto"] {
     --background: 221 39% 11%;
     --background-strong: 222 42% 7%;
@@ -112,8 +109,8 @@
     --popover: 215 28% 17%;
     --popover-foreground: 220 14% 96%;
 
-    --primary: 278 65% 58%;
-    --primary-strong: 278 68% 50%;
+    --primary: 255 80% 60%;
+    --primary-strong: 255 82% 52%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 217 22% 20%;
@@ -122,7 +119,7 @@
     --muted: 220 15% 16%;
     --muted-foreground: 220 9% 62%;
 
-    --accent: 278 65% 58%;
+    --accent: 255 80% 60%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 84% 60%;
@@ -130,16 +127,16 @@
 
     --border: 217 20% 22%;
     --input: 220 15% 16%;
-    --ring: 278 65% 58%;
+    --ring: 255 80% 60%;
 
     --sidebar-background: 222 42% 8%;
     --sidebar-foreground: 220 14% 96%;
-    --sidebar-primary: 278 65% 58%;
+    --sidebar-primary: 255 80% 60%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 217 22% 20%;
     --sidebar-accent-foreground: 220 14% 96%;
     --sidebar-border: 217 20% 22%;
-    --sidebar-ring: 278 65% 58%;
+    --sidebar-ring: 255 80% 60%;
   }
 }
 
