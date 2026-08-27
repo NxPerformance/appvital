@@ -12,8 +12,10 @@ import {
   Clock,
   Dumbbell,
   Flame,
+  Home as HomeIcon,
   Lock,
   MessageCircle,
+  PersonStanding,
   RotateCcw,
   Target,
   TrendingDown,
@@ -108,6 +110,13 @@ function SectionLabel({ children }: { children: string }) {
     </h2>
   );
 }
+
+const workoutCategories: Array<{ type: string; label: string; icon: LucideIcon }> = [
+  { type: "academia", label: "Academia", icon: Dumbbell },
+  { type: "em-casa", label: "Em Casa", icon: HomeIcon },
+  { type: "crossfit", label: "CrossFit", icon: Flame },
+  { type: "calistenia", label: "Calistenia", icon: PersonStanding },
+];
 
 const SLIDE_CLASS =
   "w-[85%] shrink-0 snap-center rounded-[1.35rem] shadow-elegant sm:w-[340px]";
@@ -542,6 +551,20 @@ export default function Home() {
 
         <section className="space-y-3">
           <SectionLabel>Treino</SectionLabel>
+
+          <div className="hide-scrollbar flex gap-2 overflow-x-auto pb-1">
+            {workoutCategories.map((category) => (
+              <Link
+                key={category.type}
+                to={`/workouts/musculacao/${category.type}`}
+                className="flex h-11 shrink-0 items-center gap-2 rounded-full border border-white/10 bg-card px-4 text-sm font-bold text-foreground shadow-elegant transition-transform hover:-translate-y-0.5"
+              >
+                <category.icon className="h-4 w-4 text-primary" />
+                {category.label}
+              </Link>
+            ))}
+          </div>
+
           <div className="space-y-3">
             {workoutLinks.map((link) => (
               <Link
