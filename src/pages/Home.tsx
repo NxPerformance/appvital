@@ -13,14 +13,12 @@ import {
   Dumbbell,
   Flame,
   Home as HomeIcon,
-  Lock,
   MessageCircle,
   PersonStanding,
   RotateCcw,
   Target,
   TrendingDown,
   TrendingUp,
-  Trophy,
   XCircle,
   type LucideIcon,
 } from "lucide-react";
@@ -28,7 +26,6 @@ import { differenceInCalendarDays, endOfWeek, format, parseISO, startOfWeek } fr
 import { ptBR } from "date-fns/locale";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { WeeklyCaloriesChart } from "@/components/home/WeeklyCaloriesChart";
-import { useAchievements } from "@/hooks/useAchievements";
 import { useProfile } from "@/hooks/useProfile";
 import { useBodyProgress } from "@/hooks/useBodyProgress";
 import { useBioimpedance } from "@/hooks/useBioimpedance";
@@ -58,13 +55,6 @@ const appointmentStatusLabels: Record<string, { label: string; className: string
   cancelled: { label: "Cancelado", className: "bg-red-400/15 text-red-300", icon: XCircle },
 };
 
-interface WorkoutLink {
-  to: string;
-  label: string;
-  description: string;
-  icon: LucideIcon;
-}
-
 function getInitials(name?: string | null): string {
   return (
     name
@@ -91,18 +81,6 @@ function formatWeight(value: number) {
   return new Intl.NumberFormat("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(value);
 }
 
-function formatUnlockedAt(value?: string) {
-  if (!value) return "Continue cuidando da sua saúde";
-
-  const unlockedAt = parseISO(value);
-  if (Number.isNaN(unlockedAt.getTime())) return "Conquista desbloqueada";
-
-  const days = differenceInCalendarDays(new Date(), unlockedAt);
-  if (days <= 0) return "Desbloqueada hoje";
-  if (days === 1) return "Desbloqueada há 1 dia";
-  return `Desbloqueada há ${days} dias`;
-}
-
 function SectionLabel({ children }: { children: string }) {
   return (
     <h2 className="px-1 text-[11px] font-bold uppercase tracking-[0.22em] text-muted-foreground">
@@ -118,12 +96,26 @@ const workoutCategories: Array<{ type: string; label: string; icon: LucideIcon }
   { type: "calistenia", label: "Calistenia", icon: PersonStanding },
 ];
 
+// Casos reais de pacientes (placeholder até termos fotos e depoimentos autorizados).
+const vital360Cases: Array<{ name: string; plan: string }> = [
+  { name: "Marina", plan: "Essencial" },
+  { name: "Rodrigo", plan: "Completo" },
+  { name: "Camila", plan: "Essencial" },
+  { name: "Bruno", plan: "Completo" },
+];
+
+const exampleWorkouts: Array<{ title: string; meta: string; type: string; icon: LucideIcon }> = [
+  { title: "Peito e Tríceps", meta: "45 min · Intermediário", type: "academia", icon: Dumbbell },
+  { title: "HIIT Full Body", meta: "30 min · Avançado", type: "crossfit", icon: Flame },
+  { title: "Treino em Casa", meta: "20 min · Iniciante", type: "em-casa", icon: HomeIcon },
+  { title: "Calistenia Base", meta: "25 min · Intermediário", type: "calistenia", icon: PersonStanding },
+];
+
 const SLIDE_CLASS =
   "w-[85%] shrink-0 snap-center rounded-[1.35rem] shadow-elegant sm:w-[340px]";
 
 export default function Home() {
   const { profile, loading, error: profileError } = useProfile();
-  const { achievements, userAchievements, latestAchievement } = useAchievements();
   const { photos } = useBodyProgress();
   const { latestRecord: latestBio, previousRecord: previousBio } = useBioimpedance();
   const today = useMemo(() => new Date(), []);
@@ -187,19 +179,8 @@ export default function Home() {
   const latestPhoto = photos[0] ?? null;
   const previousPhoto = photos[1] ?? null;
 
-  const unlockedAchievementIds = new Set(userAchievements.map((ua) => ua.achievement_id));
-  const nextAchievement = [...achievements]
-    .sort((a, b) => a.sort_order - b.sort_order)
-    .find((achievement) => !unlockedAchievementIds.has(achievement.id));
-  const daysSinceAchievement = latestAchievement
-    ? differenceInCalendarDays(today, parseISO(latestAchievement.unlocked_at))
-    : null;
-  const showRecentAchievement = latestAchievement != null && daysSinceAchievement != null && daysSinceAchievement <= 3;
-
   const weekStart = startOfWeek(today, { weekStartsOn: 0 });
   const weekEnd = endOfWeek(today, { weekStartsOn: 0 });
-  const last30Start = new Date(today);
-  last30Start.setDate(last30Start.getDate() - 29);
 
   const workoutDates = (strengthWorkouts ?? []).map((workout) => parseISO(`${workout.date}T12:00:00`));
   const dateKey = (date: Date) => format(date, "yyyy-MM-dd");
@@ -209,9 +190,6 @@ export default function Home() {
   ).size;
   const weeklyGoal = profile?.weekly_workout_goal ?? null;
   const weeklyGoalPercent = weeklyGoal ? Math.min(100, Math.round((weekWorkoutDays / weeklyGoal) * 100)) : null;
-
-  const workoutsLast30 = workoutDates.filter((date) => date >= last30Start && date <= today);
-  const activeDaysLast30 = new Set(workoutsLast30.map(dateKey)).size;
 
   const latestWeight = latestBio?.weight_kg ?? null;
   const previousWeight = previousBio?.weight_kg ?? null;
@@ -228,21 +206,6 @@ export default function Home() {
         : weightDelta < 0
           ? true
           : null;
-
-  const workoutLinks: WorkoutLink[] = [
-    { to: "/workouts", label: "Caderno de exercícios", description: "Registro de musculação", icon: Dumbbell },
-    { to: "/workouts/dashboard", label: "Desempenho", description: "Estatísticas e progresso", icon: BarChart3 },
-    ...(activeDraft
-      ? [
-          {
-            to: `/workouts/musculacao/${activeDraft.type}`,
-            label: "Continuar treino",
-            description: "Retome de onde parou",
-            icon: RotateCcw,
-          },
-        ]
-      : []),
-  ];
 
   return (
     <div className="min-h-full bg-[hsl(var(--background))]">
@@ -306,66 +269,48 @@ export default function Home() {
           entries={(strengthWorkouts ?? []).map((workout) => ({ date: workout.date, calories: workout.calories }))}
         />
 
-        <div className="grid grid-cols-2 gap-3">
-          <Link
-            to="/workouts/dashboard"
-            className="flex flex-col gap-2 rounded-[1.15rem] border border-white/10 bg-card p-4 shadow-elegant transition-transform hover:-translate-y-0.5"
-          >
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/15 text-primary">
-              <Flame className="h-4 w-4" />
-            </span>
-            <p className="text-[11px] font-extrabold uppercase tracking-[0.14em] text-muted-foreground">Consistência</p>
-            <p className="text-lg font-black leading-tight text-foreground">
-              {activeDaysLast30} {activeDaysLast30 === 1 ? "dia ativo" : "dias ativos"}
-            </p>
-            <p className="text-[11px] text-muted-foreground">
-              {workoutsLast30.length} {workoutsLast30.length === 1 ? "treino" : "treinos"} nos últimos 30 dias
-            </p>
-          </Link>
-
-          <Link
-            to="/body-progress"
-            className="flex flex-col gap-2 rounded-[1.15rem] border border-white/10 bg-card p-4 shadow-elegant transition-transform hover:-translate-y-0.5"
-          >
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/15 text-primary">
-              {weightDelta != null && weightDelta < 0 ? (
-                <TrendingDown className="h-4 w-4" />
-              ) : (
-                <TrendingUp className="h-4 w-4" />
-              )}
-            </span>
-            <p className="text-[11px] font-extrabold uppercase tracking-[0.14em] text-muted-foreground">Evolução</p>
-            {latestWeight != null ? (
-              <>
-                <p className="text-lg font-black leading-tight text-foreground">{formatWeight(latestWeight)} kg</p>
-                {weightDelta != null ? (
-                  <p className="text-[11px] font-semibold text-muted-foreground">
-                    <span
-                      className={cn(
-                        movingTowardGoal == null ? "" : movingTowardGoal ? "text-emerald-300" : "text-amber-300",
-                      )}
-                    >
-                      {weightDelta < 0 ? "↓" : weightDelta > 0 ? "↑" : "="} {formatWeight(Math.abs(weightDelta))}
-                    </span>{" "}
-                    kg desde a última pesagem
-                  </p>
-                ) : (
-                  <p className="text-[11px] text-muted-foreground">Ainda sem comparação</p>
-                )}
-              </>
-            ) : (
-              <p className="text-sm font-bold leading-snug text-foreground">Registre seu peso pra acompanhar</p>
-            )}
-          </Link>
-        </div>
-
         <section className="space-y-3">
-          <SectionLabel>Seu resumo</SectionLabel>
+          <SectionLabel>Acompanhamento</SectionLabel>
           <div className="relative">
             <div
               ref={summaryCarouselRef}
               className="hide-scrollbar flex gap-3 overflow-x-auto pb-1 snap-x snap-mandatory"
             >
+            <Link
+              to="/body-progress"
+              className={cn(SLIDE_CLASS, "flex flex-col gap-2 border border-white/10 bg-card p-5")}
+            >
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/15 text-primary">
+                {weightDelta != null && weightDelta < 0 ? (
+                  <TrendingDown className="h-4 w-4" />
+                ) : (
+                  <TrendingUp className="h-4 w-4" />
+                )}
+              </span>
+              <p className="text-[11px] font-extrabold uppercase tracking-[0.14em] text-muted-foreground">Evolução</p>
+              {latestWeight != null ? (
+                <>
+                  <p className="text-lg font-black leading-tight text-foreground">{formatWeight(latestWeight)} kg</p>
+                  {weightDelta != null ? (
+                    <p className="text-[11px] font-semibold text-muted-foreground">
+                      <span
+                        className={cn(
+                          movingTowardGoal == null ? "" : movingTowardGoal ? "text-emerald-300" : "text-amber-300",
+                        )}
+                      >
+                        {weightDelta < 0 ? "↓" : weightDelta > 0 ? "↑" : "="} {formatWeight(Math.abs(weightDelta))}
+                      </span>{" "}
+                      kg desde a última pesagem
+                    </p>
+                  ) : (
+                    <p className="text-[11px] text-muted-foreground">Ainda sem comparação</p>
+                  )}
+                </>
+              ) : (
+                <p className="text-sm font-bold leading-snug text-foreground">Registre seu peso pra acompanhar</p>
+              )}
+            </Link>
+
             <Link
               to="/body-progress"
               className={cn(SLIDE_CLASS, "flex flex-col gap-3 border border-white/10 bg-card p-5")}
@@ -406,7 +351,7 @@ export default function Home() {
                     <Calendar className="h-4 w-4" />
                   </span>
                   <p className="truncate text-[10.5px] font-extrabold uppercase tracking-[0.16em] text-primary">
-                    Próxima consulta
+                    Agendamento
                   </p>
                 </div>
                 {nextAppointment
@@ -490,45 +435,6 @@ export default function Home() {
                 </div>
               ) : null}
             </Link>
-
-            <Link
-              to="/profile#conquistas"
-              className={cn(SLIDE_CLASS, "flex flex-col gap-3 border border-primary bg-card p-5")}
-            >
-              <div className="flex items-center gap-4">
-                {showRecentAchievement ? (
-                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-primary text-primary-foreground">
-                    <Trophy className="h-6 w-6" />
-                  </span>
-                ) : (
-                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary/15 text-primary">
-                    <Lock className="h-6 w-6" />
-                  </span>
-                )}
-                <div className="min-w-0">
-                  <p className="text-[11px] font-extrabold uppercase tracking-[0.22em] text-primary">
-                    {showRecentAchievement
-                      ? formatUnlockedAt(latestAchievement?.unlocked_at)
-                      : nextAchievement
-                        ? "Continue registrando para desbloquear"
-                        : "Comece hoje"}
-                  </p>
-                  <p className="mt-1 truncate text-lg font-black text-foreground">
-                    {showRecentAchievement
-                      ? latestAchievement?.achievement.name
-                      : nextAchievement?.name ?? "Primeira conquista te espera"}
-                  </p>
-                </div>
-              </div>
-              <p className="truncate text-xs text-muted-foreground">
-                {showRecentAchievement
-                  ? latestAchievement?.achievement.description
-                  : nextAchievement?.description ?? "Registre uma aplicação ou um treino para começar sua sequência."}
-              </p>
-              <p className="text-[11px] font-semibold text-primary/80">
-                {unlockedAchievementIds.size} de {achievements.length} conquistas · Ver todas
-              </p>
-            </Link>
             </div>
             <button
               type="button"
@@ -550,9 +456,66 @@ export default function Home() {
         </section>
 
         <section className="space-y-3">
-          <SectionLabel>Treino</SectionLabel>
+          <div className="flex items-center justify-between px-1">
+            <div>
+              <SectionLabel>Vital 360°</SectionLabel>
+              <p className="mt-1 text-[11px] text-muted-foreground">Acompanhamento anual com a Dra. Gabriela</p>
+            </div>
+            <Link to="/vital-360" className="flex shrink-0 items-center gap-0.5 text-xs font-extrabold text-primary">
+              Ver planos
+              <ChevronRight className="h-3.5 w-3.5" />
+            </Link>
+          </div>
+          <div className="hide-scrollbar flex gap-3 overflow-x-auto pb-1">
+            {vital360Cases.map((item) => (
+              <Link
+                key={item.name}
+                to="/vital-360"
+                className="w-[150px] shrink-0 overflow-hidden rounded-[1.15rem] border border-white/10 bg-card shadow-elegant transition-transform hover:-translate-y-0.5"
+              >
+                <div className="flex aspect-square items-center justify-center bg-[linear-gradient(160deg,hsl(270_45%_32%),hsl(270_40%_22%))] text-muted-foreground">
+                  <Camera className="h-6 w-6" />
+                </div>
+                <p className="truncate px-2.5 py-2 text-[11.5px] font-bold text-foreground">
+                  {item.name} · {item.plan}
+                </p>
+              </Link>
+            ))}
+          </div>
+        </section>
+
+        <section className="space-y-3">
+          <div className="flex items-center justify-between px-1">
+            <SectionLabel>Treinos</SectionLabel>
+            <Link to="/workouts" className="flex shrink-0 items-center gap-0.5 text-xs font-extrabold text-primary">
+              Ver todos
+              <ChevronRight className="h-3.5 w-3.5" />
+            </Link>
+          </div>
+
+          {activeDraft ? (
+            <Link
+              to={`/workouts/musculacao/${activeDraft.type}`}
+              className="group flex items-center gap-4 rounded-[1.15rem] border border-white/10 bg-card px-4 py-4 shadow-elegant transition-transform hover:-translate-y-0.5"
+            >
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary">
+                <RotateCcw className="h-5 w-5" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm font-extrabold text-foreground">Continuar treino</span>
+                <span className="block truncate text-[11px] text-muted-foreground">Retome de onde parou</span>
+              </span>
+              <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/45 transition-transform group-hover:translate-x-0.5" />
+            </Link>
+          ) : null}
 
           <div className="hide-scrollbar flex gap-2 overflow-x-auto pb-1">
+            <Link
+              to="/workouts"
+              className="flex h-11 shrink-0 items-center gap-2 rounded-full bg-gradient-primary px-4 text-sm font-bold text-primary-foreground shadow-glow"
+            >
+              Todos
+            </Link>
             {workoutCategories.map((category) => (
               <Link
                 key={category.type}
@@ -565,21 +528,20 @@ export default function Home() {
             ))}
           </div>
 
-          <div className="space-y-3">
-            {workoutLinks.map((link) => (
+          <div className="hide-scrollbar flex gap-3 overflow-x-auto pb-1">
+            {exampleWorkouts.map((workout) => (
               <Link
-                key={link.to}
-                to={link.to}
-                className="group flex items-center gap-4 rounded-[1.15rem] border border-white/10 bg-card px-4 py-4 shadow-elegant transition-transform hover:-translate-y-0.5"
+                key={workout.title}
+                to={`/workouts/musculacao/${workout.type}`}
+                className="w-[170px] shrink-0 overflow-hidden rounded-[1.15rem] border border-white/10 bg-card shadow-elegant transition-transform hover:-translate-y-0.5"
               >
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary">
-                  <link.icon className="h-5 w-5" />
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-extrabold text-foreground">{link.label}</span>
-                  <span className="block truncate text-[11px] text-muted-foreground">{link.description}</span>
-                </span>
-                <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/45 transition-transform group-hover:translate-x-0.5" />
+                <div className="flex h-[100px] items-center justify-center bg-[linear-gradient(160deg,hsl(270_45%_34%),hsl(270_40%_20%))] text-primary">
+                  <workout.icon className="h-6 w-6" />
+                </div>
+                <div className="p-2.5">
+                  <p className="truncate text-[12.5px] font-extrabold text-foreground">{workout.title}</p>
+                  <p className="mt-0.5 text-[10.5px] text-muted-foreground">{workout.meta}</p>
+                </div>
               </Link>
             ))}
           </div>

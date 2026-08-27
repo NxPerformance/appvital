@@ -30,6 +30,7 @@ const Settings = lazy(() => import("@/pages/Settings"));
 const Profile = lazy(() => import("@/pages/Profile"));
 const TrainerDashboard = lazy(() => import("@/pages/TrainerDashboard"));
 const BodyProgress = lazy(() => import("@/pages/BodyProgress"));
+const Vital360 = lazy(() => import("@/pages/Vital360"));
 const Wearables = lazy(() => import("@/pages/Wearables"));
 const AdminDashboard = lazy(() => import("@/pages/admin/AdminDashboard"));
 const AdminUsers = lazy(() => import("@/pages/admin/AdminUsers"));
@@ -102,6 +103,7 @@ const router = createBrowserRouter([
       { path: "settings", element: lazyElement(Settings) },
       { path: "profile", element: lazyElement(Profile) },
       { path: "body-progress", element: lazyElement(BodyProgress) },
+      { path: "vital-360", element: lazyElement(Vital360) },
       { path: "wearables", element: lazyElement(Wearables) },
     ],
   },
