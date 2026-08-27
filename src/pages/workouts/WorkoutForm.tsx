@@ -626,7 +626,7 @@ export default function WorkoutForm() {
           </div>
         </div>
 
-        <footer className="fixed bottom-0 left-1/2 z-50 w-full max-w-[430px] -translate-x-1/2 border-t border-white/10 bg-[hsl(var(--background))] px-5 pb-[calc(env(safe-area-inset-bottom,0px)+1rem)] pt-3 backdrop-blur md:max-w-[1180px] md:rounded-t-[1.5rem] md:px-7">
+        <footer className="workout-fixed-bar fixed bottom-0 left-1/2 z-50 w-full max-w-[430px] -translate-x-1/2 border-t border-white/10 bg-[hsl(var(--background))] px-5 pb-[calc(env(safe-area-inset-bottom,0px)+1rem)] pt-3 backdrop-blur md:rounded-t-[1.5rem] md:px-7">
           <button
             type="button"
             onClick={proceedToExercisePicker}
@@ -805,7 +805,7 @@ export default function WorkoutForm() {
           <button
             type="button"
             onClick={confirmExerciseSelection}
-            className="fixed bottom-[calc(env(safe-area-inset-bottom,0px)+4.6rem)] left-1/2 z-50 flex h-12 w-[calc(100%-2.5rem)] max-w-[390px] -translate-x-1/2 items-center justify-center gap-2 rounded-xl border border-white/10 bg-[hsl(var(--background-strong)/0.96)] text-sm font-black text-foreground shadow-elegant backdrop-blur"
+            className="workout-fixed-pill fixed bottom-[calc(env(safe-area-inset-bottom,0px)+4.6rem)] left-1/2 z-50 flex h-12 w-[calc(100%-2.5rem)] max-w-[390px] -translate-x-1/2 items-center justify-center gap-2 rounded-xl border border-white/10 bg-[hsl(var(--background-strong)/0.96)] text-sm font-black text-foreground shadow-elegant backdrop-blur"
           >
             <Plus className="h-5 w-5 text-primary" />
             Adicionar ao treino — {selectedLibraryIds.size} exercício(s)
@@ -1028,7 +1028,7 @@ export default function WorkoutForm() {
         </main>
       </div>
 
-      <footer className="fixed bottom-0 left-1/2 z-50 w-full max-w-[430px] -translate-x-1/2 border-t border-white/10 bg-[hsl(var(--background))] px-5 pb-[calc(env(safe-area-inset-bottom,0px)+1rem)] pt-3 backdrop-blur md:max-w-[1180px] md:rounded-t-[1.5rem] md:px-7">
+      <footer className="workout-fixed-bar fixed bottom-0 left-1/2 z-50 w-full max-w-[430px] -translate-x-1/2 border-t border-white/10 bg-[hsl(var(--background))] px-5 pb-[calc(env(safe-area-inset-bottom,0px)+1rem)] pt-3 backdrop-blur md:rounded-t-[1.5rem] md:px-7">
         <button
           type="button"
           onClick={finishWorkout}

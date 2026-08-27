@@ -186,18 +186,30 @@ body.scrollable-page #root {
   padding-top: 0;
   padding-left: env(safe-area-inset-left, 0px);
   padding-right: env(safe-area-inset-right, 0px);
-  /* Torna este container o "viewport" de referência para filhos position:fixed
-     (ex: barras de ação fixas no rodapé de uma tela). Sem isso, o fixed usa o
-     viewport real do navegador, o que no desktop (com a sidebar ao lado) faz
-     esses elementos flutuarem fora do painel do app em vez de dentro dele. */
-  transform: translateZ(0);
-  /* O transform acima já cria um novo contexto de empilhamento para este
-     container, mas sem position+z-index aqui ele ainda perde para o
-     .bottom-nav (fixed, z-40, irmão fora deste container) no mobile — o que
-     fazia o menu inferior interceptar cliques nas barras de ação fixas de
-     dentro de .app-content. z-index precisa ser maior que o do .bottom-nav. */
-  position: relative;
-  z-index: 45;
+}
+
+/* Barras/pílulas fixas de ação (WorkoutForm) continuam position:fixed
+   relativo ao viewport de verdade — dar a .app-content um transform pra
+   "conter" esses elementos parecia resolver o desalinhamento com a
+   sidebar no desktop, mas quebrava o comportamento de "sempre visível":
+   com conteúdo mais alto que uma tela, o fixed passava a se posicionar
+   relativo à altura TOTAL rolável de .app-content em vez do viewport
+   visível, fazendo a barra flutuar em qualquer lugar da página conforme
+   o scroll. Em vez disso, aqui só recalculamos left/width no desktop pra
+   compensar a sidebar (330px + 8px de padding do .app-container = 338px),
+   preservando o fixed de verdade. */
+@media (min-width: 768px) {
+  .workout-fixed-bar {
+    left: calc(338px + max(0px, (100vw - 1526px) / 2));
+    width: min(1180px, calc(100vw - 346px));
+    max-width: none;
+    transform: none;
+  }
+
+  .workout-fixed-pill {
+    left: calc(338px + max(0px, (100vw - 736px) / 2));
+    transform: none;
+  }
 }
 
 .glass-panel {
