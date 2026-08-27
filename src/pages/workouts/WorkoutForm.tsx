@@ -144,6 +144,43 @@ function getMaxWeight(exercises: Exercise[]) {
   }, 0);
 }
 
+function ExerciseThumbnail({ images, alt }: { images: string[]; alt: string }) {
+  const [frameIndex, setFrameIndex] = useState(0);
+  const [brokenUrls, setBrokenUrls] = useState<Set<string>>(new Set());
+
+  const validImages = images.filter((url) => !brokenUrls.has(url));
+
+  useEffect(() => {
+    if (validImages.length < 2) return;
+
+    const interval = window.setInterval(() => {
+      setFrameIndex((current) => (current + 1) % validImages.length);
+    }, 1200);
+
+    return () => window.clearInterval(interval);
+  }, [validImages.length]);
+
+  const currentUrl = validImages[frameIndex % Math.max(validImages.length, 1)];
+
+  if (!currentUrl) {
+    return (
+      <div className="flex h-20 items-center justify-center bg-secondary/40 text-muted-foreground">
+        <Dumbbell className="h-6 w-6" />
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={currentUrl}
+      alt={alt}
+      loading="lazy"
+      className="h-20 w-full object-cover"
+      onError={() => setBrokenUrls((current) => new Set(current).add(currentUrl))}
+    />
+  );
+}
+
 function MetaIcon({ icon: Icon, children }: { icon: LucideIcon; children: React.ReactNode }) {
   return (
     <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
@@ -179,7 +216,6 @@ export default function WorkoutForm() {
   const [pickerQuery, setPickerQuery] = useState("");
   const [pickerEquipment, setPickerEquipment] = useState<string | null>(null);
   const [selectedLibraryIds, setSelectedLibraryIds] = useState<Set<string>>(new Set());
-  const [brokenImageIds, setBrokenImageIds] = useState<Set<string>>(new Set());
   const [numpadTarget, setNumpadTarget] = useState<NumpadTarget | null>(null);
   const [numpadValue, setNumpadValue] = useState("");
   const savePressLockRef = useRef(false);
@@ -727,19 +763,7 @@ export default function WorkoutForm() {
                             alreadyAdded ? "opacity-40" : "hover:-translate-y-0.5"
                           } ${selected ? "border-primary" : "border-white/10"}`}
                         >
-                          {exercise.images[0] && !brokenImageIds.has(exercise.id) ? (
-                            <img
-                              src={exercise.images[0]}
-                              alt={exercise.name}
-                              loading="lazy"
-                              className="h-20 w-full object-cover"
-                              onError={() => setBrokenImageIds((current) => new Set(current).add(exercise.id))}
-                            />
-                          ) : (
-                            <div className="flex h-20 items-center justify-center bg-secondary/40 text-muted-foreground">
-                              <Dumbbell className="h-6 w-6" />
-                            </div>
-                          )}
+                          <ExerciseThumbnail images={exercise.images} alt={exercise.name} />
                           <span
                             className={`absolute right-3 top-3 flex h-6 w-6 items-center justify-center rounded-full ${
                               selected ? "bg-primary text-primary-foreground" : "bg-primary/15 text-primary/50"
