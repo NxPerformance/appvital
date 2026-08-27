@@ -250,7 +250,9 @@ export default function WorkoutForm() {
     setDraftLoaded(true);
   }, [clearDraft, config.defaultFocus, loadDraft, workoutStartState]);
 
-  const hasUnsavedChanges = Boolean(objective.trim() || addedExercises.length > 0 || calories);
+  const hasUnsavedChanges = Boolean(
+    addedExercises.length > 0 || calories || (objective.trim() && objective.trim() !== config.defaultFocus),
+  );
 
   useEffect(() => {
     if (!draftLoaded) return;
@@ -543,6 +545,7 @@ export default function WorkoutForm() {
 
   if (flowPhase === "muscle-select") {
     return (
+      <>
       <div className="min-h-full bg-[hsl(var(--background))]">
         <div className="mx-auto flex min-h-full w-full max-w-[430px] flex-col gap-5 px-5 pb-40 pt-6 md:max-w-[1180px] md:px-7">
           <header className="grid grid-cols-[42px_1fr_42px] items-center gap-3">
@@ -607,11 +610,20 @@ export default function WorkoutForm() {
           </button>
         </footer>
       </div>
+      <UnsavedChangesDialog
+        open={isBlocked}
+        onDiscard={handleDiscardAndNavigate}
+        onSave={handleSaveAndNavigate}
+        onContinue={reset}
+        saving={saving}
+      />
+      </>
     );
   }
 
   if (pickerVisible) {
     return (
+      <>
       <div className="min-h-full bg-[hsl(var(--background))]">
         <div className="mx-auto flex min-h-full w-full max-w-[430px] flex-col gap-4 px-5 pb-40 pt-6 md:max-w-[1180px] md:px-7">
           <header className="grid grid-cols-[42px_1fr_42px] items-center gap-3">
@@ -764,6 +776,14 @@ export default function WorkoutForm() {
           </button>
         ) : null}
       </div>
+      <UnsavedChangesDialog
+        open={isBlocked}
+        onDiscard={handleDiscardAndNavigate}
+        onSave={handleSaveAndNavigate}
+        onContinue={reset}
+        saving={saving}
+      />
+      </>
     );
   }
 

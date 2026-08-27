@@ -186,6 +186,11 @@ body.scrollable-page #root {
   padding-top: 0;
   padding-left: env(safe-area-inset-left, 0px);
   padding-right: env(safe-area-inset-right, 0px);
+  /* Torna este container o "viewport" de referência para filhos position:fixed
+     (ex: barras de ação fixas no rodapé de uma tela). Sem isso, o fixed usa o
+     viewport real do navegador, o que no desktop (com a sidebar ao lado) faz
+     esses elementos flutuarem fora do painel do app em vez de dentro dele. */
+  transform: translateZ(0);
 }
 
 .glass-panel {
