@@ -27,6 +27,7 @@ backend/.env.*
 backend/node_modules
 backend/dist
 backend/uploads
+backend/GIT_SHA
 
 # Build/cache output
 .turbo
