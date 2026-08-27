@@ -29,6 +29,7 @@ import { normalizeWorkoutStartState, type WorkoutStartExercise } from "@/lib/wor
 import {
   fetchExerciseLibrary,
   fetchExerciseEquipmentOptions,
+  groupExercisesByMuscleGroup,
   MUSCLE_GROUP_OPTIONS,
   type LibraryExerciseApi,
 } from "@/lib/exerciseLibrary";
@@ -706,61 +707,68 @@ export default function WorkoutForm() {
                   Selecionar todos
                 </button>
               </div>
-              <section className="grid grid-cols-2 gap-3">
-              {(libraryResults ?? []).map((exercise) => {
-                const selected = selectedLibraryIds.has(exercise.id);
-                const alreadyAdded = addedExercises.some((added) => added.name === exercise.name);
+              {groupExercisesByMuscleGroup(libraryResults ?? [], Array.from(selectedMuscleGroups)).map((group) => (
+                <div key={group.slug ?? "outros"} className="flex flex-col gap-3">
+                  {group.label ? (
+                    <h2 className="text-xs font-black uppercase tracking-[0.1em] text-muted-foreground">{group.label}</h2>
+                  ) : null}
+                  <section className="grid grid-cols-2 gap-3">
+                    {group.exercises.map((exercise) => {
+                      const selected = selectedLibraryIds.has(exercise.id);
+                      const alreadyAdded = addedExercises.some((added) => added.name === exercise.name);
 
-                return (
-                  <button
-                    key={exercise.id}
-                    type="button"
-                    disabled={alreadyAdded}
-                    onClick={() => toggleLibrarySelection(exercise.id)}
-                    className={`relative overflow-hidden rounded-[1rem] border bg-card text-left shadow-elegant transition-transform ${
-                      alreadyAdded ? "opacity-40" : "hover:-translate-y-0.5"
-                    } ${selected ? "border-primary" : "border-white/10"}`}
-                  >
-                    {exercise.images[0] && !brokenImageIds.has(exercise.id) ? (
-                      <img
-                        src={exercise.images[0]}
-                        alt={exercise.name}
-                        loading="lazy"
-                        className="h-20 w-full object-cover"
-                        onError={() => setBrokenImageIds((current) => new Set(current).add(exercise.id))}
-                      />
-                    ) : (
-                      <div className="flex h-20 items-center justify-center bg-secondary/40 text-muted-foreground">
-                        <Dumbbell className="h-6 w-6" />
-                      </div>
-                    )}
-                    <span
-                      className={`absolute right-3 top-3 flex h-6 w-6 items-center justify-center rounded-full ${
-                        selected ? "bg-primary text-primary-foreground" : "bg-primary/15 text-primary/50"
-                      }`}
-                    >
-                      <Check className="h-3.5 w-3.5" />
-                    </span>
-                    <div className="p-3">
-                      {exercise.equipment ? (
-                        <span className="inline-flex rounded-full bg-primary/15 px-2 py-1 text-[8px] font-black uppercase tracking-[0.12em] text-primary">
-                          {exercise.equipment}
-                        </span>
-                      ) : null}
-                      <h3 className="mt-2 text-sm font-black leading-tight text-foreground">{exercise.name}</h3>
-                      {exercise.primary_muscles.length > 0 ? (
-                        <p className="mt-1 truncate text-[11px] text-muted-foreground">
-                          {exercise.primary_muscles.join(", ")}
-                        </p>
-                      ) : null}
-                      {alreadyAdded ? (
-                        <p className="mt-1 text-[10px] font-bold text-primary">Já no treino</p>
-                      ) : null}
-                    </div>
-                  </button>
-                );
-              })}
-              </section>
+                      return (
+                        <button
+                          key={exercise.id}
+                          type="button"
+                          disabled={alreadyAdded}
+                          onClick={() => toggleLibrarySelection(exercise.id)}
+                          className={`relative overflow-hidden rounded-[1rem] border bg-card text-left shadow-elegant transition-transform ${
+                            alreadyAdded ? "opacity-40" : "hover:-translate-y-0.5"
+                          } ${selected ? "border-primary" : "border-white/10"}`}
+                        >
+                          {exercise.images[0] && !brokenImageIds.has(exercise.id) ? (
+                            <img
+                              src={exercise.images[0]}
+                              alt={exercise.name}
+                              loading="lazy"
+                              className="h-20 w-full object-cover"
+                              onError={() => setBrokenImageIds((current) => new Set(current).add(exercise.id))}
+                            />
+                          ) : (
+                            <div className="flex h-20 items-center justify-center bg-secondary/40 text-muted-foreground">
+                              <Dumbbell className="h-6 w-6" />
+                            </div>
+                          )}
+                          <span
+                            className={`absolute right-3 top-3 flex h-6 w-6 items-center justify-center rounded-full ${
+                              selected ? "bg-primary text-primary-foreground" : "bg-primary/15 text-primary/50"
+                            }`}
+                          >
+                            <Check className="h-3.5 w-3.5" />
+                          </span>
+                          <div className="p-3">
+                            {exercise.equipment ? (
+                              <span className="inline-flex rounded-full bg-primary/15 px-2 py-1 text-[8px] font-black uppercase tracking-[0.12em] text-primary">
+                                {exercise.equipment}
+                              </span>
+                            ) : null}
+                            <h3 className="mt-2 text-sm font-black leading-tight text-foreground">{exercise.name}</h3>
+                            {exercise.primary_muscles.length > 0 ? (
+                              <p className="mt-1 truncate text-[11px] text-muted-foreground">
+                                {exercise.primary_muscles.join(", ")}
+                              </p>
+                            ) : null}
+                            {alreadyAdded ? (
+                              <p className="mt-1 text-[10px] font-bold text-primary">Já no treino</p>
+                            ) : null}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </section>
+                </div>
+              ))}
             </>
           )}
         </div>
