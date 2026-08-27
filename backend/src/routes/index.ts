@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { readFileSync } from "fs";
 import { authRouter } from "./auth.routes.js";
 import { profileRouter } from "./profile.routes.js";
 import { achievementsRouter } from "./achievements.routes.js";
@@ -16,8 +17,23 @@ import { paymentsRouter } from "./payments.routes.js";
 
 export const router = Router();
 
+// Lê o commit git gravado em build-time (ver backend/Dockerfile). Permite
+// confirmar, sem acesso ao painel de deploy, se o código rodando em produção
+// realmente corresponde ao último merge — sem isso, uma tela mostrando
+// comportamento antigo depois de um "deploy" pode ser um build que não
+// pegou o código novo, e não dá pra saber olhando só pela resposta da API.
+function readGitSha() {
+  try {
+    return readFileSync("GIT_SHA", "utf-8").trim() || "unknown";
+  } catch {
+    return "unknown";
+  }
+}
+
+const gitSha = readGitSha();
+
 router.get("/health", (_req, res) => {
-  res.json({ status: "ok" });
+  res.json({ status: "ok", git_sha: gitSha });
 });
 
 router.use("/auth", authRouter);
