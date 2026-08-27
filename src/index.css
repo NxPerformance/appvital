@@ -191,6 +191,13 @@ body.scrollable-page #root {
      viewport real do navegador, o que no desktop (com a sidebar ao lado) faz
      esses elementos flutuarem fora do painel do app em vez de dentro dele. */
   transform: translateZ(0);
+  /* O transform acima já cria um novo contexto de empilhamento para este
+     container, mas sem position+z-index aqui ele ainda perde para o
+     .bottom-nav (fixed, z-40, irmão fora deste container) no mobile — o que
+     fazia o menu inferior interceptar cliques nas barras de ação fixas de
+     dentro de .app-content. z-index precisa ser maior que o do .bottom-nav. */
+  position: relative;
+  z-index: 45;
 }
 
 .glass-panel {
