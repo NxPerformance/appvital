@@ -103,7 +103,7 @@ const exampleWorkouts: Array<{ title: string; meta: string; type: string; icon: 
 ];
 
 const SLIDE_CLASS =
-  "w-[85%] shrink-0 snap-center rounded-[1.35rem] shadow-elegant sm:w-[340px]";
+  "w-[327px] h-[155px] shrink-0 snap-center overflow-hidden rounded-[1.35rem] shadow-elegant";
 
 export default function Home() {
   const { profile, loading, error: profileError } = useProfile();
@@ -268,79 +268,81 @@ export default function Home() {
             >
             <Link
               to="/body-progress"
-              className={cn(SLIDE_CLASS, "flex flex-col gap-2 border border-white/10 bg-card p-5")}
+              className={cn(SLIDE_CLASS, "flex flex-col gap-1.5 border border-white/10 bg-card px-4 py-3.5")}
             >
-              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/15 text-primary">
-                {weightDelta != null && weightDelta < 0 ? (
-                  <TrendingDown className="h-4 w-4" />
-                ) : (
-                  <TrendingUp className="h-4 w-4" />
-                )}
-              </span>
-              <p className="text-[11px] font-extrabold uppercase tracking-[0.14em] text-muted-foreground">Evolução</p>
-              {latestWeight != null ? (
-                <>
-                  <p className="text-lg font-black leading-tight text-foreground">{formatWeight(latestWeight)} kg</p>
-                  {weightDelta != null ? (
-                    <p className="text-[11px] font-semibold text-muted-foreground">
-                      <span
-                        className={cn(
-                          movingTowardGoal == null ? "" : movingTowardGoal ? "text-emerald-300" : "text-amber-300",
-                        )}
-                      >
-                        {weightDelta < 0 ? "↓" : weightDelta > 0 ? "↑" : "="} {formatWeight(Math.abs(weightDelta))}
-                      </span>{" "}
-                      kg desde a última pesagem
-                    </p>
+              <div className="flex items-center gap-2">
+                <span className="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary">
+                  {weightDelta != null && weightDelta < 0 ? (
+                    <TrendingDown className="h-3.5 w-3.5" />
                   ) : (
-                    <p className="text-[11px] text-muted-foreground">Ainda sem comparação</p>
+                    <TrendingUp className="h-3.5 w-3.5" />
                   )}
-                </>
-              ) : (
-                <p className="text-sm font-bold leading-snug text-foreground">Registre seu peso pra acompanhar</p>
-              )}
+                </span>
+                <p className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-primary">Evolução</p>
+              </div>
+              <div className="flex min-h-0 flex-1 flex-col justify-center">
+                {latestWeight != null ? (
+                  <>
+                    <p className="text-[26px] font-black leading-none text-foreground">
+                      {formatWeight(latestWeight)} kg
+                    </p>
+                    {weightDelta != null ? (
+                      <p className="mt-1.5 text-xs font-semibold text-muted-foreground">
+                        <span
+                          className={cn(
+                            movingTowardGoal == null ? "" : movingTowardGoal ? "text-emerald-300" : "text-amber-300",
+                          )}
+                        >
+                          {weightDelta < 0 ? "↓" : weightDelta > 0 ? "↑" : "="} {formatWeight(Math.abs(weightDelta))} kg
+                        </span>{" "}
+                        desde a última pesagem
+                      </p>
+                    ) : (
+                      <p className="mt-1.5 text-xs text-muted-foreground">Ainda sem comparação</p>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-sm font-bold leading-snug text-foreground">Registre seu peso pra acompanhar</p>
+                )}
+              </div>
             </Link>
 
             <Link
               to="/body-progress"
-              className={cn(SLIDE_CLASS, "flex flex-col gap-3 border border-white/10 bg-card p-5")}
+              className={cn(SLIDE_CLASS, "flex flex-col gap-1.5 border border-white/10 bg-card px-4 py-3.5")}
             >
-              <p className="text-[11px] font-extrabold uppercase tracking-[0.22em] text-primary">Evolução visual</p>
-              <div className="grid grid-cols-2 gap-2">
-                {[previousPhoto, latestPhoto].map((photo, index) => (
-                  <div key={photo?.id ?? `empty-${index}`} className="space-y-1.5">
-                    {photo ? (
-                      <img
-                        src={resolveUploadUrl(photo.image_url) ?? undefined}
-                        alt="Foto de evolução"
-                        className="aspect-[4/5] w-full rounded-xl object-cover"
-                      />
-                    ) : (
-                      <div className="flex aspect-[4/5] w-full items-center justify-center rounded-xl border border-dashed border-white/15 text-muted-foreground">
-                        <Camera className="h-5 w-5" />
-                      </div>
-                    )}
-                    <p className="text-center text-[10px] font-semibold text-muted-foreground">
-                      {photo ? format(parseISO(photo.taken_at), "d MMM", { locale: ptBR }) : "Sem foto"}
-                    </p>
-                  </div>
-                ))}
+              <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-primary">Evolução visual</p>
+              <div className="flex min-h-0 flex-1 gap-2">
+                {[previousPhoto, latestPhoto].map((photo, index) =>
+                  photo ? (
+                    <img
+                      key={photo.id}
+                      src={resolveUploadUrl(photo.image_url) ?? undefined}
+                      alt="Foto de evolução"
+                      className="h-full flex-1 rounded-xl object-cover"
+                    />
+                  ) : (
+                    <div
+                      key={`empty-${index}`}
+                      className="flex h-full flex-1 items-center justify-center rounded-xl border border-dashed border-white/15 text-muted-foreground"
+                    >
+                      <Camera className="h-5 w-5" />
+                    </div>
+                  ),
+                )}
               </div>
-              <p className="text-xs text-muted-foreground">
-                {latestPhoto ? "Compare com fotos anteriores" : "Registre sua primeira foto de evolução"}
-              </p>
             </Link>
 
             <Link
               to="/appointments"
-              className={cn(SLIDE_CLASS, "flex flex-col gap-3 border border-white/10 bg-card p-5")}
+              className={cn(SLIDE_CLASS, "flex flex-col gap-1 border border-white/10 bg-card px-4 py-3.5")}
             >
               <div className="flex items-center justify-between gap-2">
                 <div className="flex min-w-0 items-center gap-2">
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary">
-                    <Calendar className="h-4 w-4" />
+                  <span className="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary">
+                    <Calendar className="h-3.5 w-3.5" />
                   </span>
-                  <p className="truncate text-[10.5px] font-extrabold uppercase tracking-[0.16em] text-primary">
+                  <p className="truncate text-[10px] font-extrabold uppercase tracking-[0.16em] text-primary">
                     Agendamento
                   </p>
                 </div>
@@ -351,11 +353,11 @@ export default function Home() {
                       return (
                         <span
                           className={cn(
-                            "flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-bold",
+                            "flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-bold",
                             status.className,
                           )}
                         >
-                          <StatusIcon className="h-3 w-3" />
+                          <StatusIcon className="h-2.5 w-2.5" />
                           {status.label}
                         </span>
                       );
@@ -363,66 +365,45 @@ export default function Home() {
                   : null}
               </div>
 
-              {nextAppointment ? (
-                <>
-                  <p className="text-center text-lg font-black leading-tight text-foreground">
-                    {appointmentTypeLabels[nextAppointment.type] ?? nextAppointment.type}
-                  </p>
-                  <div className="flex items-center rounded-xl bg-secondary/40 px-3 py-2">
-                    <div className="flex min-w-0 flex-1 items-center gap-1.5">
-                      <Calendar className="h-3.5 w-3.5 shrink-0 text-primary" />
-                      <div className="min-w-0">
-                        <p className="text-[9px] font-bold uppercase tracking-[0.1em] text-muted-foreground">Data</p>
-                        <p className="truncate text-xs font-bold text-foreground">
-                          {nextAppointment.scheduled_date
-                            ? format(parseISO(nextAppointment.scheduled_date), "d 'de' MMMM", { locale: ptBR })
-                            : "A combinar"}
-                        </p>
-                      </div>
-                    </div>
-                    <span className="mx-2.5 h-6 w-px shrink-0 bg-white/10" />
-                    <div className="flex min-w-0 flex-1 items-center gap-1.5">
-                      <Clock className="h-3.5 w-3.5 shrink-0 text-primary" />
-                      <div className="min-w-0">
-                        <p className="text-[9px] font-bold uppercase tracking-[0.1em] text-muted-foreground">Horário</p>
-                        <p className="truncate text-xs font-bold text-foreground">
-                          {nextAppointment.scheduled_time ?? "A combinar"}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <p className="text-lg font-black leading-tight text-foreground">Nenhuma consulta agendada</p>
-                  <p className="text-xs text-muted-foreground">Toque para agendar com a Dra. Gabriela</p>
-                </>
-              )}
-
-              {nextAppointment?.admin_notes ||
-              (nextAppointment && daysUntilAppointment != null && daysUntilAppointment >= 0) ? (
-                <div className="mt-auto flex flex-col gap-1">
-                  {nextAppointment?.admin_notes ? (
-                    <p className="flex items-center gap-1.5 text-[10.5px] font-bold text-primary">
-                      <MessageCircle className="h-3.5 w-3.5 shrink-0" />
-                      Novo recado da consulta
+              <div className="flex min-h-0 flex-1 flex-col justify-center gap-0.5">
+                {nextAppointment ? (
+                  <>
+                    <p className="truncate text-base font-black leading-tight text-foreground">
+                      {appointmentTypeLabels[nextAppointment.type] ?? nextAppointment.type}
                     </p>
-                  ) : null}
-
-                  {nextAppointment && daysUntilAppointment != null && daysUntilAppointment >= 0 ? (
-                    <p className="flex items-center justify-center gap-1.5 text-center text-[10.5px] text-muted-foreground">
-                      <Bell className="h-3.5 w-3.5 shrink-0 text-primary" />
-                      {daysUntilAppointment === 0 ? (
-                        <span className="font-bold text-foreground">Hoje é sua consulta!</span>
-                      ) : (
-                        <>
-                          Faltam {daysUntilAppointment} {daysUntilAppointment === 1 ? "dia" : "dias"} ·{" "}
-                          <span className="font-bold text-foreground">Estamos te esperando!</span>
-                        </>
-                      )}
+                    <p className="text-xs text-muted-foreground">
+                      {nextAppointment.scheduled_date
+                        ? format(parseISO(nextAppointment.scheduled_date), "d 'de' MMMM", { locale: ptBR })
+                        : "A combinar"}
+                      {" · "}
+                      {nextAppointment.scheduled_time ?? "A combinar"}
                     </p>
-                  ) : null}
-                </div>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-base font-black leading-tight text-foreground">Nenhuma consulta agendada</p>
+                    <p className="text-xs text-muted-foreground">Toque para agendar com a Dra. Gabriela</p>
+                  </>
+                )}
+              </div>
+
+              {nextAppointment?.admin_notes ? (
+                <p className="flex items-center gap-1.5 text-[10.5px] font-bold text-primary">
+                  <MessageCircle className="h-3.5 w-3.5 shrink-0" />
+                  Novo recado da consulta
+                </p>
+              ) : nextAppointment && daysUntilAppointment != null && daysUntilAppointment >= 0 ? (
+                <p className="flex items-center gap-1.5 text-[10.5px] text-muted-foreground">
+                  <Bell className="h-3.5 w-3.5 shrink-0 text-primary" />
+                  {daysUntilAppointment === 0 ? (
+                    <span className="font-bold text-foreground">Hoje é sua consulta!</span>
+                  ) : (
+                    <>
+                      Faltam {daysUntilAppointment} {daysUntilAppointment === 1 ? "dia" : "dias"} ·{" "}
+                      <span className="font-bold text-foreground">Estamos te esperando!</span>
+                    </>
+                  )}
+                </p>
               ) : null}
             </Link>
             </div>
@@ -430,7 +411,7 @@ export default function Home() {
               type="button"
               onClick={() => summaryCarouselRef.current?.scrollBy({ left: -260, behavior: "smooth" })}
               aria-label="Ver anterior no resumo"
-              className="absolute left-1 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-white/10 bg-card text-foreground shadow-elegant"
+              className="absolute left-1 top-[27px] flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-white/10 bg-card text-foreground shadow-elegant"
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
@@ -438,7 +419,7 @@ export default function Home() {
               type="button"
               onClick={() => summaryCarouselRef.current?.scrollBy({ left: 260, behavior: "smooth" })}
               aria-label="Ver mais no resumo"
-              className="absolute right-1 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-white/10 bg-card text-foreground shadow-elegant"
+              className="absolute right-1 top-[27px] flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-white/10 bg-card text-foreground shadow-elegant"
             >
               <ChevronRight className="h-4 w-4" />
             </button>
