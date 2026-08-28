@@ -14,6 +14,7 @@ enum UserRole {
 }
 
 enum TrainerClientStatus {
+  PENDING
   ACTIVE
   ARCHIVED
 }
@@ -348,11 +349,15 @@ model BioimpedanceRecord {
   @@index([userId, date])
 }
 
+// NB: a partial unique index (see migration
+// enforce_single_active_trainer_per_client) also enforces at most one ACTIVE
+// trainer per client at the DB level — Prisma's schema DSL has no
+// filtered/partial @@unique, so that constraint isn't representable here.
 model TrainerClient {
   id         String              @id @default(uuid()) @db.Uuid
   trainerId  String              @db.Uuid
   clientId   String              @db.Uuid
-  status     TrainerClientStatus @default(ACTIVE)
+  status     TrainerClientStatus @default(PENDING)
   notes      String?
   goals      String?
   trainingPlan String?

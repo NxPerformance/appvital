@@ -18,7 +18,7 @@ export interface TrainerClientProfile {
 
 export interface TrainerClientAssignment {
   id: string;
-  status: 'active' | 'archived';
+  status: 'pending' | 'active' | 'archived';
   notes: string | null;
   goals?: string | null;
   training_plan?: string | null;
@@ -63,7 +63,7 @@ export interface TrainerClientSummary {
 
 export interface MyTrainerAssignment {
   id: string;
-  status: 'active' | 'archived';
+  status: 'pending' | 'active' | 'archived';
   notes: string | null;
   goals: string | null;
   training_plan: string | null;
@@ -84,6 +84,19 @@ export function useMyTrainerAssignment(enabled = true) {
       return response.assignment;
     },
     enabled,
+  });
+}
+
+export function useRespondToTrainerAssignment() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (action: 'accept' | 'reject' | 'revoke') => {
+      await api.patch('/trainer/my-assignment', { action });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['myTrainerAssignment'] });
+    },
   });
 }
 
@@ -154,7 +167,9 @@ export function useUpdateTrainerClient() {
       trainingPlan,
     }: {
       assignmentId: string;
-      status?: 'ACTIVE' | 'ARCHIVED';
+      // Trainers can only archive from here; (re)activating requires the
+      // client's consent via useRespondToTrainerAssignment.
+      status?: 'ARCHIVED';
       notes?: string | null;
       goals?: string | null;
       trainingPlan?: string | null;

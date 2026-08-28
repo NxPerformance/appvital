@@ -53,6 +53,7 @@ export default function TrainerDashboard() {
   const [timelineContent, setTimelineContent] = useState('');
   const activeClients = useMemo(() => clients.filter((client) => client.status === 'active'), [clients]);
   const archivedClients = useMemo(() => clients.filter((client) => client.status === 'archived'), [clients]);
+  const pendingClients = useMemo(() => clients.filter((client) => client.status === 'pending'), [clients]);
   const selectedClient = clients.find((client) => client.profile.id === selectedClientId) ?? activeClients[0] ?? null;
   const { data: clientSummary, isLoading: summaryLoading } = useTrainerClientSummary(selectedClient?.profile.id);
   const { data: searchResults = [], isLoading: searchLoading } = useTrainerUserSearch(search);
@@ -77,8 +78,8 @@ export default function TrainerDashboard() {
     try {
       await assignClient.mutateAsync({ clientId, notes: assignmentNotes.trim() || undefined });
       toast({
-        title: 'Aluno vinculado',
-        description: 'O aluno agora está disponível na sua área do personal.',
+        title: 'Solicitação enviada',
+        description: 'O aluno vai aparecer na sua carteira assim que aceitar o vínculo.',
       });
       setSearch('');
       setAssignmentNotes('');
@@ -91,17 +92,12 @@ export default function TrainerDashboard() {
     }
   };
 
-  const handleArchiveClient = async (assignmentId: string, shouldArchive: boolean) => {
+  const handleArchiveClient = async (assignmentId: string) => {
     try {
-      await updateClient.mutateAsync({
-        assignmentId,
-        status: shouldArchive ? 'ARCHIVED' : 'ACTIVE',
-      });
+      await updateClient.mutateAsync({ assignmentId, status: 'ARCHIVED' });
       toast({
-        title: shouldArchive ? 'Aluno arquivado' : 'Aluno reativado',
-        description: shouldArchive
-          ? 'O aluno foi movido para a lista de arquivados.'
-          : 'O aluno voltou para a lista ativa.',
+        title: 'Aluno arquivado',
+        description: 'O aluno foi movido para a lista de arquivados. Para retomar, envie uma nova solicitação de vínculo.',
       });
     } catch (error) {
       toast({
@@ -292,22 +288,30 @@ export default function TrainerDashboard() {
                       Buscando usuários...
                     </div>
                   ) : searchResults.length ? (
-                    searchResults.map((candidate) => (
-                      <div key={candidate.id} className="flex items-center justify-between gap-3 rounded-[1.5rem] bg-[hsl(var(--secondary))] p-4">
-                        <div className="min-w-0">
-                          <p className="truncate font-medium">{candidate.full_name}</p>
-                          <p className="truncate text-sm text-muted-foreground">{candidate.email}</p>
+                    searchResults.map((candidate) => {
+                      const existingStatus = clients.find((item) => item.profile.id === candidate.id)?.status;
+                      const isBlocked = existingStatus === 'active' || existingStatus === 'pending';
+                      return (
+                        <div key={candidate.id} className="flex items-center justify-between gap-3 rounded-[1.5rem] bg-[hsl(var(--secondary))] p-4">
+                          <div className="min-w-0">
+                            <p className="truncate font-medium">{candidate.full_name}</p>
+                            <p className="truncate text-sm text-muted-foreground">{candidate.email}</p>
+                          </div>
+                          <Button
+                            type="button"
+                            size="sm"
+                            onClick={() => void handleAssignClient(candidate.id)}
+                            disabled={assignClient.isPending || isBlocked}
+                          >
+                            {existingStatus === 'active'
+                              ? 'Já vinculado'
+                              : existingStatus === 'pending'
+                                ? 'Aguardando resposta'
+                                : 'Vincular'}
+                          </Button>
                         </div>
-                        <Button
-                          type="button"
-                          size="sm"
-                          onClick={() => void handleAssignClient(candidate.id)}
-                          disabled={assignClient.isPending || clients.some((item) => item.profile.id === candidate.id)}
-                        >
-                          {clients.some((item) => item.profile.id === candidate.id) ? 'Já vinculado' : 'Vincular'}
-                        </Button>
-                      </div>
-                    ))
+                      );
+                    })
                   ) : (
                     <div className="rounded-[1.5rem] bg-[hsl(var(--secondary))] p-4 text-sm text-muted-foreground">
                       Nenhum aluno elegível encontrado.
@@ -316,6 +320,32 @@ export default function TrainerDashboard() {
                 </div>
               </div>
             </div>
+
+            {pendingClients.length ? (
+              <div className="rounded-[2rem] border border-white/5 bg-[hsl(var(--card))] p-6 shadow-elegant">
+                <div className="mb-5 flex items-center gap-3">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-3xl bg-primary/12 text-primary">
+                    <UserPlus className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-semibold">Aguardando resposta</h2>
+                    <p className="text-sm text-muted-foreground">
+                      O vínculo só passa a valer depois que o aluno aceitar.
+                    </p>
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  {pendingClients.map((client) => (
+                    <div key={client.id} className="rounded-[1.5rem] border border-white/5 bg-[hsl(var(--secondary))] p-4">
+                      <div className="min-w-0">
+                        <p className="truncate font-medium">{client.profile.full_name}</p>
+                        <p className="truncate text-sm text-muted-foreground">{client.profile.email}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
 
             <div className="rounded-[2rem] border border-white/5 bg-[hsl(var(--card))] p-6 shadow-elegant">
               <div className="mb-5 flex items-center gap-3">
@@ -352,17 +382,19 @@ export default function TrainerDashboard() {
                           }`}>
                             {client.status === 'active' ? 'Ativo' : 'Arquivado'}
                           </span>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="icon"
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              void handleArchiveClient(client.id, client.status === 'active');
-                            }}
-                          >
-                            <Archive className="h-4 w-4" />
-                          </Button>
+                          {client.status === 'active' ? (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                void handleArchiveClient(client.id);
+                              }}
+                            >
+                              <Archive className="h-4 w-4" />
+                            </Button>
+                          ) : null}
                         </div>
                       </div>
                     </button>
