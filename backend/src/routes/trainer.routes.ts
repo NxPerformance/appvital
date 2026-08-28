@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
+import { Prisma } from "@prisma/client";
 import { prisma } from "../lib/prisma.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { asyncHandler } from "../utils/async-handler.js";
@@ -33,10 +34,18 @@ function serializeTrainerProfile(user: User & { profile: Profile | null; roles: 
 trainerRouter.get(
   "/my-assignment",
   asyncHandler(async (req, res) => {
-    const assignment = await prisma.trainerClient.findFirst({
-      where: { clientId: req.auth!.userId, status: "ACTIVE" },
-      include: { trainer: { include: { profile: true } } },
-    });
+    // Prefer the active relationship; otherwise surface the most recent
+    // pending request so the client can accept or reject it.
+    const assignment =
+      (await prisma.trainerClient.findFirst({
+        where: { clientId: req.auth!.userId, status: "ACTIVE" },
+        include: { trainer: { include: { profile: true } } },
+      })) ??
+      (await prisma.trainerClient.findFirst({
+        where: { clientId: req.auth!.userId, status: "PENDING" },
+        orderBy: { createdAt: "desc" },
+        include: { trainer: { include: { profile: true } } },
+      }));
 
     if (!assignment) {
       res.json({ assignment: null });
@@ -61,6 +70,45 @@ trainerRouter.get(
           : null,
       },
     });
+  }),
+);
+
+const respondToAssignmentSchema = z.object({
+  action: z.enum(["accept", "reject", "revoke"]),
+});
+
+trainerRouter.patch(
+  "/my-assignment",
+  asyncHandler(async (req, res) => {
+    const { action } = respondToAssignmentSchema.parse(req.body);
+    const wantedStatus = action === "revoke" ? "ACTIVE" : "PENDING";
+
+    const assignment = await prisma.trainerClient.findFirst({
+      where: { clientId: req.auth!.userId, status: wantedStatus },
+      orderBy: { createdAt: "desc" },
+    });
+
+    if (!assignment) {
+      throw new HttpError(
+        404,
+        action === "revoke" ? "Nenhum personal trainer ativo encontrado" : "Nenhuma solicitacao pendente encontrada",
+      );
+    }
+
+    if (action === "accept") {
+      try {
+        await prisma.trainerClient.update({ where: { id: assignment.id }, data: { status: "ACTIVE" } });
+      } catch (error) {
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+          throw new HttpError(409, "Voce ja tem um personal trainer ativo. Remova o vinculo atual antes de aceitar outro.");
+        }
+        throw error;
+      }
+    } else {
+      await prisma.trainerClient.update({ where: { id: assignment.id }, data: { status: "ARCHIVED" } });
+    }
+
+    res.json({ ok: true });
   }),
 );
 
@@ -135,10 +183,30 @@ trainerRouter.post(
       throw new HttpError(400, "Voce nao pode se vincular como seu proprio cliente");
     }
 
+    const existing = await prisma.trainerClient.findUnique({
+      where: { trainerId_clientId: { trainerId: req.auth!.userId, clientId: client_id } },
+    });
+
+    if (existing?.status === "ACTIVE") {
+      throw new HttpError(409, "Este aluno ja esta vinculado a voce");
+    }
+    if (existing?.status === "PENDING") {
+      throw new HttpError(409, "Solicitacao ja enviada, aguardando resposta do aluno");
+    }
+
+    const activeElsewhere = await prisma.trainerClient.findFirst({
+      where: { clientId: client_id, status: "ACTIVE" },
+    });
+    if (activeElsewhere) {
+      throw new HttpError(409, "Este aluno ja possui um personal trainer ativo");
+    }
+
+    // Requires the client's consent (see PATCH /my-assignment): this only
+    // creates a PENDING request, it does not grant access by itself.
     const assignment = await prisma.trainerClient.upsert({
       where: { trainerId_clientId: { trainerId: req.auth!.userId, clientId: client_id } },
-      create: { trainerId: req.auth!.userId, clientId: client_id, notes: notes ?? null },
-      update: { status: "ACTIVE", notes: notes ?? null, goals: null, trainingPlan: null },
+      create: { trainerId: req.auth!.userId, clientId: client_id, notes: notes ?? null, status: "PENDING" },
+      update: { status: "PENDING", notes: notes ?? null, goals: null, trainingPlan: null },
     });
 
     res.status(201).json({
@@ -155,7 +223,10 @@ trainerRouter.post(
 );
 
 const updateSchema = z.object({
-  status: z.enum(["ACTIVE", "ARCHIVED"]).optional(),
+  // Only ARCHIVED is allowed here: a trainer can end a relationship
+  // unilaterally, but (re)activating one requires the client's consent via
+  // POST /clients (creates a PENDING request) + PATCH /my-assignment.
+  status: z.literal("ARCHIVED").optional(),
   notes: z.string().nullable().optional(),
   goals: z.string().nullable().optional(),
   training_plan: z.string().nullable().optional(),

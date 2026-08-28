@@ -3,13 +3,16 @@ import type { ElementType } from 'react';
 import {
   ArrowLeft,
   Camera,
+  CheckCircle2,
   ChevronRight,
   Crown,
   LogOut,
   Settings as SettingsIcon,
   Trophy,
   User,
+  UserRound,
   Watch,
+  XCircle,
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -17,6 +20,7 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
 import { useAchievements } from '@/hooks/useAchievements';
+import { useMyTrainerAssignment, useRespondToTrainerAssignment } from '@/hooks/useTrainer';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
@@ -70,6 +74,86 @@ function SectionLabel({ children }: { children: string }) {
     <h2 className="px-1 text-[11px] font-bold uppercase tracking-[0.22em] text-muted-foreground">
       {children}
     </h2>
+  );
+}
+
+function TrainerAssignmentCard() {
+  const { data: assignment } = useMyTrainerAssignment();
+  const respond = useRespondToTrainerAssignment();
+  const { toast } = useToast();
+
+  if (!assignment) return null;
+
+  const handleRespond = async (action: 'accept' | 'reject' | 'revoke') => {
+    try {
+      await respond.mutateAsync(action);
+      toast({
+        title:
+          action === 'accept'
+            ? 'Vínculo aceito'
+            : action === 'reject'
+              ? 'Solicitação recusada'
+              : 'Vínculo removido',
+      });
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Erro',
+        description: error instanceof Error ? error.message : 'Não foi possível atualizar o vínculo.',
+      });
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      <SectionLabel>Personal trainer</SectionLabel>
+      <div className="flex items-center gap-4 rounded-2xl border border-white/5 bg-card/85 p-4 shadow-elegant">
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary">
+          <UserRound className="h-5 w-5" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-semibold">{assignment.trainer?.full_name ?? 'Personal trainer'}</p>
+          <p className="text-xs text-muted-foreground">
+            {assignment.status === 'pending' ? 'Quer acompanhar seus treinos e sua evolução' : 'Vinculado à sua conta'}
+          </p>
+        </div>
+        {assignment.status === 'pending' ? (
+          <div className="flex shrink-0 gap-2">
+            <Button
+              type="button"
+              size="icon"
+              variant="outline"
+              disabled={respond.isPending}
+              onClick={() => void handleRespond('reject')}
+              className="border-destructive/50 text-destructive hover:bg-destructive hover:text-destructive-foreground"
+              aria-label="Recusar"
+            >
+              <XCircle className="h-4 w-4" />
+            </Button>
+            <Button
+              type="button"
+              size="icon"
+              disabled={respond.isPending}
+              onClick={() => void handleRespond('accept')}
+              aria-label="Aceitar"
+            >
+              <CheckCircle2 className="h-4 w-4" />
+            </Button>
+          </div>
+        ) : (
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            disabled={respond.isPending}
+            onClick={() => void handleRespond('revoke')}
+            className="shrink-0 border-destructive/50 text-destructive hover:bg-destructive hover:text-destructive-foreground"
+          >
+            Remover
+          </Button>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -225,6 +309,8 @@ export default function Profile() {
         <SectionLabel>Conta</SectionLabel>
         <AccountGroup actions={accountActions} />
       </div>
+
+      <TrainerAssignmentCard />
 
       <Button
         variant="outline"
