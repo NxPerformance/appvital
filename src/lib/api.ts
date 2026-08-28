@@ -8,7 +8,10 @@ export interface BackendUser {
 const defaultApiUrl = import.meta.env.DEV ? '/api' : 'https://app.vitalissy.com.br/api';
 const API_URL = (import.meta.env.VITE_API_URL || defaultApiUrl).replace(/\/$/, '');
 const API_ORIGIN = API_URL.replace(/\/api\/?$/, '');
-const AUTH_STORAGE_KEY = 'vitalissy-auth';
+
+const CSRF_COOKIE_NAME = 'vitalissy_csrf';
+const CSRF_HEADER_NAME = 'x-csrf-token';
+const MUTATING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
 export function resolveUploadUrl(url: string | null | undefined): string | null {
   if (!url) return null;
@@ -16,33 +19,9 @@ export function resolveUploadUrl(url: string | null | undefined): string | null 
   return `${API_ORIGIN}${url}`;
 }
 
-interface StoredAuthSession {
-  token: string;
-  user: BackendUser;
-}
-
-export function getStoredAuthSession(): StoredAuthSession | null {
-  const raw = localStorage.getItem(AUTH_STORAGE_KEY);
-  if (!raw) return null;
-
-  try {
-    return JSON.parse(raw) as StoredAuthSession;
-  } catch {
-    localStorage.removeItem(AUTH_STORAGE_KEY);
-    return null;
-  }
-}
-
-export function persistAuthSession(token: string, user: BackendUser) {
-  localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ token, user }));
-}
-
-export function clearStoredAuthSession() {
-  localStorage.removeItem(AUTH_STORAGE_KEY);
-}
-
-function getToken() {
-  return getStoredAuthSession()?.token ?? null;
+function readCsrfToken(): string | null {
+  const match = document.cookie.match(new RegExp(`(?:^|; )${CSRF_COOKIE_NAME}=([^;]*)`));
+  return match ? decodeURIComponent(match[1]) : null;
 }
 
 export class ApiError extends Error {
@@ -54,7 +33,7 @@ export class ApiError extends Error {
   }
 }
 
-async function request<T>(path: string, init: RequestInit = {}, useAuth = true): Promise<T> {
+async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const headers = new Headers(init.headers);
   const isFormData = init.body instanceof FormData;
   const timeoutMs = isFormData ? 60000 : 20000;
@@ -65,10 +44,11 @@ async function request<T>(path: string, init: RequestInit = {}, useAuth = true):
     headers.set('Content-Type', 'application/json');
   }
 
-  if (useAuth) {
-    const token = getToken();
-    if (token) {
-      headers.set('Authorization', `Bearer ${token}`);
+  const method = (init.method ?? 'GET').toUpperCase();
+  if (MUTATING_METHODS.has(method)) {
+    const csrfToken = readCsrfToken();
+    if (csrfToken) {
+      headers.set(CSRF_HEADER_NAME, csrfToken);
     }
   }
 
@@ -76,6 +56,7 @@ async function request<T>(path: string, init: RequestInit = {}, useAuth = true):
     const response = await fetch(`${API_URL}${path}`, {
       ...init,
       headers,
+      credentials: 'include',
       signal: init.signal ?? controller.signal,
     });
 
@@ -96,33 +77,21 @@ async function request<T>(path: string, init: RequestInit = {}, useAuth = true):
 }
 
 export const api = {
-  get: <T>(path: string, useAuth = true) => request<T>(path, { method: 'GET' }, useAuth),
-  post: <T>(path: string, body?: unknown, useAuth = true) =>
-    request<T>(
-      path,
-      {
-        method: 'POST',
-        body: body instanceof FormData ? body : JSON.stringify(body ?? {}),
-      },
-      useAuth,
-    ),
-  put: <T>(path: string, body?: unknown, useAuth = true) =>
-    request<T>(
-      path,
-      {
-        method: 'PUT',
-        body: body instanceof FormData ? body : JSON.stringify(body ?? {}),
-      },
-      useAuth,
-    ),
-  patch: <T>(path: string, body?: unknown, useAuth = true) =>
-    request<T>(
-      path,
-      {
-        method: 'PATCH',
-        body: body instanceof FormData ? body : JSON.stringify(body ?? {}),
-      },
-      useAuth,
-    ),
-  delete: <T>(path: string, useAuth = true) => request<T>(path, { method: 'DELETE' }, useAuth),
+  get: <T>(path: string) => request<T>(path, { method: 'GET' }),
+  post: <T>(path: string, body?: unknown) =>
+    request<T>(path, {
+      method: 'POST',
+      body: body instanceof FormData ? body : JSON.stringify(body ?? {}),
+    }),
+  put: <T>(path: string, body?: unknown) =>
+    request<T>(path, {
+      method: 'PUT',
+      body: body instanceof FormData ? body : JSON.stringify(body ?? {}),
+    }),
+  patch: <T>(path: string, body?: unknown) =>
+    request<T>(path, {
+      method: 'PATCH',
+      body: body instanceof FormData ? body : JSON.stringify(body ?? {}),
+    }),
+  delete: <T>(path: string) => request<T>(path, { method: 'DELETE' }),
 };

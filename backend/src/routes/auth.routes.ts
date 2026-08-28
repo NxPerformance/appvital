@@ -6,6 +6,7 @@ import { signJwt } from "../lib/jwt.js";
 import { asyncHandler } from "../utils/async-handler.js";
 import { HttpError } from "../middleware/error-handler.js";
 import { requireAuth } from "../middleware/auth.js";
+import { clearAuthCookies, setAuthCookies } from "../lib/auth-cookies.js";
 import { serializeUser, serializeProfile, DEFAULT_NOTIFICATION_PREFERENCES } from "../utils/serializers.js";
 import { trainerApplicationUpload, deleteUploadedFileSafe } from "../lib/upload.js";
 
@@ -170,9 +171,9 @@ authRouter.post(
       });
 
       const token = signJwt({ sub: result.user.id, email: result.user.email, roles: [] });
+      setAuthCookies(res, token);
 
       res.status(201).json({
-        token,
         user: serializeUser(result.user, []),
         profile: serializeProfile(result.profile, [], result.trainerApplication),
       });
@@ -210,12 +211,20 @@ authRouter.post(
 
     const roles = user.roles.map((assignment) => assignment.role);
     const token = signJwt({ sub: user.id, email: user.email, roles });
+    setAuthCookies(res, token);
 
     res.json({
-      token,
       user: serializeUser(user, roles),
       profile: serializeProfile(user.profile, roles, user.trainerApplication),
     });
+  }),
+);
+
+authRouter.post(
+  "/logout",
+  asyncHandler(async (_req, res) => {
+    clearAuthCookies(res);
+    res.status(204).end();
   }),
 );
 
