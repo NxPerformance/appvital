@@ -14,8 +14,10 @@ import {
   Flame,
   Home as HomeIcon,
   MessageCircle,
+  Moon,
   PersonStanding,
   RotateCcw,
+  Sun,
   Target,
   TrendingDown,
   TrendingUp,
@@ -24,9 +26,9 @@ import {
 } from "lucide-react";
 import { differenceInCalendarDays, endOfWeek, format, parseISO, startOfWeek } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { WeeklyCaloriesChart } from "@/components/home/WeeklyCaloriesChart";
 import { useProfile } from "@/hooks/useProfile";
+import { useTheme } from "@/hooks/useTheme";
 import { useBodyProgress } from "@/hooks/useBodyProgress";
 import { useBioimpedance } from "@/hooks/useBioimpedance";
 import { api, resolveUploadUrl } from "@/lib/api";
@@ -54,17 +56,6 @@ const appointmentStatusLabels: Record<string, { label: string; className: string
   completed: { label: "Concluído", className: "bg-sky-400/15 text-sky-300", icon: CheckCircle2 },
   cancelled: { label: "Cancelado", className: "bg-red-400/15 text-red-300", icon: XCircle },
 };
-
-function getInitials(name?: string | null): string {
-  return (
-    name
-      ?.split(" ")
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((part) => part[0]?.toUpperCase())
-      .join("") || "PA"
-  );
-}
 
 function getGreeting(hour: number) {
   if (hour < 12) return "Bom dia";
@@ -116,6 +107,7 @@ const SLIDE_CLASS =
 
 export default function Home() {
   const { profile, loading, error: profileError } = useProfile();
+  const { theme, setTheme } = useTheme();
   const { photos } = useBodyProgress();
   const { latestRecord: latestBio, previousRecord: previousBio } = useBioimpedance();
   const today = useMemo(() => new Date(), []);
@@ -160,8 +152,6 @@ export default function Home() {
   }
 
   const firstName = profile?.full_name?.split(" ")[0] || "Paciente";
-  const fullName = profile?.full_name || "Paciente";
-  const initials = getInitials(fullName);
   const greeting = getGreeting(today.getHours());
 
   const nextAppointment = (appointments ?? [])
@@ -226,14 +216,14 @@ export default function Home() {
             >
               <Bell className="h-5 w-5" />
             </Link>
-            <Link to="/profile" aria-label="Abrir perfil">
-              <Avatar className="h-11 w-11 border border-primary/30 shadow-glow">
-                <AvatarImage src={profile?.avatar_url || undefined} alt={fullName} />
-                <AvatarFallback className="bg-gradient-primary text-sm font-extrabold text-primary-foreground">
-                  {initials}
-                </AvatarFallback>
-              </Avatar>
-            </Link>
+            <button
+              type="button"
+              onClick={() => setTheme(theme === "roxo" ? "preto" : "roxo")}
+              aria-label={theme === "roxo" ? "Mudar para tema escuro" : "Mudar para tema claro"}
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-card/85 text-muted-foreground shadow-elegant hover:text-foreground"
+            >
+              {theme === "roxo" ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
+            </button>
           </div>
         </header>
 
