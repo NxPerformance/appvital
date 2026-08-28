@@ -2,7 +2,6 @@ import { useMemo, useState } from "react";
 import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, XAxis, YAxis } from "recharts";
 import {
   eachDayOfInterval,
-  eachWeekOfInterval,
   endOfMonth,
   endOfWeek,
   format,
@@ -76,12 +75,19 @@ export function WeeklyCaloriesChart({ entries }: WeeklyCaloriesChartProps) {
   const monthBars = useMemo<ChartBar[]>(() => {
     const monthStart = startOfMonth(today);
     const monthEnd = endOfMonth(today);
-    const weekStarts = eachWeekOfInterval({ start: monthStart, end: monthEnd }, { weekStartsOn: 0 });
 
-    return weekStarts.map((weekStart, index) => {
-      const rangeStart = weekStart < monthStart ? monthStart : weekStart;
-      const weekEnd = endOfWeek(weekStart, { weekStartsOn: 0 });
-      const rangeEnd = weekEnd > monthEnd ? monthEnd : weekEnd;
+    // Sempre 4 semanas por mês (dias 1-7, 8-14, 15-21, 22-fim), em vez de
+    // semanas civis (dom-sáb): alinhar por semana civil rende de 5 a 6
+    // barras por mês, com as pontas cortadas em pedaços de 1-2 dias — mais
+    // confuso do que as "4 semanas" que as pessoas esperam ver.
+    const bucketStarts = [1, 8, 15, 22];
+
+    return bucketStarts.map((startDay, index) => {
+      const rangeStart = new Date(monthStart.getFullYear(), monthStart.getMonth(), startDay);
+      const nextStartDay = bucketStarts[index + 1];
+      const rangeEnd = nextStartDay
+        ? new Date(monthStart.getFullYear(), monthStart.getMonth(), nextStartDay - 1, 23, 59, 59, 999)
+        : monthEnd;
 
       const total = entries.reduce((sum, entry) => {
         const entryDate = new Date(`${entry.date}T12:00:00`);
