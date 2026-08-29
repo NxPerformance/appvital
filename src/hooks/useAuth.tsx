@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { api, BackendUser, clearStoredAuthSession, getStoredAuthSession, persistAuthSession } from '@/lib/api';
+import { api, ApiError, BackendUser } from '@/lib/api';
 
 interface RegisterPayload {
   full_name: string;
@@ -26,7 +26,6 @@ interface RegisterPayload {
 
 interface AuthContextType {
   user: BackendUser | null;
-  session: { token: string } | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   register: (payload: RegisterPayload | FormData) => Promise<void>;
@@ -38,72 +37,48 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<BackendUser | null>(null);
-  const [session, setSession] = useState<{ token: string } | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // The session lives in an httpOnly cookie the browser sends automatically —
+  // there's nothing for the frontend to read directly, so auth state is
+  // always determined by asking the backend.
   const refreshAuth = async () => {
-    const stored = getStoredAuthSession();
-    if (!stored?.token) {
-      setSession(null);
-      setUser(null);
-      return;
+    try {
+      const response = await api.get<{ user: BackendUser }>('/auth/me');
+      setUser(response.user);
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 401) {
+        setUser(null);
+        return;
+      }
+      throw error;
     }
-
-    const response = await api.get<{ user: BackendUser }>('/auth/me');
-    persistAuthSession(stored.token, response.user);
-    setSession({ token: stored.token });
-    setUser(response.user);
   };
 
   useEffect(() => {
-    const bootstrap = async () => {
-      const stored = getStoredAuthSession();
-      if (!stored?.token) {
-        setLoading(false);
-        return;
-      }
-
-      try {
-        await refreshAuth();
-      } catch {
-        clearStoredAuthSession();
-        setSession(null);
-        setUser(null);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    bootstrap();
+    refreshAuth().finally(() => setLoading(false));
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    const response = await api.post<{ token: string; user: BackendUser }>('/auth/login', {
-      email,
-      password,
-    }, false);
-
-    persistAuthSession(response.token, response.user);
-    setSession({ token: response.token });
+    const response = await api.post<{ user: BackendUser }>('/auth/login', { email, password });
     setUser(response.user);
   };
 
   const register = async (payload: RegisterPayload | FormData) => {
-    const response = await api.post<{ token: string; user: BackendUser }>('/auth/register', payload, false);
-
-    persistAuthSession(response.token, response.user);
-    setSession({ token: response.token });
+    const response = await api.post<{ user: BackendUser }>('/auth/register', payload);
     setUser(response.user);
   };
 
   const signOut = async () => {
-    clearStoredAuthSession();
-    setSession(null);
-    setUser(null);
+    try {
+      await api.post('/auth/logout');
+    } finally {
+      setUser(null);
+    }
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, signIn, register, signOut, refreshAuth }}>
+    <AuthContext.Provider value={{ user, loading, signIn, register, signOut, refreshAuth }}>
       {children}
     </AuthContext.Provider>
   );
