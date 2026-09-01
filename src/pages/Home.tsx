@@ -37,7 +37,7 @@ function formatHomeDate(date: Date) {
 
 function SectionLabel({ children }: { children: string }) {
   return (
-    <h2 className="px-1 text-[11px] font-bold uppercase tracking-[0.22em] text-muted-foreground">
+    <h2 className="text-[11px] font-bold uppercase tracking-[0.22em] text-muted-foreground">
       {children}
     </h2>
   );
@@ -140,7 +140,7 @@ export default function Home() {
 
   return (
     <div className="min-h-full bg-[hsl(var(--background))]">
-      <div className="mx-auto flex min-h-full w-full max-w-[430px] flex-col gap-4 px-5 pb-28 pt-6 md:max-w-[1180px] md:px-7 md:pb-8 md:pt-7">
+      <div className="mx-auto flex min-h-full w-full max-w-[430px] flex-col px-5 pb-28 pt-6 md:max-w-[1180px] md:px-7 md:pb-8 md:pt-7">
         <header className="flex items-start justify-between gap-4">
           <div className="min-w-0">
             <p className="mt-1 text-xs text-muted-foreground">{formatHomeDate(today)}</p>
@@ -168,14 +168,14 @@ export default function Home() {
           </div>
         </header>
 
-        <div className="mt-2">
+        <div className="mt-4">
           <WeeklyCaloriesChart
             entries={(strengthWorkouts ?? []).map((workout) => ({ date: workout.date, calories: workout.calories }))}
           />
         </div>
 
-        <section className="space-y-3">
-          <div className="flex items-center justify-between px-1">
+        <section className="mt-6 space-y-4">
+          <div className="flex items-center justify-between">
             <SectionLabel>Planos</SectionLabel>
             <Link to="/vital-360" className="flex shrink-0 items-center gap-0.5 text-xs font-extrabold text-primary">
               Ver todos
@@ -227,8 +227,8 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="space-y-3">
-          <div className="flex items-center justify-between px-1">
+        <section className="mt-6 space-y-4">
+          <div className="flex items-center justify-between">
             <SectionLabel>Treinos</SectionLabel>
             <Link to="/workouts" className="flex shrink-0 items-center gap-0.5 text-xs font-extrabold text-primary">
               Ver todos
