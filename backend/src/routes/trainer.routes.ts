@@ -7,6 +7,7 @@ import { asyncHandler } from "../utils/async-handler.js";
 import { HttpError } from "../middleware/error-handler.js";
 import { getRouteParam } from "../utils/params.js";
 import { serializeProfile } from "../utils/serializers.js";
+import { assertOwner } from "../utils/ownership.js";
 import type { Profile, User, UserRoleAssignment } from "@prisma/client";
 
 export const trainerRouter = Router();
@@ -248,7 +249,7 @@ trainerRouter.patch(
 
     const existing = await prisma.trainerClient.findUnique({ where: { id: assignmentId } });
     if (!existing) throw new HttpError(404, "Vinculo nao encontrado");
-    if (existing.trainerId !== req.auth!.userId) throw new HttpError(403, "Acesso negado");
+    assertOwner(existing.trainerId, req.auth!.userId);
 
     const assignment = await prisma.trainerClient.update({
       where: { id: assignmentId },

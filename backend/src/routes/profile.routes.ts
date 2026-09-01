@@ -6,6 +6,7 @@ import { asyncHandler } from "../utils/async-handler.js";
 import { HttpError } from "../middleware/error-handler.js";
 import { serializeProfile } from "../utils/serializers.js";
 import { avatarUpload, deleteUploadedFileSafe } from "../lib/upload.js";
+import { assertValidPhoneDigits } from "../utils/phone.js";
 
 export const profileRouter = Router();
 
@@ -54,9 +55,7 @@ profileRouter.patch(
         phone = null;
       } else {
         const digits = data.phone.replace(/\D/g, "");
-        if (digits.length < 10 || digits.length > 11) {
-          throw new HttpError(400, "Telefone invalido, informe DDD + numero");
-        }
+        assertValidPhoneDigits(digits);
         phone = digits;
       }
     }

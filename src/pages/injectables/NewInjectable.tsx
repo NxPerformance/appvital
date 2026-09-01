@@ -9,12 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-
-const bodyLocations = [
-  { value: 'abdomen', label: 'Abdômen' },
-  { value: 'coxa', label: 'Coxa' },
-  { value: 'braco', label: 'Braço' },
-];
+import { BODY_LOCATIONS } from '@/lib/injectableLocations';
 
 const medications = [
   'Mounjaro (Tirzepatida)',
@@ -125,7 +120,7 @@ export default function NewInjectable() {
           </div>
           <div className="rounded-2xl border border-white/5 bg-card/85 p-4 shadow-elegant">
             <MapPin className="mb-3 h-5 w-5 text-primary" />
-            <p className="truncate text-sm font-semibold">{bodyLocations.find((item) => item.value === location)?.label || 'Local'}</p>
+            <p className="truncate text-sm font-semibold">{BODY_LOCATIONS.find((item) => item.value === location)?.label || 'Local'}</p>
             <p className="text-xs text-muted-foreground">Aplicação</p>
           </div>
         </section>
@@ -220,7 +215,7 @@ export default function NewInjectable() {
                 <SelectValue placeholder="Selecione o local" />
               </SelectTrigger>
               <SelectContent>
-                {bodyLocations.map((loc) => (
+                {BODY_LOCATIONS.map((loc) => (
                   <SelectItem key={loc.value} value={loc.value}>
                     {loc.label}
                   </SelectItem>

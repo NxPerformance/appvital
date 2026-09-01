@@ -33,19 +33,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { formatDateSafe } from '@/lib/dateUtils';
 import { cn } from '@/lib/utils';
-
-const typeLabels: Record<string, string> = {
-  consulta_online: 'Consulta online',
-  consulta_presencial: 'Consulta presencial',
-  bioimpedancia: 'Bioimpedância',
-};
-
-const statusLabels: Record<string, { label: string; className: string }> = {
-  pending: { label: 'Aguardando contato', className: 'bg-yellow-500/15 text-yellow-300' },
-  confirmed: { label: 'Agendado', className: 'bg-emerald-400/15 text-emerald-300' },
-  completed: { label: 'Concluído', className: 'bg-sky-400/15 text-sky-300' },
-  cancelled: { label: 'Cancelado', className: 'bg-red-400/15 text-red-300' },
-};
+import { APPOINTMENT_TYPE_LABELS, APPOINTMENT_STATUS_LABELS } from '@/lib/appointmentLabels';
 
 const appointmentTypes = [
   {
@@ -243,7 +231,7 @@ export default function Appointments() {
                   <SelectedTypeIcon className="h-7 w-7" />
                 </span>
                 <div className="min-w-0">
-                  <p className="font-bold">{typeLabels[selectedType.id]}</p>
+                  <p className="font-bold">{APPOINTMENT_TYPE_LABELS[selectedType.id]}</p>
                   <p className="mt-1 text-sm text-muted-foreground">{selectedType.description}</p>
                   <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
                     <Clock className="h-3.5 w-3.5" />
@@ -287,14 +275,14 @@ export default function Appointments() {
           ) : (
             <div className="space-y-3">
               {appointments.map((appointment) => {
-                const status = statusLabels[appointment.status] || statusLabels.pending;
+                const status = APPOINTMENT_STATUS_LABELS[appointment.status] || APPOINTMENT_STATUS_LABELS.pending;
                 const scheduledInfo = formatScheduledInfo(appointment);
 
                 return (
                   <div key={appointment.id} className="rounded-2xl border border-white/5 bg-card/85 p-4 shadow-elegant">
                     <div className="flex items-start justify-between gap-3">
                       <div className="space-y-2">
-                        <h3 className="font-semibold">{typeLabels[appointment.type] || appointment.type}</h3>
+                        <h3 className="font-semibold">{APPOINTMENT_TYPE_LABELS[appointment.type] || appointment.type}</h3>
                         {scheduledInfo ? (
                           <div className="flex items-center gap-2 text-sm font-medium text-primary">
                             <Clock className="h-4 w-4" />

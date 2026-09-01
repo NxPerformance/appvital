@@ -5,6 +5,7 @@ import { requireAuth } from "../middleware/auth.js";
 import { asyncHandler } from "../utils/async-handler.js";
 import { HttpError } from "../middleware/error-handler.js";
 import { getRouteParam } from "../utils/params.js";
+import { assertOwner } from "../utils/ownership.js";
 
 export const workoutsRouter = Router();
 
@@ -87,7 +88,7 @@ workoutsRouter.patch(
 
     const existing = await prisma.workout.findUnique({ where: { id } });
     if (!existing) throw new HttpError(404, "Treino nao encontrado");
-    if (existing.userId !== req.auth!.userId) throw new HttpError(403, "Acesso negado");
+    assertOwner(existing.userId, req.auth!.userId);
 
     const workout = await prisma.workout.update({
       where: { id },
@@ -112,7 +113,7 @@ workoutsRouter.delete(
 
     const existing = await prisma.workout.findUnique({ where: { id } });
     if (!existing) throw new HttpError(404, "Treino nao encontrado");
-    if (existing.userId !== req.auth!.userId) throw new HttpError(403, "Acesso negado");
+    assertOwner(existing.userId, req.auth!.userId);
 
     await prisma.workout.delete({ where: { id } });
     res.status(204).send();
@@ -178,7 +179,7 @@ workoutsRouter.patch(
 
     const existing = await prisma.cardioWorkout.findUnique({ where: { id } });
     if (!existing) throw new HttpError(404, "Treino nao encontrado");
-    if (existing.userId !== req.auth!.userId) throw new HttpError(403, "Acesso negado");
+    assertOwner(existing.userId, req.auth!.userId);
 
     const workout = await prisma.cardioWorkout.update({
       where: { id },
@@ -205,7 +206,7 @@ workoutsRouter.delete(
 
     const existing = await prisma.cardioWorkout.findUnique({ where: { id } });
     if (!existing) throw new HttpError(404, "Treino nao encontrado");
-    if (existing.userId !== req.auth!.userId) throw new HttpError(403, "Acesso negado");
+    assertOwner(existing.userId, req.auth!.userId);
 
     await prisma.cardioWorkout.delete({ where: { id } });
     res.status(204).send();

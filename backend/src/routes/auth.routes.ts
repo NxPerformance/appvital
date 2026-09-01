@@ -10,6 +10,7 @@ import { loginRateLimiter } from "../middleware/rate-limit.js";
 import { clearAuthCookies, setAuthCookies } from "../lib/auth-cookies.js";
 import { serializeUser, serializeProfile, DEFAULT_NOTIFICATION_PREFERENCES } from "../utils/serializers.js";
 import { trainerApplicationUpload, deleteUploadedFileSafe } from "../lib/upload.js";
+import { assertValidPhoneDigits } from "../utils/phone.js";
 
 export const authRouter = Router();
 
@@ -78,9 +79,7 @@ function normalizePhone(phone?: string): string | undefined {
   if (!phone) return undefined;
   const digits = phone.replace(/\D/g, "");
   if (digits.length === 0) return undefined;
-  if (digits.length < 10 || digits.length > 11) {
-    throw new HttpError(400, "Telefone invalido, informe DDD + numero");
-  }
+  assertValidPhoneDigits(digits);
   return digits;
 }
 
