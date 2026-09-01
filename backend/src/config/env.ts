@@ -10,6 +10,14 @@ const envSchema = z.object({
   UPLOAD_DIR: z.string().default("./uploads"),
   CORS_ORIGIN: z.string().default("http://localhost:8080"),
   APP_URL: z.string().url().default("http://localhost:8080"),
+  // Only needed when the frontend and API live on different subdomains of
+  // the same site (e.g. app.example.com / api.example.com) — without it,
+  // both auth cookies are host-only to the API's own host and the readable
+  // CSRF cookie is invisible to frontend JS running on the other subdomain,
+  // which fails every mutating request. Leave unset for same-host deploys
+  // (including local dev, where it must stay unset since "localhost" can't
+  // take a leading-dot Domain attribute).
+  COOKIE_DOMAIN: z.string().optional(),
   GOOGLE_FIT_CLIENT_ID: z.string().optional(),
   GOOGLE_FIT_CLIENT_SECRET: z.string().optional(),
   FITBIT_CLIENT_ID: z.string().optional(),

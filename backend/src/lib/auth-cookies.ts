@@ -32,8 +32,15 @@ function cookieOptions(maxAgeMs: number) {
     secure: env.NODE_ENV === "production",
     sameSite: "lax" as const,
     path: "/",
+    domain: env.COOKIE_DOMAIN || undefined,
     maxAge: maxAgeMs,
   };
+}
+
+// clearCookie must be called with the same domain/path the cookie was set
+// with, or the browser won't recognize it as the same cookie to delete.
+function baseCookieAttributes() {
+  return { path: "/", domain: env.COOKIE_DOMAIN || undefined };
 }
 
 export function setAuthCookies(res: Response, token: string): void {
@@ -51,6 +58,6 @@ export function setAuthCookies(res: Response, token: string): void {
 }
 
 export function clearAuthCookies(res: Response): void {
-  res.clearCookie(SESSION_COOKIE_NAME, { path: "/" });
-  res.clearCookie(CSRF_COOKIE_NAME, { path: "/" });
+  res.clearCookie(SESSION_COOKIE_NAME, baseCookieAttributes());
+  res.clearCookie(CSRF_COOKIE_NAME, baseCookieAttributes());
 }
