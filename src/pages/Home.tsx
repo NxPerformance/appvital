@@ -2,14 +2,10 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
-  BarChart3,
   Bell,
   ChevronRight,
   Dumbbell,
-  Flame,
-  Home as HomeIcon,
   Moon,
-  PersonStanding,
   RotateCcw,
   Sparkles,
   Sun,
@@ -88,13 +84,12 @@ const exampleWorkouts: Array<{
   title: string;
   meta: string;
   type: string;
-  icon: LucideIcon;
   imagePosition: string;
 }> = [
-  { title: "Academia", meta: "45 min · Intermediário", type: "academia", icon: Dumbbell, imagePosition: "left top" },
-  { title: "HIIT Full Body", meta: "30 min · Avançado", type: "crossfit", icon: Flame, imagePosition: "center top" },
-  { title: "Treino em Casa", meta: "20 min · Iniciante", type: "em-casa", icon: HomeIcon, imagePosition: "right top" },
-  { title: "Calistenia", meta: "25 min · Intermediário", type: "calistenia", icon: PersonStanding, imagePosition: "center bottom" },
+  { title: "Academia", meta: "45 min · Intermediário", type: "academia", imagePosition: "left top" },
+  { title: "HIIT Full Body", meta: "30 min · Avançado", type: "crossfit", imagePosition: "center top" },
+  { title: "Treino em Casa", meta: "20 min · Iniciante", type: "em-casa", imagePosition: "right top" },
+  { title: "Calistenia", meta: "25 min · Intermediário", type: "calistenia", imagePosition: "center bottom" },
 ];
 
 export default function Home() {
@@ -283,9 +278,6 @@ export default function Home() {
                 }}
               >
                 <div className="absolute inset-0 bg-gradient-to-t from-background via-background/55 to-transparent" />
-                <span className="absolute left-3 top-3 flex h-8 w-8 items-center justify-center rounded-lg bg-background/70 text-primary backdrop-blur">
-                  <workout.icon className="h-4 w-4" />
-                </span>
                 <div className="absolute inset-x-3 bottom-3">
                   <p className="text-[13px] font-extrabold leading-tight text-white">{workout.title}</p>
                   <p className="mt-1 text-[10.5px] text-white/70">{workout.meta}</p>
