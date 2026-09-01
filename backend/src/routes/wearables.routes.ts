@@ -341,8 +341,19 @@ wearablesRouter.post(
   }),
 );
 
+// Not currently consumed as an actual redirect target anywhere (the Fitbit
+// callback always redirects to a hardcoded /wearables, and the frontend
+// never reads this back out of the query string) - constrained here anyway
+// so it can't quietly become an open redirect if either side starts using
+// it without a second look. Must stay a same-app relative path: no
+// protocol-relative ("//host"), absolute URL, or backslash trick.
 const authorizeQuerySchema = z.object({
-  redirect_path: z.string().default("/wearables"),
+  redirect_path: z
+    .string()
+    .default("/wearables")
+    .refine((value) => value.startsWith("/") && !value.startsWith("//") && !value.includes("\\"), {
+      message: "redirect_path invalido",
+    }),
 });
 
 wearablesRouter.get(

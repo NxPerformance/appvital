@@ -5,7 +5,9 @@ const envSchema = z.object({
   PORT: z.coerce.number().default(3001),
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   DATABASE_URL: z.string().min(1, "DATABASE_URL e obrigatoria"),
-  JWT_SECRET: z.string().min(8, "JWT_SECRET deve ter ao menos 8 caracteres"),
+  // 32+ chars keeps HMAC-SHA256 signing at its full intended strength - the
+  // same secret is also used to derive the wearable-token encryption key.
+  JWT_SECRET: z.string().min(32, "JWT_SECRET deve ter ao menos 32 caracteres"),
   JWT_EXPIRES_IN: z.string().default("7d"),
   UPLOAD_DIR: z.string().default("./uploads"),
   CORS_ORIGIN: z.string().default("http://localhost:8080"),

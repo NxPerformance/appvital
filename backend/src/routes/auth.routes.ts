@@ -6,6 +6,7 @@ import { signJwt } from "../lib/jwt.js";
 import { asyncHandler } from "../utils/async-handler.js";
 import { HttpError } from "../middleware/error-handler.js";
 import { requireAuth, requireTrustedOrigin } from "../middleware/auth.js";
+import { loginRateLimiter } from "../middleware/rate-limit.js";
 import { clearAuthCookies, setAuthCookies } from "../lib/auth-cookies.js";
 import { serializeUser, serializeProfile, DEFAULT_NOTIFICATION_PREFERENCES } from "../utils/serializers.js";
 import { trainerApplicationUpload, deleteUploadedFileSafe } from "../lib/upload.js";
@@ -194,6 +195,7 @@ const loginSchema = z.object({
 authRouter.post(
   "/login",
   requireTrustedOrigin,
+  loginRateLimiter,
   asyncHandler(async (req, res) => {
     const { email, password } = loginSchema.parse(req.body);
 

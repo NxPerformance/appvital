@@ -9,6 +9,14 @@ import { errorHandler } from "./middleware/error-handler.js";
 
 export const app = express();
 
+// The app sits behind a single reverse proxy in production (Easypanel/
+// Traefik). Without this, req.ip is always the proxy's own address, which
+// would make IP-based rate limiting apply one shared limit across every
+// real client instead of per-client. "1" trusts only the immediate
+// upstream hop's X-Forwarded-For entry, not an arbitrary chain a client
+// could spoof further back.
+app.set("trust proxy", 1);
+
 app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
 app.use(
   cors({
