@@ -43,11 +43,11 @@ function SectionLabel({ children }: { children: string }) {
   );
 }
 
-const workoutCategories: Array<{ type: string; label: string; icon: LucideIcon }> = [
-  { type: "academia", label: "Academia", icon: Dumbbell },
-  { type: "em-casa", label: "Em Casa", icon: HomeIcon },
-  { type: "crossfit", label: "CrossFit", icon: Flame },
-  { type: "calistenia", label: "Calistenia", icon: PersonStanding },
+const workoutCategories: Array<{ type: string; label: string }> = [
+  { type: "academia", label: "Academia" },
+  { type: "em-casa", label: "Em Casa" },
+  { type: "crossfit", label: "CrossFit" },
+  { type: "calistenia", label: "Calistenia" },
 ];
 
 interface HomePlan {
@@ -252,10 +252,10 @@ export default function Home() {
             </Link>
           ) : null}
 
-          <div className="hide-scrollbar flex gap-2 overflow-x-auto pb-1">
+          <div className="hide-scrollbar flex gap-3 overflow-x-auto pb-1">
             <Link
               to="/workouts"
-              className="flex h-11 shrink-0 items-center gap-2 rounded-full bg-gradient-primary px-4 text-sm font-bold text-primary-foreground shadow-glow"
+              className="flex shrink-0 items-center justify-center rounded-[8px] bg-gradient-primary px-4 py-2 text-xs font-bold text-primary-foreground"
             >
               Todos
             </Link>
@@ -263,9 +263,8 @@ export default function Home() {
               <Link
                 key={category.type}
                 to={`/workouts/musculacao/${category.type}`}
-                className="flex h-11 shrink-0 items-center gap-2 rounded-full border border-white/10 bg-card px-4 text-sm font-bold text-foreground shadow-elegant transition-transform hover:-translate-y-0.5"
+                className="flex shrink-0 items-center justify-center rounded-[8px] border border-white/10 bg-card px-4 py-2 text-xs font-bold text-muted-foreground transition-colors hover:text-foreground"
               >
-                <category.icon className="h-4 w-4 text-primary" />
                 {category.label}
               </Link>
             ))}
