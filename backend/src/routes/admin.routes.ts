@@ -6,6 +6,7 @@ import { asyncHandler } from "../utils/async-handler.js";
 import { HttpError } from "../middleware/error-handler.js";
 import { getRouteParam } from "../utils/params.js";
 import { logAudit } from "../services/audit.service.js";
+import { serializeProfile } from "../utils/serializers.js";
 import type { Profile, TrainerApplication, User, UserRoleAssignment } from "@prisma/client";
 
 export const adminRouter = Router();
@@ -17,23 +18,11 @@ function serializeAdminProfile(
 ) {
   if (!user.profile) return null;
   const roles = user.roles.map((assignment) => assignment.role);
-  return {
-    id: user.id,
-    full_name: user.profile.fullName,
-    email: user.email,
-    phone: user.profile.phone,
-    age: user.profile.age,
-    height_cm: user.profile.heightCm,
-    weight_kg: Number(user.profile.weightKg),
-    is_premium: user.profile.isPremium,
-    created_at: user.createdAt,
-    entry_date: user.profile.entryDate,
-    avatar_url: user.profile.avatarUrl,
-    is_admin: roles.includes("ADMIN"),
-    is_personal_trainer: roles.includes("PERSONAL_TRAINER"),
-    trainer_application_status: user.trainerApplication?.status ?? null,
-    trainer_application_id: user.trainerApplication?.id ?? null,
-  };
+  // Reuses the same field set/logic (and created_at source) as the
+  // self-service profile view, so the two never drift apart again -
+  // only email is admin-view-specific (the self view gets it from the
+  // sibling `user` object instead of the profile payload).
+  return { email: user.email, ...serializeProfile(user.profile, roles, user.trainerApplication) };
 }
 
 function serializeTrainerApplication(

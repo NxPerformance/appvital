@@ -6,28 +6,36 @@ import { requireAuth, requireRole } from "../middleware/auth.js";
 import { asyncHandler } from "../utils/async-handler.js";
 import { HttpError } from "../middleware/error-handler.js";
 import { getRouteParam } from "../utils/params.js";
+import { serializeProfile } from "../utils/serializers.js";
 import type { Profile, User, UserRoleAssignment } from "@prisma/client";
 
 export const trainerRouter = Router();
 
 trainerRouter.use(requireAuth);
 
+// Deliberately narrower than the admin/self profile views: a trainer only
+// sees what's relevant to coaching a consenting client, not account-settings
+// fields (notification prefs, payment method, terms acceptance) or whether
+// that client separately applied to become a trainer themselves. Sources its
+// values from serializeProfile so they can't silently drift (e.g. created_at
+// coming from a different DB column) even though the field set stays a pick.
 function serializeTrainerProfile(user: User & { profile: Profile | null; roles: UserRoleAssignment[] }) {
   if (!user.profile) return null;
   const roles = user.roles.map((assignment) => assignment.role);
+  const full = serializeProfile(user.profile, roles, null);
   return {
-    id: user.id,
-    full_name: user.profile.fullName,
+    id: full.id,
+    full_name: full.full_name,
     email: user.email,
-    phone: user.profile.phone,
-    age: user.profile.age,
-    height_cm: user.profile.heightCm,
-    weight_kg: Number(user.profile.weightKg),
-    is_premium: user.profile.isPremium,
-    entry_date: user.profile.entryDate,
-    avatar_url: user.profile.avatarUrl,
-    is_admin: roles.includes("ADMIN"),
-    is_personal_trainer: roles.includes("PERSONAL_TRAINER"),
+    phone: full.phone,
+    age: full.age,
+    height_cm: full.height_cm,
+    weight_kg: full.weight_kg,
+    is_premium: full.is_premium,
+    entry_date: full.entry_date,
+    avatar_url: full.avatar_url,
+    is_admin: full.is_admin,
+    is_personal_trainer: full.is_personal_trainer,
   };
 }
 
