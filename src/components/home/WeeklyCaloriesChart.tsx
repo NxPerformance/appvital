@@ -123,7 +123,7 @@ export function WeeklyCaloriesChart({ entries }: WeeklyCaloriesChartProps) {
   };
 
   return (
-    <div className="mx-auto w-[327px] rounded-[1.15rem] border border-white/10 bg-card p-3.5 shadow-elegant md:mx-0 md:w-full md:p-4">
+    <div className="rounded-[1.15rem] border border-white/10 bg-card p-3.5 shadow-elegant md:p-4">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary md:h-9 md:w-9">
