@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { ElementType } from 'react';
 import {
   ArrowLeft,
+  Bell,
   Calendar,
   CalendarCheck,
   CheckCircle2,
@@ -16,6 +17,8 @@ import {
   Video,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { differenceInCalendarDays, format, parseISO } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import { useMyAppointments, useCreateAppointment, useDeleteAppointment, type Appointment } from '@/hooks/useAppointments';
 import { useProfile } from '@/hooks/useProfile';
 import { useToast } from '@/hooks/use-toast';
@@ -85,6 +88,18 @@ export default function Appointments() {
 
   const selectedType = appointmentTypes.find((type) => type.id === selectedTypeId) || appointmentTypes[0];
   const SelectedTypeIcon = selectedType.icon;
+
+  const nextAppointment = appointments
+    .filter((appointment) => appointment.status !== 'cancelled' && appointment.status !== 'completed')
+    .sort((a, b) => {
+      if (!a.scheduled_date) return 1;
+      if (!b.scheduled_date) return -1;
+      return parseISO(a.scheduled_date).getTime() - parseISO(b.scheduled_date).getTime();
+    })[0];
+
+  const daysUntilAppointment = nextAppointment?.scheduled_date
+    ? differenceInCalendarDays(parseISO(nextAppointment.scheduled_date), new Date())
+    : null;
 
   const handleDelete = async (id: string) => {
     try {
@@ -161,6 +176,65 @@ export default function Appointments() {
           </Link>
           <h1 className="text-base font-bold">Área Médica Vital</h1>
         </header>
+
+        {nextAppointment ? (
+          <section className="rounded-2xl border border-white/5 bg-card/90 p-4 shadow-elegant md:rounded-[2rem] md:p-5">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex min-w-0 items-center gap-3">
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary">
+                  <Calendar className="h-5 w-5" />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-primary">Próxima consulta</p>
+                  <p className="truncate text-base font-black leading-tight text-foreground">
+                    {APPOINTMENT_TYPE_LABELS[nextAppointment.type] ?? nextAppointment.type}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {nextAppointment.scheduled_date
+                      ? format(parseISO(nextAppointment.scheduled_date), "d 'de' MMMM", { locale: ptBR })
+                      : 'A combinar'}
+                    {' · '}
+                    {nextAppointment.scheduled_time ?? 'A combinar'}
+                  </p>
+                </div>
+              </div>
+              {(() => {
+                const status = APPOINTMENT_STATUS_LABELS[nextAppointment.status] ?? APPOINTMENT_STATUS_LABELS.pending;
+                const StatusIcon = status.icon;
+                return (
+                  <span
+                    className={cn(
+                      'flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-bold',
+                      status.className,
+                    )}
+                  >
+                    <StatusIcon className="h-3 w-3" />
+                    {status.label}
+                  </span>
+                );
+              })()}
+            </div>
+
+            {nextAppointment.admin_notes ? (
+              <p className="mt-3 flex items-center gap-1.5 text-xs font-bold text-primary">
+                <MessageCircle className="h-3.5 w-3.5 shrink-0" />
+                Novo recado da consulta — veja no histórico abaixo
+              </p>
+            ) : daysUntilAppointment != null && daysUntilAppointment >= 0 ? (
+              <p className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Bell className="h-3.5 w-3.5 shrink-0 text-primary" />
+                {daysUntilAppointment === 0 ? (
+                  <span className="font-bold text-foreground">Hoje é sua consulta!</span>
+                ) : (
+                  <>
+                    Faltam {daysUntilAppointment} {daysUntilAppointment === 1 ? 'dia' : 'dias'} ·{' '}
+                    <span className="font-bold text-foreground">Estamos te esperando!</span>
+                  </>
+                )}
+              </p>
+            ) : null}
+          </section>
+        ) : null}
 
         <section className="rounded-2xl border border-white/5 bg-card/90 p-5 shadow-elegant md:rounded-[2rem] md:p-6">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
