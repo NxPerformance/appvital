@@ -5,7 +5,6 @@ import {
   endOfWeek,
   format,
   isSameDay,
-  isToday,
   startOfMonth,
   startOfWeek,
 } from "date-fns";
@@ -35,6 +34,11 @@ const WEEKLY_CALORIE_TARGET = DAILY_CALORIE_TARGET * 3;
 // Altura mínima da barra em % — mesmo um dia com 0 kcal precisa de um
 // "coto" visível, senão o dia some da linha do gráfico.
 const MIN_BAR_HEIGHT_PERCENT = 6;
+
+// Teto da barra em % (não 100%) — sobra espaço pro badge flutuante do dia
+// selecionado não colidir com o cabeçalho do card, já que a área do
+// gráfico é baixa (card mobile fixado em 130px de altura, igual ao Figma).
+const MAX_BAR_HEIGHT_PERCENT = 72;
 
 interface ChartBar {
   id: string;
@@ -102,7 +106,6 @@ export function WeeklyCaloriesChart({ entries }: WeeklyCaloriesChartProps) {
   }, [entries, today]);
 
   const bars = period === "week" ? weekBars : monthBars;
-  const selected = bars.find((bar) => bar.isSelected(selectedDate)) ?? bars[bars.length - 1];
 
   const chartMax = useMemo(
     () => Math.max(period === "week" ? DAILY_CALORIE_TARGET : WEEKLY_CALORIE_TARGET, ...bars.map((bar) => bar.calories)),
@@ -120,11 +123,11 @@ export function WeeklyCaloriesChart({ entries }: WeeklyCaloriesChartProps) {
   };
 
   return (
-    <div className="rounded-[1.15rem] border border-white/10 bg-card p-4 shadow-elegant">
+    <div className="w-[327px] rounded-[1.15rem] border border-white/10 bg-card p-3.5 shadow-elegant md:w-full md:p-4">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary">
-            <Flame className="h-4 w-4" />
+          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary md:h-9 md:w-9">
+            <Flame className="h-3.5 w-3.5 md:h-4 md:w-4" />
           </span>
           <p className="text-sm font-extrabold text-foreground">Calorias</p>
         </div>
@@ -139,17 +142,17 @@ export function WeeklyCaloriesChart({ entries }: WeeklyCaloriesChartProps) {
       </div>
 
       {period === "month" ? (
-        <p className="mt-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+        <p className="mt-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground md:mt-3">
           {monthLabel}
         </p>
       ) : null}
 
-      <div className="mt-8 flex h-28 items-end justify-between gap-2 md:h-32">
+      <div className="mt-4 flex h-14 items-end justify-between gap-2 md:mt-8 md:h-32">
         {bars.map((bar) => {
           const isSelected = bar.isSelected(selectedDate);
-          const heightPercent = Math.max(
-            MIN_BAR_HEIGHT_PERCENT,
-            Math.round((bar.calories / chartMax) * 100),
+          const heightPercent = Math.min(
+            MAX_BAR_HEIGHT_PERCENT,
+            Math.max(MIN_BAR_HEIGHT_PERCENT, Math.round((bar.calories / chartMax) * 100)),
           );
 
           return (
@@ -157,7 +160,7 @@ export function WeeklyCaloriesChart({ entries }: WeeklyCaloriesChartProps) {
               key={bar.id}
               type="button"
               onClick={() => setSelectedDate(bar.representativeDate)}
-              className="flex h-full flex-1 flex-col items-center justify-end gap-2"
+              className="flex h-full flex-1 flex-col items-center justify-end gap-1.5 md:gap-2"
             >
               <div className="relative flex w-full flex-1 items-end justify-center">
                 {isSelected ? (
@@ -188,14 +191,6 @@ export function WeeklyCaloriesChart({ entries }: WeeklyCaloriesChartProps) {
           );
         })}
       </div>
-
-      {period === "week" ? (
-        <p className="mt-3 text-center text-[11px] text-muted-foreground">
-          {isToday(selected.representativeDate)
-            ? "Hoje"
-            : format(selected.representativeDate, "EEEE, d 'de' MMMM", { locale: ptBR })}
-        </p>
-      ) : null}
     </div>
   );
 }
