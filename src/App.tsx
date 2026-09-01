@@ -7,6 +7,7 @@ import { createBrowserRouter, Navigate, RouterProvider } from "react-router-dom"
 import { AuthProvider } from "@/hooks/useAuth";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AdminRoute } from "@/components/AdminRoute";
+import { TrainerRoute } from "@/components/TrainerRoute";
 import { AppLayout } from "@/components/AppLayout";
 import { AppUpdatePrompt } from "@/components/AppUpdatePrompt";
 
@@ -99,7 +100,7 @@ const router = createBrowserRouter([
       { path: "premium", element: lazyElement(Premium) },
       { path: "appointments", element: lazyElement(Appointments) },
       { path: "notifications", element: lazyElement(Notifications) },
-      { path: "trainer", element: lazyElement(TrainerDashboard) },
+      { path: "trainer", element: <TrainerRoute>{lazyElement(TrainerDashboard)}</TrainerRoute> },
       { path: "settings", element: lazyElement(Settings) },
       { path: "profile", element: lazyElement(Profile) },
       { path: "body-progress", element: lazyElement(BodyProgress) },

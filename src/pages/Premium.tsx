@@ -9,6 +9,19 @@ import { api } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import { useProfile } from '@/hooks/useProfile';
 
+// The checkout endpoint isn't implemented yet (dead code today - every call
+// 404s), but when it is, this stops a compromised/misconfigured backend
+// response from turning window.location.href into an open redirect: only
+// navigate to a URL actually hosted by the payment gateway.
+function isTrustedCheckoutUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === 'https:' && parsed.hostname === 'checkout.stripe.com';
+  } catch {
+    return false;
+  }
+}
+
 const benefits = [
   {
     title: 'Estatísticas de Treino',
@@ -247,7 +260,16 @@ export default function Premium() {
       });
 
       if (response.checkout.checkout_url) {
-        window.location.href = response.checkout.checkout_url;
+        if (isTrustedCheckoutUrl(response.checkout.checkout_url)) {
+          window.location.href = response.checkout.checkout_url;
+          return;
+        }
+
+        toast({
+          title: 'Nao foi possivel iniciar o pagamento',
+          description: 'O link de pagamento recebido nao e confiavel.',
+          variant: 'destructive',
+        });
         return;
       }
 

@@ -5,7 +5,7 @@ import { prisma } from "../lib/prisma.js";
 import { signJwt } from "../lib/jwt.js";
 import { asyncHandler } from "../utils/async-handler.js";
 import { HttpError } from "../middleware/error-handler.js";
-import { requireAuth } from "../middleware/auth.js";
+import { requireAuth, requireTrustedOrigin } from "../middleware/auth.js";
 import { clearAuthCookies, setAuthCookies } from "../lib/auth-cookies.js";
 import { serializeUser, serializeProfile, DEFAULT_NOTIFICATION_PREFERENCES } from "../utils/serializers.js";
 import { trainerApplicationUpload, deleteUploadedFileSafe } from "../lib/upload.js";
@@ -85,6 +85,7 @@ function normalizePhone(phone?: string): string | undefined {
 
 authRouter.post(
   "/register",
+  requireTrustedOrigin,
   trainerApplicationUpload.fields([
     { name: "self_photo", maxCount: 1 },
     { name: "document_photo", maxCount: 1 },
@@ -192,6 +193,7 @@ const loginSchema = z.object({
 
 authRouter.post(
   "/login",
+  requireTrustedOrigin,
   asyncHandler(async (req, res) => {
     const { email, password } = loginSchema.parse(req.body);
 
