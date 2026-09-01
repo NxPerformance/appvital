@@ -52,6 +52,7 @@ export function WeeklyCaloriesChart({ entries }: WeeklyCaloriesChartProps) {
   const today = useMemo(() => new Date(), []);
   const [period, setPeriod] = useState<Period>("week");
   const [selectedDate, setSelectedDate] = useState<Date>(today);
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
 
   const weekBars = useMemo<ChartBar[]>(() => {
     const start = startOfWeek(today, { weekStartsOn: 0 });
@@ -120,6 +121,7 @@ export function WeeklyCaloriesChart({ entries }: WeeklyCaloriesChartProps) {
   const togglePeriod = () => {
     setPeriod((current) => (current === "week" ? "month" : "week"));
     setSelectedDate(today);
+    setHoveredId(null);
   };
 
   return (
@@ -155,15 +157,22 @@ export function WeeklyCaloriesChart({ entries }: WeeklyCaloriesChartProps) {
             Math.max(MIN_BAR_HEIGHT_PERCENT, Math.round((bar.calories / chartMax) * 100)),
           );
 
+          const isHovered = hoveredId === bar.id;
+
           return (
             <button
               key={bar.id}
               type="button"
-              onClick={() => setSelectedDate(bar.representativeDate)}
+              onClick={() => {
+                setSelectedDate(bar.representativeDate);
+                setHoveredId(bar.id);
+              }}
+              onMouseEnter={() => setHoveredId(bar.id)}
+              onMouseLeave={() => setHoveredId((current) => (current === bar.id ? null : current))}
               className="flex h-full flex-1 flex-col items-center justify-end gap-1.5 md:gap-2"
             >
               <div className="relative flex w-full flex-1 items-end justify-center">
-                {isSelected ? (
+                {isHovered ? (
                   <span
                     className="absolute left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg border border-white/10 bg-background px-2 py-1 text-[11px] font-extrabold text-primary shadow-elegant"
                     style={{ bottom: `calc(${heightPercent}% + 8px)` }}
