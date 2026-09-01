@@ -1,11 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
   BarChart3,
   Bell,
-  Camera,
-  ChevronLeft,
   ChevronRight,
   Dumbbell,
   Flame,
@@ -16,8 +14,6 @@ import {
   Sparkles,
   Sun,
   Target,
-  TrendingDown,
-  TrendingUp,
   Zap,
   type LucideIcon,
 } from "lucide-react";
@@ -26,9 +22,6 @@ import { ptBR } from "date-fns/locale";
 import { WeeklyCaloriesChart } from "@/components/home/WeeklyCaloriesChart";
 import { useProfile } from "@/hooks/useProfile";
 import { useTheme } from "@/hooks/useTheme";
-import { useBodyProgress } from "@/hooks/useBodyProgress";
-import { useBioimpedance } from "@/hooks/useBioimpedance";
-import { resolveUploadUrl } from "@/lib/api";
 import { fetchStrengthWorkouts, findActiveWorkoutDraft, type ActiveWorkoutDraft } from "@/lib/workoutApi";
 import { cn } from "@/lib/utils";
 
@@ -41,10 +34,6 @@ function getGreeting(hour: number) {
 function formatHomeDate(date: Date) {
   const formatted = format(date, "EEEE '·' d MMM yyyy", { locale: ptBR }).replace(".", "");
   return formatted.charAt(0).toUpperCase() + formatted.slice(1);
-}
-
-function formatWeight(value: number) {
-  return new Intl.NumberFormat("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(value);
 }
 
 function SectionLabel({ children }: { children: string }) {
@@ -109,17 +98,11 @@ const exampleWorkouts: Array<{
   { title: "Calistenia Base", meta: "25 min · Intermediário", type: "calistenia", icon: PersonStanding, imagePosition: "center bottom" },
 ];
 
-const SLIDE_CLASS =
-  "w-[327px] h-[155px] shrink-0 snap-center overflow-hidden rounded-[1.35rem] shadow-elegant";
-
 export default function Home() {
   const { profile, loading, error: profileError } = useProfile();
   const { theme, setTheme } = useTheme();
-  const { photos } = useBodyProgress();
-  const { latestRecord: latestBio, previousRecord: previousBio, getDifference } = useBioimpedance();
   const today = useMemo(() => new Date(), []);
   const [activeDraft, setActiveDraft] = useState<ActiveWorkoutDraft | null>(null);
-  const summaryCarouselRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setActiveDraft(findActiveWorkoutDraft());
@@ -156,9 +139,6 @@ export default function Home() {
   const firstName = profile?.full_name?.split(" ")[0] || "Paciente";
   const greeting = getGreeting(today.getHours());
 
-  const latestPhoto = photos[0] ?? null;
-  const previousPhoto = photos[1] ?? null;
-
   const weekStart = startOfWeek(today, { weekStartsOn: 0 });
   const weekEnd = endOfWeek(today, { weekStartsOn: 0 });
 
@@ -170,22 +150,6 @@ export default function Home() {
   ).size;
   const weeklyGoal = profile?.weekly_workout_goal ?? null;
   const weeklyGoalPercent = weeklyGoal ? Math.min(100, Math.round((weekWorkoutDays / weeklyGoal) * 100)) : null;
-
-  const latestWeight = latestBio?.weight_kg ?? null;
-  const previousWeight = previousBio?.weight_kg ?? null;
-  const weightDelta = getDifference(latestWeight, previousWeight);
-  const weightGoal = profile?.weight_goal_kg ?? null;
-  const movingTowardGoal =
-    weightDelta == null
-      ? null
-      : weightGoal != null && latestWeight != null
-        ? (latestWeight > weightGoal && weightDelta < 0) || (latestWeight < weightGoal && weightDelta > 0)
-        // Sem meta cadastrada, perda de peso já conta como progresso (maioria dos pacientes
-        // está em acompanhamento de emagrecimento); ganho de peso fica neutro, já que não
-        // sabemos se o paciente está buscando ganho de massa.
-        : weightDelta < 0
-          ? true
-          : null;
 
   return (
     <div className="min-h-full bg-[hsl(var(--background))]">
@@ -250,100 +214,13 @@ export default function Home() {
         />
 
         <section className="space-y-3">
-          <SectionLabel>Acompanhamento</SectionLabel>
-          <div className="relative">
-            <div
-              ref={summaryCarouselRef}
-              className="hide-scrollbar flex gap-3 overflow-x-auto pb-1 snap-x snap-mandatory"
-            >
-            <Link
-              to="/body-progress"
-              className={cn(SLIDE_CLASS, "flex flex-col gap-1.5 border border-white/10 bg-card px-4 py-3.5")}
-            >
-              <div className="flex items-center gap-2">
-                <span className="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary">
-                  {weightDelta != null && weightDelta < 0 ? (
-                    <TrendingDown className="h-3.5 w-3.5" />
-                  ) : (
-                    <TrendingUp className="h-3.5 w-3.5" />
-                  )}
-                </span>
-                <p className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-primary">Evolução</p>
-              </div>
-              <div className="flex min-h-0 flex-1 flex-col justify-center">
-                {latestWeight != null ? (
-                  <>
-                    <p className="text-[26px] font-black leading-none text-foreground">
-                      {formatWeight(latestWeight)} kg
-                    </p>
-                    {weightDelta != null ? (
-                      <p className="mt-1.5 text-xs font-semibold text-muted-foreground">
-                        <span
-                          className={cn(
-                            movingTowardGoal == null ? "" : movingTowardGoal ? "text-emerald-300" : "text-amber-300",
-                          )}
-                        >
-                          {weightDelta < 0 ? "↓" : weightDelta > 0 ? "↑" : "="} {formatWeight(Math.abs(weightDelta))} kg
-                        </span>{" "}
-                        desde a última pesagem
-                      </p>
-                    ) : (
-                      <p className="mt-1.5 text-xs text-muted-foreground">Ainda sem comparação</p>
-                    )}
-                  </>
-                ) : (
-                  <p className="text-sm font-bold leading-snug text-foreground">Registre seu peso pra acompanhar</p>
-                )}
-              </div>
+          <div className="flex items-center justify-between px-1">
+            <SectionLabel>Planos</SectionLabel>
+            <Link to="/vital-360" className="flex shrink-0 items-center gap-0.5 text-xs font-extrabold text-primary">
+              Ver todos
+              <ChevronRight className="h-3.5 w-3.5" />
             </Link>
-
-            <Link
-              to="/body-progress"
-              className={cn(SLIDE_CLASS, "flex flex-col gap-1.5 border border-white/10 bg-card px-4 py-3.5")}
-            >
-              <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-primary">Evolução visual</p>
-              <div className="flex min-h-0 flex-1 gap-2">
-                {[previousPhoto, latestPhoto].map((photo, index) =>
-                  photo ? (
-                    <img
-                      key={photo.id}
-                      src={resolveUploadUrl(photo.image_url) ?? undefined}
-                      alt="Foto de evolução"
-                      className="h-full flex-1 rounded-xl object-cover"
-                    />
-                  ) : (
-                    <div
-                      key={`empty-${index}`}
-                      className="flex h-full flex-1 items-center justify-center rounded-xl border border-dashed border-white/15 text-muted-foreground"
-                    >
-                      <Camera className="h-5 w-5" />
-                    </div>
-                  ),
-                )}
-              </div>
-            </Link>
-            </div>
-            <button
-              type="button"
-              onClick={() => summaryCarouselRef.current?.scrollBy({ left: -260, behavior: "smooth" })}
-              aria-label="Ver anterior no resumo"
-              className="absolute left-1 top-[27px] flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-white/10 bg-card text-foreground shadow-elegant"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-            <button
-              type="button"
-              onClick={() => summaryCarouselRef.current?.scrollBy({ left: 260, behavior: "smooth" })}
-              aria-label="Ver mais no resumo"
-              className="absolute right-1 top-[27px] flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-white/10 bg-card text-foreground shadow-elegant"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </button>
           </div>
-        </section>
-
-        <section className="space-y-3">
-          <SectionLabel>Planos</SectionLabel>
           <div className="hide-scrollbar flex gap-3 overflow-x-auto pb-1 snap-x snap-mandatory">
             {homePlans.map((plan) => {
               const cardClassName = cn(
