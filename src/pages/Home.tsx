@@ -168,9 +168,11 @@ export default function Home() {
           </div>
         </header>
 
-        <WeeklyCaloriesChart
-          entries={(strengthWorkouts ?? []).map((workout) => ({ date: workout.date, calories: workout.calories }))}
-        />
+        <div className="mt-2">
+          <WeeklyCaloriesChart
+            entries={(strengthWorkouts ?? []).map((workout) => ({ date: workout.date, calories: workout.calories }))}
+          />
+        </div>
 
         <section className="space-y-3">
           <div className="flex items-center justify-between px-1">
@@ -183,7 +185,7 @@ export default function Home() {
           <div className="hide-scrollbar flex gap-3 overflow-x-auto pb-1 snap-x snap-mandatory">
             {homePlans.map((plan) => {
               const cardClassName = cn(
-                "flex min-h-[176px] w-[240px] shrink-0 snap-center flex-col justify-between gap-3 rounded-[1.35rem] border border-white/10 bg-gradient-primary p-4 shadow-elegant",
+                "flex aspect-[303/168] w-[92%] shrink-0 snap-center flex-col justify-between gap-2.5 rounded-[1.35rem] border border-white/10 bg-gradient-primary p-3.5 shadow-elegant",
                 plan.available ? "transition-transform hover:-translate-y-0.5" : "opacity-70",
               );
 
