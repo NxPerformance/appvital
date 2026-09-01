@@ -71,7 +71,7 @@ export default function Onboarding() {
 
   if (showGetStarted) {
     return (
-      <div className="min-h-[100svh] overflow-y-auto bg-background text-foreground">
+      <div data-theme="preto" className="min-h-[100svh] overflow-y-auto bg-background text-foreground">
         <div className="mx-auto flex min-h-[100svh] w-full max-w-[430px] flex-col px-6 pb-8 lg:grid lg:max-w-none lg:grid-cols-[1.08fr_0.92fr] lg:gap-10 lg:p-10">
           <div className="relative -mx-6 h-[38svh] min-h-[260px] max-h-[340px] overflow-hidden bg-background lg:mx-0 lg:h-auto lg:max-h-none lg:rounded-[2rem] lg:border lg:border-white/10 lg:shadow-elegant">
             <div className="grid h-full grid-cols-3 gap-2 px-2">
@@ -128,7 +128,7 @@ export default function Onboarding() {
   }
 
   return (
-    <div className="min-h-[100svh] overflow-hidden bg-background text-white">
+    <div data-theme="preto" className="min-h-[100svh] overflow-hidden bg-background text-white">
       <div className="relative mx-auto min-h-[100svh] w-full max-w-[430px] overflow-hidden lg:max-w-none">
         <div
           className="absolute inset-0 bg-cover bg-no-repeat transition-all duration-500 lg:inset-y-10 lg:left-10 lg:right-[48%] lg:rounded-[2rem] lg:border lg:border-white/10 lg:shadow-elegant"

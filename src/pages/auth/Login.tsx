@@ -47,8 +47,8 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen overflow-hidden bg-background text-foreground lg:grid lg:grid-cols-[1.05fr_0.95fr]">
-      <section className="relative hidden min-h-screen overflow-hidden bg-[#1c0a26] p-10 lg:flex">
+    <div data-theme="preto" className="min-h-screen overflow-hidden bg-background text-foreground lg:grid lg:grid-cols-[1.05fr_0.95fr]">
+      <section className="relative hidden min-h-screen overflow-hidden bg-[hsl(var(--background-strong))] p-10 lg:flex">
         <div
           className="absolute inset-0 bg-cover bg-center opacity-45"
           style={{ backgroundImage: "url('/images/workout-examples-ai.jpg')" }}
