@@ -6,10 +6,8 @@ import {
   Bell,
   Calendar,
   Camera,
-  CheckCircle2,
   ChevronLeft,
   ChevronRight,
-  Clock,
   Dumbbell,
   Flame,
   Home as HomeIcon,
@@ -21,12 +19,12 @@ import {
   Target,
   TrendingDown,
   TrendingUp,
-  XCircle,
   type LucideIcon,
 } from "lucide-react";
 import { differenceInCalendarDays, endOfWeek, format, parseISO, startOfWeek } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { WeeklyCaloriesChart } from "@/components/home/WeeklyCaloriesChart";
+import { APPOINTMENT_TYPE_LABELS, APPOINTMENT_STATUS_LABELS } from "@/lib/appointmentLabels";
 import { useProfile } from "@/hooks/useProfile";
 import { useTheme } from "@/hooks/useTheme";
 import { useBodyProgress } from "@/hooks/useBodyProgress";
@@ -43,19 +41,6 @@ interface AppointmentEntry {
   scheduled_time: string | null;
   admin_notes: string | null;
 }
-
-const appointmentTypeLabels: Record<string, string> = {
-  consulta_online: "Consulta online",
-  consulta_presencial: "Consulta presencial",
-  bioimpedancia: "Bioimpedância",
-};
-
-const appointmentStatusLabels: Record<string, { label: string; className: string; icon: LucideIcon }> = {
-  pending: { label: "Aguardando contato", className: "bg-yellow-500/15 text-yellow-300", icon: Clock },
-  confirmed: { label: "Agendado", className: "bg-emerald-400/15 text-emerald-300", icon: CheckCircle2 },
-  completed: { label: "Concluído", className: "bg-sky-400/15 text-sky-300", icon: CheckCircle2 },
-  cancelled: { label: "Cancelado", className: "bg-red-400/15 text-red-300", icon: XCircle },
-};
 
 function getGreeting(hour: number) {
   if (hour < 12) return "Bom dia";
@@ -109,7 +94,7 @@ export default function Home() {
   const { profile, loading, error: profileError } = useProfile();
   const { theme, setTheme } = useTheme();
   const { photos } = useBodyProgress();
-  const { latestRecord: latestBio, previousRecord: previousBio } = useBioimpedance();
+  const { latestRecord: latestBio, previousRecord: previousBio, getDifference } = useBioimpedance();
   const today = useMemo(() => new Date(), []);
   const [activeDraft, setActiveDraft] = useState<ActiveWorkoutDraft | null>(null);
   const summaryCarouselRef = useRef<HTMLDivElement>(null);
@@ -183,7 +168,7 @@ export default function Home() {
 
   const latestWeight = latestBio?.weight_kg ?? null;
   const previousWeight = previousBio?.weight_kg ?? null;
-  const weightDelta = latestWeight != null && previousWeight != null ? latestWeight - previousWeight : null;
+  const weightDelta = getDifference(latestWeight, previousWeight);
   const weightGoal = profile?.weight_goal_kg ?? null;
   const movingTowardGoal =
     weightDelta == null
@@ -348,7 +333,7 @@ export default function Home() {
                 </div>
                 {nextAppointment
                   ? (() => {
-                      const status = appointmentStatusLabels[nextAppointment.status] ?? appointmentStatusLabels.pending;
+                      const status = APPOINTMENT_STATUS_LABELS[nextAppointment.status] ?? APPOINTMENT_STATUS_LABELS.pending;
                       const StatusIcon = status.icon;
                       return (
                         <span
@@ -369,7 +354,7 @@ export default function Home() {
                 {nextAppointment ? (
                   <>
                     <p className="truncate text-base font-black leading-tight text-foreground">
-                      {appointmentTypeLabels[nextAppointment.type] ?? nextAppointment.type}
+                      {APPOINTMENT_TYPE_LABELS[nextAppointment.type] ?? nextAppointment.type}
                     </p>
                     <p className="text-xs text-muted-foreground">
                       {nextAppointment.scheduled_date

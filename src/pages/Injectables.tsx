@@ -30,18 +30,7 @@ import { toast } from 'sonner';
 import { ptBR } from 'date-fns/locale';
 import { InjectablesAnalytics } from '@/components/injectables/InjectablesAnalytics';
 import { formatDateSafe, toDateOnlyString } from '@/lib/dateUtils';
-
-const locationLabels: Record<string, string> = {
-  abdomen: 'Abdômen',
-  coxa: 'Coxa',
-  braco: 'Braço',
-};
-
-const bodyLocations = [
-  { value: 'abdomen', label: 'Abdômen' },
-  { value: 'coxa', label: 'Coxa' },
-  { value: 'braco', label: 'Braço' },
-];
+import { BODY_LOCATIONS, BODY_LOCATION_LABELS } from '@/lib/injectableLocations';
 
 interface Injectable {
   id: string;
@@ -117,7 +106,7 @@ export default function Injectables() {
 
   const latestInjectable = sortedInjectables[0] ?? null;
   const uniqueMedications = new Set(sortedInjectables.map((item) => item.medication)).size;
-  const lastLocation = latestInjectable ? locationLabels[latestInjectable.location] || latestInjectable.location : '--';
+  const lastLocation = latestInjectable ? BODY_LOCATION_LABELS[latestInjectable.location] || latestInjectable.location : '--';
 
   const updateMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -350,7 +339,7 @@ export default function Injectables() {
                 </div>
                 <div className="flex items-center gap-2">
                   <MapPin className="w-4 h-4" />
-                  <span>{locationLabels[injectable.location] || injectable.location}</span>
+                  <span>{BODY_LOCATION_LABELS[injectable.location] || injectable.location}</span>
                 </div>
               </div>
 
@@ -425,7 +414,7 @@ export default function Injectables() {
                   <SelectValue placeholder="Selecione o local" />
                 </SelectTrigger>
                 <SelectContent>
-                  {bodyLocations.map((loc) => (
+                  {BODY_LOCATIONS.map((loc) => (
                     <SelectItem key={loc.value} value={loc.value}>
                       {loc.label}
                     </SelectItem>

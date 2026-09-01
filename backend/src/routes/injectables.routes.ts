@@ -5,6 +5,7 @@ import { requireAuth } from "../middleware/auth.js";
 import { asyncHandler } from "../utils/async-handler.js";
 import { HttpError } from "../middleware/error-handler.js";
 import { getRouteParam } from "../utils/params.js";
+import { assertOwner } from "../utils/ownership.js";
 
 export const injectablesRouter = Router();
 
@@ -87,9 +88,7 @@ injectablesRouter.patch(
     if (!existing) {
       throw new HttpError(404, "Registro nao encontrado");
     }
-    if (existing.userId !== req.auth!.userId) {
-      throw new HttpError(403, "Acesso negado");
-    }
+    assertOwner(existing.userId, req.auth!.userId);
 
     const injectable = await prisma.injectable.update({
       where: { id },
@@ -116,9 +115,7 @@ injectablesRouter.delete(
     if (!existing) {
       throw new HttpError(404, "Registro nao encontrado");
     }
-    if (existing.userId !== req.auth!.userId) {
-      throw new HttpError(403, "Acesso negado");
-    }
+    assertOwner(existing.userId, req.auth!.userId);
 
     await prisma.injectable.delete({ where: { id } });
     res.status(204).send();

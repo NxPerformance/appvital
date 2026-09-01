@@ -7,6 +7,7 @@ import { HttpError } from "../middleware/error-handler.js";
 import { getRouteParam } from "../utils/params.js";
 import { serializeBodyProgressPhoto } from "../utils/serializers.js";
 import { bodyProgressUpload, deleteUploadedFileSafe } from "../lib/upload.js";
+import { assertOwner } from "../utils/ownership.js";
 
 export const bodyProgressRouter = Router();
 
@@ -69,9 +70,7 @@ bodyProgressRouter.delete(
     if (!existing) {
       throw new HttpError(404, "Foto nao encontrada");
     }
-    if (existing.userId !== req.auth!.userId) {
-      throw new HttpError(403, "Acesso negado");
-    }
+    assertOwner(existing.userId, req.auth!.userId);
 
     await prisma.bodyProgressPhoto.delete({ where: { id } });
     deleteUploadedFileSafe(existing.imageUrl);
