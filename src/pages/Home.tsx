@@ -13,11 +13,10 @@ import {
   RotateCcw,
   Sparkles,
   Sun,
-  Target,
   Zap,
   type LucideIcon,
 } from "lucide-react";
-import { endOfWeek, format, parseISO, startOfWeek } from "date-fns";
+import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { WeeklyCaloriesChart } from "@/components/home/WeeklyCaloriesChart";
 import { useProfile } from "@/hooks/useProfile";
@@ -139,18 +138,6 @@ export default function Home() {
   const firstName = profile?.full_name?.split(" ")[0] || "Paciente";
   const greeting = getGreeting(today.getHours());
 
-  const weekStart = startOfWeek(today, { weekStartsOn: 0 });
-  const weekEnd = endOfWeek(today, { weekStartsOn: 0 });
-
-  const workoutDates = (strengthWorkouts ?? []).map((workout) => parseISO(`${workout.date}T12:00:00`));
-  const dateKey = (date: Date) => format(date, "yyyy-MM-dd");
-
-  const weekWorkoutDays = new Set(
-    workoutDates.filter((date) => date >= weekStart && date <= weekEnd).map(dateKey),
-  ).size;
-  const weeklyGoal = profile?.weekly_workout_goal ?? null;
-  const weeklyGoalPercent = weeklyGoal ? Math.min(100, Math.round((weekWorkoutDays / weeklyGoal) * 100)) : null;
-
   return (
     <div className="min-h-full bg-[hsl(var(--background))]">
       <div className="mx-auto flex min-h-full w-full max-w-[430px] flex-col gap-4 px-5 pb-28 pt-6 md:max-w-[1180px] md:px-7 md:pb-8 md:pt-7">
@@ -180,34 +167,6 @@ export default function Home() {
             </button>
           </div>
         </header>
-
-        {weeklyGoal ? (
-          <div className="rounded-[1.15rem] border border-white/10 bg-card p-4 shadow-elegant">
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary">
-                  <Target className="h-4 w-4" />
-                </span>
-                <p className="text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground">Sua semana</p>
-              </div>
-              <span className="shrink-0 text-sm font-extrabold text-foreground">
-                {weekWorkoutDays} de {weeklyGoal} treinos
-              </span>
-            </div>
-            <div className="mt-3 h-2 overflow-hidden rounded-full bg-secondary/50">
-              <div
-                className="h-full rounded-full bg-gradient-primary transition-all"
-                style={{ width: `${weeklyGoalPercent}%` }}
-              />
-            </div>
-            <Link
-              to="/settings?edit=weekly_goal"
-              className="mt-2 inline-block text-[11px] font-semibold text-muted-foreground/70 hover:text-muted-foreground"
-            >
-              Alterar meta
-            </Link>
-          </div>
-        ) : null}
 
         <WeeklyCaloriesChart
           entries={(strengthWorkouts ?? []).map((workout) => ({ date: workout.date, calories: workout.calories }))}

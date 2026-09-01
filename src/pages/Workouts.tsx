@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -9,9 +9,12 @@ import {
   History,
   Home as HomeIcon,
   PersonStanding,
+  Target,
   type LucideIcon,
 } from 'lucide-react';
+import { endOfWeek, format, parseISO, startOfWeek } from 'date-fns';
 import { useAuth } from '@/hooks/useAuth';
+import { useProfile } from '@/hooks/useProfile';
 import { fetchStrengthWorkouts, type StrengthWorkoutApi } from '@/lib/workoutApi';
 import { cn } from '@/lib/utils';
 
@@ -36,6 +39,7 @@ function formatNumber(value: number) {
 export default function Workouts() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { profile } = useProfile();
   const [recentWorkouts, setRecentWorkouts] = useState<StrengthWorkoutApi[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -67,6 +71,22 @@ export default function Workouts() {
   const totalCalories = recentWorkouts.reduce((sum, workout) => sum + (workout.calories ?? 0), 0);
   const totalMinutes = recentWorkouts.reduce((sum, workout) => sum + (workout.duration_min ?? 0), 0);
 
+  const weeklyGoal = profile?.weekly_workout_goal ?? null;
+  const weekWorkoutDays = useMemo(() => {
+    const today = new Date();
+    const weekStart = startOfWeek(today, { weekStartsOn: 0 });
+    const weekEnd = endOfWeek(today, { weekStartsOn: 0 });
+    const dateKey = (date: Date) => format(date, 'yyyy-MM-dd');
+
+    return new Set(
+      recentWorkouts
+        .map((workout) => parseISO(`${workout.date}T12:00:00`))
+        .filter((date) => date >= weekStart && date <= weekEnd)
+        .map(dateKey),
+    ).size;
+  }, [recentWorkouts]);
+  const weeklyGoalPercent = weeklyGoal ? Math.min(100, Math.round((weekWorkoutDays / weeklyGoal) * 100)) : null;
+
   return (
     <div className="min-h-full bg-[hsl(var(--background))]">
       <div className="mx-auto flex min-h-full w-full max-w-[430px] flex-col gap-5 px-5 pb-28 pt-6 md:max-w-[1180px] md:px-7 md:pb-8 md:pt-7">
@@ -87,6 +107,34 @@ export default function Workouts() {
         <p className="text-sm leading-relaxed text-muted-foreground">
           Registre suas sessões de musculação: exercícios, séries, cargas e evolução ao longo do tempo.
         </p>
+
+        {weeklyGoal ? (
+          <div className="rounded-[1.15rem] border border-white/10 bg-card p-4 shadow-elegant">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary">
+                  <Target className="h-4 w-4" />
+                </span>
+                <p className="text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground">Sua semana</p>
+              </div>
+              <span className="shrink-0 text-sm font-extrabold text-foreground">
+                {weekWorkoutDays} de {weeklyGoal} treinos
+              </span>
+            </div>
+            <div className="mt-3 h-2 overflow-hidden rounded-full bg-secondary/50">
+              <div
+                className="h-full rounded-full bg-gradient-primary transition-all"
+                style={{ width: `${weeklyGoalPercent}%` }}
+              />
+            </div>
+            <Link
+              to="/settings?edit=weekly_goal"
+              className="mt-2 inline-block text-[11px] font-semibold text-muted-foreground/70 hover:text-muted-foreground"
+            >
+              Alterar meta
+            </Link>
+          </div>
+        ) : null}
 
         {!loading ? (
           <section className="grid grid-cols-3 gap-3">
