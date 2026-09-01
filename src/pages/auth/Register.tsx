@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, Navigate } from 'react-router-dom';
-import { ArrowLeft, BarChart3, CheckCircle2, Eye, EyeOff, Heart, ShieldCheck, Sparkles } from 'lucide-react';
+import { ArrowLeft, Eye, EyeOff, Heart, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
@@ -53,8 +53,6 @@ export default function Register() {
     proof_notes: '',
   });
   const [accountType, setAccountType] = useState<'client' | 'personal'>('client');
-  const [selectedPlan, setSelectedPlan] = useState<'essential' | 'premium'>('premium');
-  const [paymentMethod, setPaymentMethod] = useState<'pix' | 'credit_card'>('pix');
   const [showPassword, setShowPassword] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [selfPhoto, setSelfPhoto] = useState<File | null>(null);
@@ -214,10 +212,6 @@ export default function Register() {
         payload.append('password', formData.password);
         payload.append('terms_accepted', String(termsAccepted));
         payload.append('account_type', accountType);
-        payload.append('selected_plan', selectedPlan);
-        if (selectedPlan === 'premium') {
-          payload.append('initial_payment_method', paymentMethod);
-        }
         payload.append('trainer_application', JSON.stringify(trainerApplication));
         payload.append('self_photo', selfPhoto!);
         payload.append('document_photo', documentPhoto!);
@@ -234,8 +228,6 @@ export default function Register() {
         password: formData.password,
         terms_accepted: termsAccepted,
         account_type: accountType,
-        selected_plan: selectedPlan,
-        initial_payment_method: selectedPlan === 'premium' ? paymentMethod : null,
         trainer_application: trainerApplication,
         });
       }
@@ -245,25 +237,10 @@ export default function Register() {
         description:
           accountType === 'personal'
             ? 'Seu cadastro de personal ficou pendente de aprovação pela administração.'
-            : selectedPlan === 'premium'
-              ? 'Agora vamos finalizar seu acesso premium.'
-              : 'Bem-vindo(a)!',
+            : 'Bem-vindo(a)!',
       });
 
-      navigate(
-        accountType === 'personal' ? '/' : selectedPlan === 'premium' ? '/premium' : '/',
-        accountType === 'personal'
-          ? undefined
-          : selectedPlan === 'premium'
-            ? {
-                state: {
-                  autostartCheckout: true,
-                  paymentMethod,
-                  fromRegister: true,
-                },
-              }
-            : undefined,
-      );
+      navigate('/');
     } catch (err) {
       toast({
         variant: 'destructive',
@@ -300,23 +277,9 @@ export default function Register() {
                 Crie sua conta com conforto no desktop.
               </h1>
               <p className="text-lg leading-relaxed text-muted-foreground">
-                Preencha seus dados, escolha o tipo de acesso e siga para o plano ideal sem ficar preso ao formato mobile.
+                Preencha seus dados e escolha o tipo de acesso sem ficar preso ao formato mobile.
               </p>
             </div>
-          </div>
-          <div className="relative grid gap-3">
-            {[
-              { icon: CheckCircle2, label: 'Cadastro real via API' },
-              { icon: BarChart3, label: 'Premium conectado ao checkout' },
-              { icon: ShieldCheck, label: 'Personal com validação' },
-            ].map((item) => (
-              <div key={item.label} className="flex items-center gap-3 rounded-2xl border border-white/10 bg-background/45 p-4">
-                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/15 text-primary">
-                  <item.icon className="h-5 w-5" />
-                </span>
-                <span className="font-semibold">{item.label}</span>
-              </div>
-            ))}
           </div>
         </aside>
 
@@ -507,7 +470,7 @@ export default function Register() {
                 <div>
                   <p className="font-medium">Sou aluno / cliente</p>
                   <p className="text-sm text-muted-foreground">
-                    Fluxo normal de cadastro com opção de plano Essencial ou Premium.
+                    Cria sua conta para registrar treinos e acompanhar sua evolução.
                   </p>
                 </div>
               </Label>
@@ -524,60 +487,7 @@ export default function Register() {
             </RadioGroup>
           </div>
 
-          {accountType === 'client' ? (
-            <div className="space-y-3 rounded-2xl border border-white/5 bg-card/70 p-4 shadow-elegant">
-              <div>
-                <h2 className="font-semibold">Escolha seu plano ao criar a conta</h2>
-                <p className="text-sm text-muted-foreground">
-                  Você pode usar o caderno de treinos gratuito ou seguir direto para as estatísticas Premium.
-                </p>
-              </div>
-
-              <RadioGroup
-                value={selectedPlan}
-                onValueChange={(value) => setSelectedPlan(value as 'essential' | 'premium')}
-                className="gap-3"
-              >
-                <Label className="flex cursor-pointer items-start gap-3 rounded-xl border border-white/10 p-4 transition-colors hover:bg-secondary/50">
-                  <RadioGroupItem value="essential" className="mt-1" />
-                  <div>
-                    <p className="font-medium">Caderno de treinos gratuito</p>
-                    <p className="text-sm text-muted-foreground">Cria a conta sem cobrança para registrar e consultar seus treinos.</p>
-                  </div>
-                </Label>
-
-                <Label className="flex cursor-pointer items-start gap-3 rounded-xl border border-primary/30 bg-primary/5 p-4 transition-colors hover:bg-primary/10">
-                  <RadioGroupItem value="premium" className="mt-1" />
-                  <div>
-                    <p className="font-medium">Quero ser Premium agora</p>
-                    <p className="text-sm text-muted-foreground">
-                      A conta é criada e você segue direto para finalizar o pagamento das estatísticas.
-                    </p>
-                  </div>
-                </Label>
-              </RadioGroup>
-
-              {selectedPlan === 'premium' && (
-                <div className="space-y-3 rounded-xl border border-white/10 bg-background/30 p-3">
-                  <p className="text-sm font-medium">Forma de pagamento inicial</p>
-                  <RadioGroup
-                    value={paymentMethod}
-                    onValueChange={(value) => setPaymentMethod(value as 'pix' | 'credit_card')}
-                    className="grid gap-3 sm:grid-cols-2"
-                  >
-                    <Label className="flex cursor-pointer items-center gap-3 rounded-lg border border-white/10 p-3 transition-colors hover:bg-secondary/50">
-                      <RadioGroupItem value="pix" />
-                      <span className="text-sm">PIX</span>
-                    </Label>
-                    <Label className="flex cursor-pointer items-center gap-3 rounded-lg border border-white/10 p-3 transition-colors hover:bg-secondary/50">
-                      <RadioGroupItem value="credit_card" />
-                      <span className="text-sm">Cartão de crédito</span>
-                    </Label>
-                  </RadioGroup>
-                </div>
-              )}
-            </div>
-          ) : (
+          {accountType === 'personal' && (
             <div className="space-y-4 rounded-2xl border border-primary/30 bg-primary/5 p-4 shadow-elegant">
               <div>
                 <h2 className="font-semibold">Validação de personal trainer</h2>
@@ -714,9 +624,7 @@ export default function Register() {
               ? 'Criando...'
               : accountType === 'personal'
                 ? 'Enviar cadastro para aprovação'
-                : selectedPlan === 'premium'
-                  ? 'Criar conta e ir para o pagamento'
-                  : 'Criar conta'}
+                : 'Criar conta'}
           </Button>
         </form>
 
