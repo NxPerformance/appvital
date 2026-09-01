@@ -91,10 +91,10 @@ const exampleWorkouts: Array<{
   icon: LucideIcon;
   imagePosition: string;
 }> = [
-  { title: "Peito e Tríceps", meta: "45 min · Intermediário", type: "academia", icon: Dumbbell, imagePosition: "left top" },
+  { title: "Academia", meta: "45 min · Intermediário", type: "academia", icon: Dumbbell, imagePosition: "left top" },
   { title: "HIIT Full Body", meta: "30 min · Avançado", type: "crossfit", icon: Flame, imagePosition: "center top" },
   { title: "Treino em Casa", meta: "20 min · Iniciante", type: "em-casa", icon: HomeIcon, imagePosition: "right top" },
-  { title: "Calistenia Base", meta: "25 min · Intermediário", type: "calistenia", icon: PersonStanding, imagePosition: "center bottom" },
+  { title: "Calistenia", meta: "25 min · Intermediário", type: "calistenia", icon: PersonStanding, imagePosition: "center bottom" },
 ];
 
 export default function Home() {
