@@ -274,7 +274,7 @@ export default function Home() {
               <Link
                 key={workout.title}
                 to={`/workouts/musculacao/${workout.type}`}
-                className="relative h-[190px] w-[154px] shrink-0 overflow-hidden rounded-[1.15rem] border border-white/10 bg-cover shadow-elegant transition-transform hover:-translate-y-0.5"
+                className="relative h-[190px] w-[154px] shrink-0 overflow-hidden rounded-[1.15rem] border border-white/10 bg-cover transition-transform hover:-translate-y-0.5"
                 style={{
                   backgroundImage: "url('/images/workout-examples-ai.jpg')",
                   backgroundPosition: workout.imagePosition,
