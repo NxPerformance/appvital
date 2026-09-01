@@ -1,5 +1,4 @@
 import { useMemo, useState } from "react";
-import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, XAxis, YAxis } from "recharts";
 import {
   eachDayOfInterval,
   endOfMonth,
@@ -12,6 +11,7 @@ import {
 } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ChevronDown, Flame } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface WeeklyCaloriesChartProps {
   entries: Array<{ date: string; calories: number | null }>;
@@ -32,6 +32,10 @@ const DAY_LETTERS = ["D", "S", "T", "Q", "Q", "S", "S"];
 const DAILY_CALORIE_TARGET = 500;
 const WEEKLY_CALORIE_TARGET = DAILY_CALORIE_TARGET * 3;
 
+// Altura mínima da barra em % — mesmo um dia com 0 kcal precisa de um
+// "coto" visível, senão o dia some da linha do gráfico.
+const MIN_BAR_HEIGHT_PERCENT = 6;
+
 interface ChartBar {
   id: string;
   xLabel: string;
@@ -40,18 +44,10 @@ interface ChartBar {
   representativeDate: Date;
 }
 
-interface CalloutProps {
-  x: number;
-  y: number;
-  width: number;
-  index: number;
-}
-
 export function WeeklyCaloriesChart({ entries }: WeeklyCaloriesChartProps) {
   const today = useMemo(() => new Date(), []);
   const [period, setPeriod] = useState<Period>("week");
   const [selectedDate, setSelectedDate] = useState<Date>(today);
-  const [activeIndex, setActiveIndex] = useState<number | null>(null);
 
   const weekBars = useMemo<ChartBar[]>(() => {
     const start = startOfWeek(today, { weekStartsOn: 0 });
@@ -107,7 +103,6 @@ export function WeeklyCaloriesChart({ entries }: WeeklyCaloriesChartProps) {
 
   const bars = period === "week" ? weekBars : monthBars;
   const selected = bars.find((bar) => bar.isSelected(selectedDate)) ?? bars[bars.length - 1];
-  const selectedIndex = bars.findIndex((bar) => bar.id === selected.id);
 
   const chartMax = useMemo(
     () => Math.max(period === "week" ? DAILY_CALORIE_TARGET : WEEKLY_CALORIE_TARGET, ...bars.map((bar) => bar.calories)),
@@ -122,43 +117,6 @@ export function WeeklyCaloriesChart({ entries }: WeeklyCaloriesChartProps) {
   const togglePeriod = () => {
     setPeriod((current) => (current === "week" ? "month" : "week"));
     setSelectedDate(today);
-    setActiveIndex(null);
-  };
-
-  const renderSelectedCallout = (props: CalloutProps) => {
-    const { x, y, width, index } = props;
-    const bar = bars[index];
-    if (!bar || index !== activeIndex) return <g key={`callout-${index}`} />;
-
-    const label = `${bar.calories} kcal`;
-    const boxWidth = Math.max(56, label.length * 7 + 20);
-    const boxHeight = 26;
-    const cx = x + width / 2;
-    const boxY = y - boxHeight - 8;
-
-    return (
-      <g key={`callout-${index}`}>
-        <rect
-          x={cx - boxWidth / 2}
-          y={boxY}
-          width={boxWidth}
-          height={boxHeight}
-          rx={8}
-          fill="hsl(var(--card))"
-          stroke="hsl(var(--border))"
-        />
-        <text
-          x={cx}
-          y={boxY + boxHeight / 2 + 4}
-          textAnchor="middle"
-          fontSize={12}
-          fontWeight={700}
-          fill="hsl(var(--primary))"
-        >
-          {label}
-        </text>
-      </g>
-    );
   };
 
   return (
@@ -168,16 +126,7 @@ export function WeeklyCaloriesChart({ entries }: WeeklyCaloriesChartProps) {
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary">
             <Flame className="h-4 w-4" />
           </span>
-          <div>
-            <p className="text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground">
-              {period === "week"
-                ? isToday(selected.representativeDate)
-                  ? "Calorias hoje"
-                  : format(selected.representativeDate, "EEEE", { locale: ptBR })
-                : `${monthLabel} · Semana ${selectedIndex + 1}`}
-            </p>
-            <p className="text-lg font-extrabold leading-none text-foreground">{selected.calories} kcal</p>
-          </div>
+          <p className="text-sm font-extrabold text-foreground">Calorias</p>
         </div>
         <button
           type="button"
@@ -189,81 +138,64 @@ export function WeeklyCaloriesChart({ entries }: WeeklyCaloriesChartProps) {
         </button>
       </div>
 
-      <div className="mt-4 h-32 md:h-40">
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart
-            data={bars}
-            margin={{ top: 34, right: 4, left: 0, bottom: 0 }}
-            barCategoryGap="18%"
-            barSize={period === "week" ? 36 : 42}
-            onMouseLeave={() => setActiveIndex(null)}
-          >
-            <defs>
-              <linearGradient id="calorieBarDefault" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="hsl(270, 45%, 62%)" />
-                <stop offset="100%" stopColor="hsl(270, 40%, 42%)" />
-              </linearGradient>
-              <linearGradient id="calorieBarSelected" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={1} />
-                <stop offset="100%" stopColor="hsl(var(--primary-strong))" stopOpacity={1} />
-              </linearGradient>
-            </defs>
-            <CartesianGrid vertical={false} stroke="hsl(var(--border))" strokeDasharray="3 4" />
-            <YAxis
-              domain={[0, chartMax]}
-              tickCount={6}
-              axisLine={false}
-              tickLine={false}
-              tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
-              width={36}
-            />
-            <XAxis
-              dataKey="xLabel"
-              axisLine={false}
-              tickLine={false}
-              height={20}
-              tick={(props: { x: number; y: number; payload: { index: number; value: string } }) => {
-                const bar = bars[props.payload.index];
-                const isSelected = bar && bar.isSelected(selectedDate);
-                return (
-                  <text
-                    x={props.x}
-                    y={props.y + 12}
-                    textAnchor="middle"
-                    fontSize={11}
-                    fontWeight={700}
-                    fill={isSelected ? "hsl(var(--primary))" : "hsl(var(--muted-foreground))"}
-                  >
-                    {props.payload.value}
-                  </text>
-                );
-              }}
-            />
-            <Bar
-              dataKey="calories"
-              radius={[8, 8, 8, 8]}
-              onClick={(_data: unknown, index: number) => {
-                const bar = bars[index];
-                if (!bar) return;
-                setSelectedDate(bar.representativeDate);
-                setActiveIndex(index);
-              }}
-              cursor="pointer"
-              isAnimationActive={false}
-              label={renderSelectedCallout}
+      {period === "month" ? (
+        <p className="mt-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+          {monthLabel}
+        </p>
+      ) : null}
+
+      <div className="mt-8 flex h-28 items-end justify-between gap-2 md:h-32">
+        {bars.map((bar) => {
+          const isSelected = bar.isSelected(selectedDate);
+          const heightPercent = Math.max(
+            MIN_BAR_HEIGHT_PERCENT,
+            Math.round((bar.calories / chartMax) * 100),
+          );
+
+          return (
+            <button
+              key={bar.id}
+              type="button"
+              onClick={() => setSelectedDate(bar.representativeDate)}
+              className="flex h-full flex-1 flex-col items-center justify-end gap-2"
             >
-              {bars.map((bar, index) => (
-                <Cell
-                  key={bar.id}
-                  fill={bar.isSelected(selectedDate) ? "url(#calorieBarSelected)" : "url(#calorieBarDefault)"}
-                  onMouseEnter={() => setActiveIndex(index)}
-                  onMouseLeave={() => setActiveIndex(null)}
+              <div className="relative flex w-full flex-1 items-end justify-center">
+                {isSelected ? (
+                  <span
+                    className="absolute left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg border border-white/10 bg-background px-2 py-1 text-[11px] font-extrabold text-primary shadow-elegant"
+                    style={{ bottom: `calc(${heightPercent}% + 8px)` }}
+                  >
+                    {bar.calories} kcal
+                  </span>
+                ) : null}
+                <div
+                  className={cn(
+                    "w-full max-w-[32px] rounded-md transition-all",
+                    isSelected ? "bg-gradient-primary" : "bg-secondary",
+                  )}
+                  style={{ height: `${heightPercent}%` }}
                 />
-              ))}
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
+              </div>
+              <span
+                className={cn(
+                  "text-[11px] font-bold",
+                  isSelected ? "text-primary" : "text-muted-foreground",
+                )}
+              >
+                {bar.xLabel}
+              </span>
+            </button>
+          );
+        })}
       </div>
+
+      {period === "week" ? (
+        <p className="mt-3 text-center text-[11px] text-muted-foreground">
+          {isToday(selected.representativeDate)
+            ? "Hoje"
+            : format(selected.representativeDate, "EEEE, d 'de' MMMM", { locale: ptBR })}
+        </p>
+      ) : null}
     </div>
   );
 }
