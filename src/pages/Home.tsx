@@ -80,11 +80,17 @@ const vital360Cases: Array<{ name: string; plan: string }> = [
   { name: "Bruno", plan: "Completo" },
 ];
 
-const exampleWorkouts: Array<{ title: string; meta: string; type: string; icon: LucideIcon }> = [
-  { title: "Peito e Tríceps", meta: "45 min · Intermediário", type: "academia", icon: Dumbbell },
-  { title: "HIIT Full Body", meta: "30 min · Avançado", type: "crossfit", icon: Flame },
-  { title: "Treino em Casa", meta: "20 min · Iniciante", type: "em-casa", icon: HomeIcon },
-  { title: "Calistenia Base", meta: "25 min · Intermediário", type: "calistenia", icon: PersonStanding },
+const exampleWorkouts: Array<{
+  title: string;
+  meta: string;
+  type: string;
+  icon: LucideIcon;
+  imagePosition: string;
+}> = [
+  { title: "Peito e Tríceps", meta: "45 min · Intermediário", type: "academia", icon: Dumbbell, imagePosition: "left top" },
+  { title: "HIIT Full Body", meta: "30 min · Avançado", type: "crossfit", icon: Flame, imagePosition: "center top" },
+  { title: "Treino em Casa", meta: "20 min · Iniciante", type: "em-casa", icon: HomeIcon, imagePosition: "right top" },
+  { title: "Calistenia Base", meta: "25 min · Intermediário", type: "calistenia", icon: PersonStanding, imagePosition: "center bottom" },
 ];
 
 const SLIDE_CLASS =
@@ -489,14 +495,20 @@ export default function Home() {
               <Link
                 key={workout.title}
                 to={`/workouts/musculacao/${workout.type}`}
-                className="w-[170px] shrink-0 overflow-hidden rounded-[1.15rem] border border-white/10 bg-card shadow-elegant transition-transform hover:-translate-y-0.5"
+                className="relative h-[190px] w-[154px] shrink-0 overflow-hidden rounded-[1.15rem] border border-white/10 bg-cover shadow-elegant transition-transform hover:-translate-y-0.5"
+                style={{
+                  backgroundImage: "url('/images/workout-examples-ai.jpg')",
+                  backgroundPosition: workout.imagePosition,
+                  backgroundSize: "220% auto",
+                }}
               >
-                <div className="flex h-[100px] items-center justify-center bg-[linear-gradient(160deg,hsl(270_45%_34%),hsl(270_40%_20%))] text-primary">
-                  <workout.icon className="h-6 w-6" />
-                </div>
-                <div className="p-2.5">
-                  <p className="truncate text-[12.5px] font-extrabold text-foreground">{workout.title}</p>
-                  <p className="mt-0.5 text-[10.5px] text-muted-foreground">{workout.meta}</p>
+                <div className="absolute inset-0 bg-gradient-to-t from-background via-background/55 to-transparent" />
+                <span className="absolute left-3 top-3 flex h-8 w-8 items-center justify-center rounded-lg bg-background/70 text-primary backdrop-blur">
+                  <workout.icon className="h-4 w-4" />
+                </span>
+                <div className="absolute inset-x-3 bottom-3">
+                  <p className="text-[13px] font-extrabold leading-tight text-white">{workout.title}</p>
+                  <p className="mt-1 text-[10.5px] text-white/70">{workout.meta}</p>
                 </div>
               </Link>
             ))}
