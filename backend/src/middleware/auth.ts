@@ -3,6 +3,7 @@ import { verifyJwt } from "../lib/jwt.js";
 import { prisma } from "../lib/prisma.js";
 import { HttpError } from "./error-handler.js";
 import { CSRF_COOKIE_NAME, CSRF_HEADER_NAME, SESSION_COOKIE_NAME } from "../lib/auth-cookies.js";
+import { corsOrigins } from "../config/env.js";
 import type { UserRole } from "@prisma/client";
 
 const UNSAFE_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
@@ -43,15 +44,22 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
       }
     }
 
-    const assignments = await prisma.userRoleAssignment.findMany({
-      where: { userId: payload.sub },
-      select: { role: true },
+    // Look the user up by id rather than trusting the JWT payload alone, so
+    // a deleted account's still-valid (unexpired) token stops working
+    // immediately instead of staying "authenticated" with an empty role set.
+    const user = await prisma.user.findUnique({
+      where: { id: payload.sub },
+      select: { id: true, roles: { select: { role: true } } },
     });
 
+    if (!user) {
+      throw new HttpError(401, "Nao autenticado");
+    }
+
     req.auth = {
-      userId: payload.sub,
+      userId: user.id,
       email: payload.email,
-      roles: assignments.map((assignment) => assignment.role),
+      roles: user.roles.map((assignment) => assignment.role),
     };
 
     next();
@@ -62,6 +70,33 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
     }
     res.status(401).json({ message: "Nao autenticado" });
   }
+}
+
+function originFromHeader(value: string | undefined): string | null {
+  if (!value) return null;
+  try {
+    return new URL(value).origin;
+  } catch {
+    return null;
+  }
+}
+
+// Login/register issue a fresh session cookie before the double-submit CSRF
+// cookie exists, so requireAuth's check can't cover them. A cross-site HTML
+// form can still POST here (it doesn't need to read anything to submit
+// credentials or trigger a login), and the browser honors whatever
+// Set-Cookie the response carries regardless of who made the request. This
+// checks the request actually came from our own frontend origin - the only
+// signal available before a session exists - falling back to Referer when a
+// browser omits Origin on same-origin requests, and allowing requests with
+// neither header rather than breaking non-browser API clients.
+export function requireTrustedOrigin(req: Request, res: Response, next: NextFunction) {
+  const origin = originFromHeader(req.headers.origin) ?? originFromHeader(req.headers.referer);
+  if (origin && !corsOrigins.includes(origin)) {
+    res.status(403).json({ message: "Origem da requisicao nao permitida" });
+    return;
+  }
+  next();
 }
 
 export function requireAdmin(req: Request, res: Response, next: NextFunction) {

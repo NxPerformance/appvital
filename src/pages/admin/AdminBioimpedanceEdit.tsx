@@ -331,7 +331,7 @@ export default function AdminBioimpedanceEdit() {
     try {
       await deleteMutation.mutateAsync(id);
       toast({ title: 'Sucesso', description: 'Exame excluído com sucesso!' });
-      navigate('/admin/users');
+      navigate(-1);
     } catch (error) {
       console.error('Error deleting bioimpedance:', error);
       toast({ title: 'Erro', description: 'Falha ao excluir exame', variant: 'destructive' });
