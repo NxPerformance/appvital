@@ -138,16 +138,10 @@ export function WeeklyCaloriesChart({ entries }: WeeklyCaloriesChartProps) {
           onClick={togglePeriod}
           className="flex shrink-0 items-center gap-1 text-sm font-bold text-muted-foreground transition-colors hover:text-foreground"
         >
-          {period === "week" ? "Semana" : "Mês"}
+          {period === "week" ? "Semana" : monthLabel}
           <ChevronDown className="h-3.5 w-3.5" />
         </button>
       </div>
-
-      {period === "month" ? (
-        <p className="mt-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground md:mt-3">
-          {monthLabel}
-        </p>
-      ) : null}
 
       <div className="mt-4 flex h-14 items-end justify-between gap-2 md:mt-8 md:h-32">
         {bars.map((bar) => {
