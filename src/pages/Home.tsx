@@ -4,43 +4,33 @@ import { useQuery } from "@tanstack/react-query";
 import {
   BarChart3,
   Bell,
-  Calendar,
   Camera,
   ChevronLeft,
   ChevronRight,
   Dumbbell,
   Flame,
   Home as HomeIcon,
-  MessageCircle,
   Moon,
   PersonStanding,
   RotateCcw,
+  Sparkles,
   Sun,
   Target,
   TrendingDown,
   TrendingUp,
+  Zap,
   type LucideIcon,
 } from "lucide-react";
-import { differenceInCalendarDays, endOfWeek, format, parseISO, startOfWeek } from "date-fns";
+import { endOfWeek, format, parseISO, startOfWeek } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { WeeklyCaloriesChart } from "@/components/home/WeeklyCaloriesChart";
-import { APPOINTMENT_TYPE_LABELS, APPOINTMENT_STATUS_LABELS } from "@/lib/appointmentLabels";
 import { useProfile } from "@/hooks/useProfile";
 import { useTheme } from "@/hooks/useTheme";
 import { useBodyProgress } from "@/hooks/useBodyProgress";
 import { useBioimpedance } from "@/hooks/useBioimpedance";
-import { api, resolveUploadUrl } from "@/lib/api";
+import { resolveUploadUrl } from "@/lib/api";
 import { fetchStrengthWorkouts, findActiveWorkoutDraft, type ActiveWorkoutDraft } from "@/lib/workoutApi";
 import { cn } from "@/lib/utils";
-
-interface AppointmentEntry {
-  id: string;
-  type: string;
-  status: string;
-  scheduled_date: string | null;
-  scheduled_time: string | null;
-  admin_notes: string | null;
-}
 
 function getGreeting(hour: number) {
   if (hour < 12) return "Bom dia";
@@ -72,12 +62,38 @@ const workoutCategories: Array<{ type: string; label: string; icon: LucideIcon }
   { type: "calistenia", label: "Calistenia", icon: PersonStanding },
 ];
 
-// Casos reais de pacientes (placeholder até termos fotos e depoimentos autorizados).
-const vital360Cases: Array<{ name: string; plan: string }> = [
-  { name: "Marina", plan: "Essencial" },
-  { name: "Rodrigo", plan: "Completo" },
-  { name: "Camila", plan: "Essencial" },
-  { name: "Bruno", plan: "Completo" },
+interface HomePlan {
+  title: string;
+  description: string;
+  icon: LucideIcon;
+  href: string;
+  available: boolean;
+}
+
+// Planos reais da Vitalissy. Os marcados como "available: false" ainda não têm
+// página própria — aparecem como "Em breve" em vez de linkar pra algo que não existe.
+const homePlans: HomePlan[] = [
+  {
+    title: "Vital 360°",
+    description: "Consultas e bioimpedância com a Dra. Gabriela ao longo do ano.",
+    icon: Sparkles,
+    href: "/vital-360",
+    available: true,
+  },
+  {
+    title: "Ganho de Músculo",
+    description: "Hipertrofia com acompanhamento de treino e nutrição.",
+    icon: Dumbbell,
+    href: "/vital-360",
+    available: false,
+  },
+  {
+    title: "Protocolo Glúteos",
+    description: "Bioestimuladores com acompanhamento clínico completo.",
+    icon: Zap,
+    href: "/vital-360",
+    available: false,
+  },
 ];
 
 const exampleWorkouts: Array<{
@@ -109,11 +125,6 @@ export default function Home() {
     setActiveDraft(findActiveWorkoutDraft());
   }, []);
 
-  const { data: appointments } = useQuery({
-    queryKey: ["home", "appointments"],
-    queryFn: async () => (await api.get<{ appointments: AppointmentEntry[] }>("/appointments/mine")).appointments,
-  });
-
   const { data: strengthWorkouts } = useQuery({
     queryKey: ["home", "workouts-strength"],
     queryFn: fetchStrengthWorkouts,
@@ -144,18 +155,6 @@ export default function Home() {
 
   const firstName = profile?.full_name?.split(" ")[0] || "Paciente";
   const greeting = getGreeting(today.getHours());
-
-  const nextAppointment = (appointments ?? [])
-    .filter((appointment) => appointment.status !== "cancelled" && appointment.status !== "completed")
-    .sort((a, b) => {
-      if (!a.scheduled_date) return 1;
-      if (!b.scheduled_date) return -1;
-      return parseISO(a.scheduled_date).getTime() - parseISO(b.scheduled_date).getTime();
-    })[0];
-
-  const daysUntilAppointment = nextAppointment?.scheduled_date
-    ? differenceInCalendarDays(parseISO(nextAppointment.scheduled_date), today)
-    : null;
 
   const latestPhoto = photos[0] ?? null;
   const previousPhoto = photos[1] ?? null;
@@ -323,80 +322,6 @@ export default function Home() {
                 )}
               </div>
             </Link>
-
-            <Link
-              to="/appointments"
-              className={cn(SLIDE_CLASS, "flex flex-col gap-1 border border-white/10 bg-card px-4 py-3.5")}
-            >
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex min-w-0 items-center gap-2">
-                  <span className="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary">
-                    <Calendar className="h-3.5 w-3.5" />
-                  </span>
-                  <p className="truncate text-[10px] font-extrabold uppercase tracking-[0.16em] text-primary">
-                    Agendamento
-                  </p>
-                </div>
-                {nextAppointment
-                  ? (() => {
-                      const status = APPOINTMENT_STATUS_LABELS[nextAppointment.status] ?? APPOINTMENT_STATUS_LABELS.pending;
-                      const StatusIcon = status.icon;
-                      return (
-                        <span
-                          className={cn(
-                            "flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-bold",
-                            status.className,
-                          )}
-                        >
-                          <StatusIcon className="h-2.5 w-2.5" />
-                          {status.label}
-                        </span>
-                      );
-                    })()
-                  : null}
-              </div>
-
-              <div className="flex min-h-0 flex-1 flex-col justify-center gap-0.5">
-                {nextAppointment ? (
-                  <>
-                    <p className="truncate text-base font-black leading-tight text-foreground">
-                      {APPOINTMENT_TYPE_LABELS[nextAppointment.type] ?? nextAppointment.type}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {nextAppointment.scheduled_date
-                        ? format(parseISO(nextAppointment.scheduled_date), "d 'de' MMMM", { locale: ptBR })
-                        : "A combinar"}
-                      {" · "}
-                      {nextAppointment.scheduled_time ?? "A combinar"}
-                    </p>
-                  </>
-                ) : (
-                  <>
-                    <p className="text-base font-black leading-tight text-foreground">Nenhuma consulta agendada</p>
-                    <p className="text-xs text-muted-foreground">Toque para agendar com a Dra. Gabriela</p>
-                  </>
-                )}
-              </div>
-
-              {nextAppointment?.admin_notes ? (
-                <p className="flex items-center gap-1.5 text-[10.5px] font-bold text-primary">
-                  <MessageCircle className="h-3.5 w-3.5 shrink-0" />
-                  Novo recado da consulta
-                </p>
-              ) : nextAppointment && daysUntilAppointment != null && daysUntilAppointment >= 0 ? (
-                <p className="flex items-center gap-1.5 text-[10.5px] text-muted-foreground">
-                  <Bell className="h-3.5 w-3.5 shrink-0 text-primary" />
-                  {daysUntilAppointment === 0 ? (
-                    <span className="font-bold text-foreground">Hoje é sua consulta!</span>
-                  ) : (
-                    <>
-                      Faltam {daysUntilAppointment} {daysUntilAppointment === 1 ? "dia" : "dias"} ·{" "}
-                      <span className="font-bold text-foreground">Estamos te esperando!</span>
-                    </>
-                  )}
-                </p>
-              ) : null}
-            </Link>
             </div>
             <button
               type="button"
@@ -418,31 +343,49 @@ export default function Home() {
         </section>
 
         <section className="space-y-3">
-          <div className="flex items-center justify-between px-1">
-            <div>
-              <SectionLabel>Vital 360°</SectionLabel>
-              <p className="mt-1 text-[11px] text-muted-foreground">Acompanhamento anual com a Dra. Gabriela</p>
-            </div>
-            <Link to="/vital-360" className="flex shrink-0 items-center gap-0.5 text-xs font-extrabold text-primary">
-              Ver planos
-              <ChevronRight className="h-3.5 w-3.5" />
-            </Link>
-          </div>
-          <div className="hide-scrollbar flex gap-3 overflow-x-auto pb-1">
-            {vital360Cases.map((item) => (
-              <Link
-                key={item.name}
-                to="/vital-360"
-                className="w-[150px] shrink-0 overflow-hidden rounded-[1.15rem] border border-white/10 bg-card shadow-elegant transition-transform hover:-translate-y-0.5"
-              >
-                <div className="flex aspect-square items-center justify-center bg-[linear-gradient(160deg,hsl(270_45%_32%),hsl(270_40%_22%))] text-muted-foreground">
-                  <Camera className="h-6 w-6" />
+          <SectionLabel>Planos</SectionLabel>
+          <div className="hide-scrollbar flex gap-3 overflow-x-auto pb-1 snap-x snap-mandatory">
+            {homePlans.map((plan) => {
+              const cardClassName = cn(
+                "flex min-h-[176px] w-[240px] shrink-0 snap-center flex-col justify-between gap-3 rounded-[1.35rem] border border-white/10 bg-gradient-primary p-4 shadow-elegant",
+                plan.available ? "transition-transform hover:-translate-y-0.5" : "opacity-70",
+              );
+
+              const content = (
+                <>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/15 text-primary-foreground">
+                      <plan.icon className="h-5 w-5" />
+                    </span>
+                    {!plan.available ? (
+                      <span className="shrink-0 rounded-full bg-black/25 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-primary-foreground/85">
+                        Em breve
+                      </span>
+                    ) : null}
+                  </div>
+                  <div>
+                    <p className="text-base font-extrabold text-primary-foreground">{plan.title}</p>
+                    <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-primary-foreground/75">{plan.description}</p>
+                  </div>
+                  {plan.available ? (
+                    <span className="inline-flex items-center gap-0.5 text-xs font-bold text-primary-foreground">
+                      Ver plano
+                      <ChevronRight className="h-3.5 w-3.5" />
+                    </span>
+                  ) : null}
+                </>
+              );
+
+              return plan.available ? (
+                <Link key={plan.title} to={plan.href} className={cardClassName}>
+                  {content}
+                </Link>
+              ) : (
+                <div key={plan.title} className={cardClassName}>
+                  {content}
                 </div>
-                <p className="truncate px-2.5 py-2 text-[11.5px] font-bold text-foreground">
-                  {item.name} · {item.plan}
-                </p>
-              </Link>
-            ))}
+              );
+            })}
           </div>
         </section>
 
