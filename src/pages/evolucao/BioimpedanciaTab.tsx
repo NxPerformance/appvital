@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { AlertTriangle, ArrowDown, ArrowUp, CalendarCheck, CalendarPlus, Droplets, ExternalLink, Flame, Flag, GitCompare, Gauge, Minus, Scale, ThumbsUp, TrendingUp } from 'lucide-react';
+import { AlertTriangle, ArrowDown, ArrowUp, CalendarCheck, CalendarPlus, Droplets, ExternalLink, Flame, Flag, GitCompare, Gauge, Minus, PersonStanding, Scale, ThumbsUp, TrendingUp } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { EvolutionChart } from '@/components/bioimpedance/EvolutionChart';
 import { MetricRow } from '@/components/bioimpedance/MetricRow';
@@ -358,39 +358,80 @@ function ExamPhotos({ record }: { record: BioimpedanceRecord }) {
   );
 }
 
+// Ordem de leitura da grade 3x3 da Anovator: obesidade invisível, sobrepeso,
+// obeso / magro c/ músculo, padrão, muito musculoso / magro, padrão musculoso,
+// sedentário - bate exatamente com os valores 0-8 de bodyShape.
+const BODY_SHAPE_GRID_ORDER = [0, 1, 2, 3, 4, 5, 6, 7, 8];
+
 function BodyStatsRow({ record }: { record: BioimpedanceRecord }) {
-  const bodyShapeLabel = record.body_shape !== null ? BODY_SHAPE_LABELS[record.body_shape] : null;
-  const hasStats = record.score !== null || record.body_age !== null || bodyShapeLabel;
-  if (!hasStats) return null;
+  // Mesmo agrupamento da Anovator: pontuação/idade corporal vêm juntos com
+  // WHR e a conversão de peso em gordura/músculo, logo antes da grade de
+  // tipo corporal - não são uma categoria de "obesidade" à parte.
+  const statTiles: { label: string; value: string }[] = [];
+  if (record.score !== null) statTiles.push({ label: 'Pontuação', value: String(record.score) });
+  if (record.body_age !== null) statTiles.push({ label: 'Idade corporal', value: String(record.body_age) });
+  if (record.waist_hip_ratio !== null) {
+    statTiles.push({ label: 'Relação Cintura-Quadril', value: record.waist_hip_ratio.toFixed(2) });
+  }
+  if (record.fat_weight_kg !== null) {
+    statTiles.push({ label: 'Peso da Gordura', value: `${record.fat_weight_kg.toFixed(1)}kg` });
+  }
+
+  const hasBodyShape = record.body_shape !== null;
+  if (statTiles.length === 0 && !hasBodyShape) return null;
 
   return (
     <section className="rounded-[2rem] border border-white/5 bg-card/85 p-5 shadow-elegant">
       <div className="mb-5">
         <h2 className="text-xl font-semibold">Classificação Corporal</h2>
         <p className="text-sm text-muted-foreground">
-          Pontuação geral, idade corporal e tipo corporal do exame selecionado.
+          Pontuação, idade corporal, relação cintura-quadril e tipo corporal do exame selecionado.
         </p>
       </div>
-      <div className="grid grid-cols-3 gap-3 text-center">
-        {record.score !== null ? (
-          <div className="rounded-2xl bg-secondary/40 p-3">
-            <p className="text-lg font-bold text-primary">{record.score}</p>
-            <p className="text-[11px] text-muted-foreground">Pontuação</p>
-          </div>
-        ) : null}
-        {record.body_age !== null ? (
-          <div className="rounded-2xl bg-secondary/40 p-3">
-            <p className="text-lg font-bold text-primary">{record.body_age}</p>
-            <p className="text-[11px] text-muted-foreground">Idade corporal</p>
-          </div>
-        ) : null}
-        {bodyShapeLabel ? (
-          <div className="rounded-2xl bg-secondary/40 p-3">
-            <p className="text-sm font-bold leading-tight text-primary">{bodyShapeLabel}</p>
-            <p className="text-[11px] text-muted-foreground">Tipo corporal</p>
-          </div>
-        ) : null}
-      </div>
+
+      {statTiles.length > 0 ? (
+        <div
+          className={cn(
+            'grid gap-3 text-center',
+            hasBodyShape && 'mb-4',
+            statTiles.length > 2 ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-2',
+          )}
+        >
+          {statTiles.map((tile) => (
+            <div key={tile.label} className="rounded-2xl bg-secondary/40 p-3">
+              <p className="text-lg font-bold text-primary">{tile.value}</p>
+              <p className="text-[11px] text-muted-foreground">{tile.label}</p>
+            </div>
+          ))}
+        </div>
+      ) : null}
+
+      {hasBodyShape ? (
+        <div className="grid grid-cols-3 gap-2">
+          {BODY_SHAPE_GRID_ORDER.map((value) => {
+            const isActive = record.body_shape === value;
+            return (
+              <div
+                key={value}
+                className={cn(
+                  'flex flex-col items-center gap-1.5 rounded-xl border p-2.5 text-center',
+                  isActive ? 'border-transparent bg-gradient-primary' : 'border-white/5 bg-secondary/40',
+                )}
+              >
+                <PersonStanding className={cn('h-6 w-6', isActive ? 'text-primary-foreground' : 'text-muted-foreground')} />
+                <p
+                  className={cn(
+                    'text-[10px] font-semibold leading-tight',
+                    isActive ? 'text-primary-foreground' : 'text-muted-foreground',
+                  )}
+                >
+                  {BODY_SHAPE_LABELS[value]}
+                </p>
+              </div>
+            );
+          })}
+        </div>
+      ) : null}
     </section>
   );
 }
@@ -943,6 +984,7 @@ export function BioimpedanciaTab() {
             { label: 'Proteína', value: selectedRecord.protein_percent, unit: '%' },
             { label: 'Massa Óssea', value: selectedRecord.bone_mass_kg, unit: 'kg' },
             { label: 'Peso Muscular', value: selectedRecord.muscle_mass_kg, unit: 'kg' },
+            { label: 'TMB', value: selectedRecord.bmr_kcal, unit: 'kcal' },
           ]}
         />
       ) : null}
@@ -975,18 +1017,6 @@ export function BioimpedanciaTab() {
             <PostureAnalysis record={selectedRecord} previousRecord={selectedPreviousRecord} />
           </div>
         </section>
-      ) : null}
-
-      {hasRecords && selectedRecord ? (
-        <SimpleMetricsCard
-          title="Análise de Obesidade"
-          description="Indicadores de risco calculados a partir do exame selecionado."
-          metrics={[
-            { label: 'Peso da Gordura', value: selectedRecord.fat_weight_kg, unit: 'kg' },
-            { label: 'Relação Cintura-Quadril', value: selectedRecord.waist_hip_ratio, unit: '' },
-            { label: 'TMB', value: selectedRecord.bmr_kcal, unit: 'kcal' },
-          ]}
-        />
       ) : null}
 
       {hasRecords && selectedRecord ? (
