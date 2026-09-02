@@ -96,6 +96,14 @@ interface FormData {
   front_head_risk_level: string;
   body_shape_risk_level: string;
   posture_risk_level: string;
+  // Foto + classificação corporal - preenchidos só via busca automática
+  // (não há input manual pra isso, body_image_key/side_image_key são um
+  // identificador de arquivo interno da Anovator, não algo editável à mão).
+  body_image_key: string;
+  side_image_key: string;
+  body_shape: string;
+  score: string;
+  body_age: string;
   notes: string;
   anovator_exam_id: string;
 }
@@ -168,6 +176,11 @@ const initialFormData: FormData = {
   front_head_risk_level: '',
   body_shape_risk_level: '',
   posture_risk_level: '',
+  body_image_key: '',
+  side_image_key: '',
+  body_shape: '',
+  score: '',
+  body_age: '',
   notes: '',
   anovator_exam_id: '',
 };
@@ -320,6 +333,11 @@ export default function AdminBioimpedance() {
       front_head_risk_level: parseLocaleInteger(formData.front_head_risk_level),
       body_shape_risk_level: parseLocaleInteger(formData.body_shape_risk_level),
       posture_risk_level: parseLocaleInteger(formData.posture_risk_level),
+      body_image_key: formData.body_image_key || null,
+      side_image_key: formData.side_image_key || null,
+      body_shape: parseLocaleInteger(formData.body_shape),
+      score: parseLocaleInteger(formData.score),
+      body_age: parseLocaleInteger(formData.body_age),
       notes: formData.notes || null,
       anovator_exam_id: formData.anovator_exam_id || null,
     };

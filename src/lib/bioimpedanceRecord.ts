@@ -1,5 +1,19 @@
 import { toDateOnlyString } from '@/lib/dateUtils';
 
+// Rótulo do campo bodyShape (0-8) devolvido pela Anovator - ver documentação
+// da API, item "bodyShape" da interface getExamById.m.
+export const BODY_SHAPE_LABELS: Record<number, string> = {
+  0: 'Obesidade invisível',
+  1: 'Sobrepeso',
+  2: 'Obeso',
+  3: 'Magro com músculo',
+  4: 'Padrão',
+  5: 'Muito musculoso',
+  6: 'Magro',
+  7: 'Padrão musculoso',
+  8: 'Sedentário',
+};
+
 // Canonical shape + mapper for a bioimpedance record as returned by both
 // GET /bioimpedance/mine and GET /bioimpedance/admin/*, which return the
 // exact same raw Prisma shape regardless of viewer. Shared by useBioimpedance
@@ -85,6 +99,14 @@ export interface BioimpedanceRecord {
   front_head_risk_level: number | null;
   body_shape_risk_level: number | null;
   posture_risk_level: number | null;
+  // Foto + classificação corporal (importado automaticamente da Anovator).
+  // body_image_key/side_image_key não são URLs prontas - a foto é buscada
+  // via GET /bioimpedance/photo/:id/front|side (ver resolveBioimpedancePhotoUrl).
+  body_image_key: string | null;
+  side_image_key: string | null;
+  body_shape: number | null;
+  score: number | null;
+  body_age: number | null;
   notes: string | null;
   source_pdf_url: string | null;
   anovator_exam_id: string | null;
@@ -161,6 +183,11 @@ export function mapBioimpedanceRecord(record: any): BioimpedanceRecord {
     front_head_risk_level: record.frontHeadRiskLevel ?? null,
     body_shape_risk_level: record.bodyShapeRiskLevel ?? null,
     posture_risk_level: record.postureRiskLevel ?? null,
+    body_image_key: record.bodyImageKey ?? null,
+    side_image_key: record.sideImageKey ?? null,
+    body_shape: record.bodyShape ?? null,
+    score: record.score ?? null,
+    body_age: record.bodyAge ?? null,
     notes: record.notes,
     source_pdf_url: record.sourcePdfUrl ?? null,
     anovator_exam_id: record.anovatorExamId ?? null,

@@ -339,6 +339,14 @@ model BioimpedanceRecord {
   frontHeadRiskLevel     Int?
   bodyShapeRiskLevel     Int?
   postureRiskLevel       Int?
+  // Foto + classificação corporal (importado automaticamente da Anovator).
+  // bodyImageKey/sideImageKey são o "key" de arquivo da Anovator, não uma URL
+  // pública - a foto em si é buscada via proxy no backend (GET /bioimpedance/photo/:id/:side).
+  bodyImageKey           String?
+  sideImageKey           String?
+  bodyShape              Int?
+  score                  Int?
+  bodyAge                Int?
   notes                  String?
   sourcePdfUrl           String?
   anovatorExamId         String?

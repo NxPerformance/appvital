@@ -19,6 +19,14 @@ export function resolveUploadUrl(url: string | null | undefined): string | null 
   return `${API_ORIGIN}${url}`;
 }
 
+// Foto de bioimpedância (frontal/lateral) vem da Anovator via proxy autenticado
+// no backend, não de um arquivo estático - por isso não usa resolveUploadUrl.
+// A sessão (cookie) é enviada automaticamente pelo <img>, já que front e
+// backend compartilham o mesmo site (app.*/api.* de vitalissy.com.br).
+export function resolveBioimpedancePhotoUrl(recordId: string, side: 'front' | 'side'): string {
+  return `${API_URL}/bioimpedance/photo/${recordId}/${side}`;
+}
+
 function readCsrfToken(): string | null {
   const match = document.cookie.match(new RegExp(`(?:^|; )${CSRF_COOKIE_NAME}=([^;]*)`));
   return match ? decodeURIComponent(match[1]) : null;
