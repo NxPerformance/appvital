@@ -236,9 +236,22 @@ export default function AdminBioimpedance() {
         .map((field) => UNAVAILABLE_FIELD_LABELS[field] ?? field)
         .join(', ');
 
+      // Campos que a Anovator devolveu vazios (null/undefined) mas que NÃO
+      // fazem parte da lista já conhecida de "precisa preencher à mão" -
+      // diagnóstico temporário pra descobrir se um campo esperado (ex: foto,
+      // pontuação) veio mesmo vazio nesse exame específico ou se é bug.
+      const unexpectedlyEmpty = Object.entries(result.data)
+        .filter(([, value]) => value === null || value === undefined)
+        .map(([key]) => key)
+        .filter((key) => !result.unavailable_fields.includes(key));
+
       toast({
         title: 'Dados importados da Anovator',
-        description: `${filled.length} campo(s) foram preenchidos automaticamente. Medidas corporais e postura (${manualLabels}) ainda precisam ser preenchidas manualmente.`,
+        description: `${filled.length} campo(s) foram preenchidos automaticamente. Medidas corporais e postura (${manualLabels}) ainda precisam ser preenchidas manualmente.${
+          unexpectedlyEmpty.length
+            ? ` A Anovator não retornou dado pra: ${unexpectedlyEmpty.join(', ')}.`
+            : ''
+        }`,
       });
     } catch (error) {
       if (error instanceof ApiError && error.status === 501) {
