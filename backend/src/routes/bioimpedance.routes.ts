@@ -7,7 +7,7 @@ import { HttpError } from "../middleware/error-handler.js";
 import { getRouteParam } from "../utils/params.js";
 import { logAudit } from "../services/audit.service.js";
 import { bioimpedanceReportUpload, deleteUploadedFileSafe } from "../lib/upload.js";
-import { fetchAnovatorExam } from "../services/anovator.service.js";
+import { fetchAnovatorExam, fetchAnovatorPhoto } from "../services/anovator.service.js";
 
 export const bioimpedanceRouter = Router();
 
@@ -84,10 +84,17 @@ const integerFields = {
   front_head_risk_level: "frontHeadRiskLevel",
   body_shape_risk_level: "bodyShapeRiskLevel",
   posture_risk_level: "postureRiskLevel",
+  // Classificação corporal (importado automaticamente da Anovator)
+  body_shape: "bodyShape",
+  score: "score",
+  body_age: "bodyAge",
 } as const;
 
 const stringFields = {
   leg_risk_type: "legRiskType",
+  // Key de arquivo da foto na Anovator (não é URL - ver GET /photo/:id/:side)
+  body_image_key: "bodyImageKey",
+  side_image_key: "sideImageKey",
 } as const;
 
 const numericShape = Object.fromEntries(
@@ -140,6 +147,41 @@ bioimpedanceRouter.get(
       orderBy: { date: "desc" },
     });
     res.json({ records });
+  }),
+);
+
+// Proxy pra foto guardada na Anovator - nunca expomos a apiKey no frontend,
+// nem dependemos de anovator.com aceitar hotlink direto de <img src>. Acesso
+// liberado pro dono do exame (paciente vendo o próprio histórico) ou admin.
+bioimpedanceRouter.get(
+  "/photo/:id/:side",
+  asyncHandler(async (req, res) => {
+    const id = getRouteParam(req.params.id, "id");
+    const side = getRouteParam(req.params.side, "side");
+    if (side !== "front" && side !== "side") {
+      throw new HttpError(400, "Parametro 'side' invalido - use 'front' ou 'side'");
+    }
+
+    const record = await prisma.bioimpedanceRecord.findUnique({ where: { id } });
+    if (!record) {
+      throw new HttpError(404, "Registro nao encontrado");
+    }
+
+    const isOwner = record.userId === req.auth!.userId;
+    const isAdmin = req.auth!.roles.includes("ADMIN");
+    if (!isOwner && !isAdmin) {
+      throw new HttpError(403, "Acesso negado");
+    }
+
+    const key = side === "front" ? record.bodyImageKey : record.sideImageKey;
+    if (!key) {
+      throw new HttpError(404, "Foto nao disponivel para este exame");
+    }
+
+    const { buffer, contentType } = await fetchAnovatorPhoto(key);
+    res.setHeader("Content-Type", contentType);
+    res.setHeader("Cache-Control", "private, max-age=86400");
+    res.send(buffer);
   }),
 );
 

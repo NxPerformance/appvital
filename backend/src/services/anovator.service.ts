@@ -155,6 +155,14 @@ export async function fetchAnovatorExam(examId: string) {
     aerobic_calories_kcal: d.aerobicGoal ?? null,
     endurance_calories_kcal: d.enduGoal ?? null,
     anaerobic_calories_kcal: d.anaGoal ?? null,
+    // Foto (frontal/lateral) + classificação corporal - bodyImage/sideImage sao
+    // o "key" de arquivo da Anovator (nao uma URL), resolvido depois via proxy
+    // (GET /bioimpedance/photo/:id/:side) usando a interface 6 (loadFile.msg).
+    body_image_key: typeof d.bodyImage === "string" ? d.bodyImage : null,
+    side_image_key: typeof d.sideImage === "string" ? d.sideImage : null,
+    body_shape: typeof d.bodyShape === "number" ? d.bodyShape : null,
+    score: typeof d.score === "number" ? d.score : null,
+    body_age: typeof d.bodyAge === "number" ? d.bodyAge : null,
     // Classificação de risco postural (nível 1-5, importado automaticamente da Anovator)
     shoulder_risk_level: d.shoulderRisk ?? null,
     humpback_risk_level: d.humpbackRisk ?? null,
@@ -171,4 +179,51 @@ export async function fetchAnovatorExam(examId: string) {
   };
 
   return { data, unavailableFields: UNAVAILABLE_FIELDS };
+}
+
+// Interface 6 da documentação ("photo display path interface") - recebe o
+// "key" de arquivo devolvido em bodyImage/sideImage (ex:
+// "2019-10-15/1571108144859500400.jpg") e retorna os bytes da foto. Usado
+// como proxy (ver bioimpedance.routes.ts) pra nunca expor a apiKey no
+// frontend nem depender de anovator.com aceitar hotlink direto de <img>.
+export async function fetchAnovatorPhoto(key: string): Promise<{ buffer: Buffer; contentType: string }> {
+  if (!env.ANOVATOR_API_KEY) {
+    throw new HttpError(
+      501,
+      "Integração com a Anovator ainda não configurada. Configure ANOVATOR_API_KEY.",
+    );
+  }
+
+  const url = `${env.ANOVATOR_BASE_URL}/file/FileAction!loadFile.msg?key=${encodeURIComponent(
+    key,
+  )}&apiKey=${encodeURIComponent(env.ANOVATOR_API_KEY)}`;
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10_000);
+
+  let response: Response;
+  try {
+    response = await fetch(url, { signal: controller.signal });
+  } catch (error) {
+    const isTimeout = error instanceof Error && error.name === "AbortError";
+    console.error("[anovator] falha ao buscar foto:", error);
+    throw new HttpError(
+      502,
+      isTimeout ? "Tempo esgotado ao buscar a foto na Anovator." : "Não foi possível buscar a foto na Anovator.",
+    );
+  } finally {
+    clearTimeout(timeoutId);
+  }
+
+  if (!response.ok) {
+    throw new HttpError(502, `Anovator retornou HTTP ${response.status} ao buscar a foto`);
+  }
+
+  const contentType = response.headers.get("content-type") || "image/jpeg";
+  if (!contentType.startsWith("image/")) {
+    throw new HttpError(502, "Resposta da Anovator não é uma imagem");
+  }
+
+  const buffer = Buffer.from(await response.arrayBuffer());
+  return { buffer, contentType };
 }

@@ -8,7 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useBioimpedance, type BioimpedanceRecord } from '@/hooks/useBioimpedance';
 import { useProfile } from '@/hooks/useProfile';
 import { formatDateSafe } from '@/lib/dateUtils';
-import { resolveUploadUrl } from '@/lib/api';
+import { resolveUploadUrl, resolveBioimpedancePhotoUrl } from '@/lib/api';
+import { BODY_SHAPE_LABELS } from '@/lib/bioimpedanceRecord';
 import { cn } from '@/lib/utils';
 import { ptBR } from 'date-fns/locale';
 
@@ -229,6 +230,72 @@ function SegmentalAnalysis({ record }: { record: BioimpedanceRecord }) {
           </tbody>
         </table>
       </div>
+    </section>
+  );
+}
+
+function ExamPhoto({ recordId, side, label }: { recordId: string; side: 'front' | 'side'; label: string }) {
+  const [failed, setFailed] = useState(false);
+  if (failed) return null;
+
+  return (
+    <div className="overflow-hidden rounded-2xl border border-white/5 bg-secondary/40">
+      <img
+        src={resolveBioimpedancePhotoUrl(recordId, side)}
+        alt={label}
+        onError={() => setFailed(true)}
+        className="aspect-[3/4] w-full object-cover"
+      />
+      <p className="p-2 text-center text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+        {label}
+      </p>
+    </div>
+  );
+}
+
+function ExamPhotosCard({ record }: { record: BioimpedanceRecord }) {
+  const hasPhoto = Boolean(record.body_image_key || record.side_image_key);
+  const bodyShapeLabel = record.body_shape !== null ? BODY_SHAPE_LABELS[record.body_shape] : null;
+  const hasStats = record.score !== null || record.body_age !== null || bodyShapeLabel;
+
+  if (!hasPhoto && !hasStats) return null;
+
+  return (
+    <section className="rounded-[2rem] border border-white/5 bg-card/85 p-5 shadow-elegant">
+      <div className="mb-5">
+        <h2 className="text-xl font-semibold">Fotos do exame</h2>
+        <p className="text-sm text-muted-foreground">Registro visual capturado pelo scanner corporal.</p>
+      </div>
+
+      {hasPhoto ? (
+        <div className="grid grid-cols-2 gap-3">
+          {record.body_image_key ? <ExamPhoto recordId={record.id} side="front" label="Frontal" /> : null}
+          {record.side_image_key ? <ExamPhoto recordId={record.id} side="side" label="Lateral" /> : null}
+        </div>
+      ) : null}
+
+      {hasStats ? (
+        <div className={cn('grid gap-3 text-center', hasPhoto && 'mt-4', 'grid-cols-3')}>
+          {record.score !== null ? (
+            <div className="rounded-2xl bg-secondary/40 p-3">
+              <p className="text-lg font-bold text-primary">{record.score}</p>
+              <p className="text-[11px] text-muted-foreground">Pontuação</p>
+            </div>
+          ) : null}
+          {record.body_age !== null ? (
+            <div className="rounded-2xl bg-secondary/40 p-3">
+              <p className="text-lg font-bold text-primary">{record.body_age}</p>
+              <p className="text-[11px] text-muted-foreground">Idade corporal</p>
+            </div>
+          ) : null}
+          {bodyShapeLabel ? (
+            <div className="rounded-2xl bg-secondary/40 p-3">
+              <p className="text-sm font-bold leading-tight text-primary">{bodyShapeLabel}</p>
+              <p className="text-[11px] text-muted-foreground">Tipo corporal</p>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
     </section>
   );
 }
@@ -764,6 +831,8 @@ export function BioimpedanciaTab() {
           )}
         </div>
       </section>
+
+      {hasRecords && selectedRecord ? <ExamPhotosCard record={selectedRecord} /> : null}
 
       {records.length > 1 ? <BestPhaseCard records={records} onSelect={selectExam} /> : null}
 
