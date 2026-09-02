@@ -461,55 +461,6 @@ function SimpleMetricsCard({ title, description, metrics }: { title: string; des
   );
 }
 
-interface BestPhaseResult {
-  record: BioimpedanceRecord;
-  diffKg: number;
-}
-
-function findBestPhase(records: BioimpedanceRecord[]): BestPhaseResult | null {
-  let best: BestPhaseResult | null = null;
-
-  for (const record of records) {
-    if (typeof record.weight_kg !== 'number' || typeof record.ideal_weight_kg !== 'number') continue;
-
-    const diffKg = Math.abs(record.weight_kg - record.ideal_weight_kg);
-    if (best === null || diffKg < best.diffKg) {
-      best = { record, diffKg };
-    }
-  }
-
-  return best;
-}
-
-function BestPhaseCard({ records, onSelect }: { records: BioimpedanceRecord[]; onSelect: (id: string) => void }) {
-  const best = useMemo(() => findBestPhase(records), [records]);
-  if (!best) return null;
-
-  return (
-    <section className="rounded-[2rem] border border-primary/20 bg-primary/10 p-5 shadow-elegant">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="text-[11px] font-extrabold uppercase tracking-[0.22em] text-primary">Sua melhor fase</p>
-          <h2 className="mt-1 text-xl font-semibold">{formatDate(best.record.date)}</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {best.diffKg < 0.1
-              ? 'Seu peso bateu exatamente com o peso ideal calculado pela bioimpedância nesse exame.'
-              : `A ${best.diffKg.toFixed(1)}kg do peso ideal calculado pela bioimpedância nesse exame — a menor distância registrada.`}
-          </p>
-        </div>
-        <ThumbsUp className="h-5 w-5 shrink-0 text-primary" />
-      </div>
-      <button
-        type="button"
-        onClick={() => onSelect(best.record.id)}
-        className="mt-4 inline-flex h-9 items-center gap-2 rounded-xl bg-primary px-4 text-xs font-black text-primary-foreground"
-      >
-        Ver esse exame
-      </button>
-    </section>
-  );
-}
-
 interface CompareField {
   key: keyof BioimpedanceRecord;
   label: string;
@@ -796,11 +747,6 @@ export function BioimpedanciaTab() {
     return index >= 0 ? (records[index + 1] ?? null) : null;
   }, [records, selectedRecord]);
 
-  const selectExam = (id: string) => {
-    setSelectedExamId(id);
-    document.getElementById('exame-selecionado')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  };
-
   if (loading) {
     return (
       <div className="flex min-h-[300px] items-center justify-center">
@@ -1049,8 +995,6 @@ export function BioimpedanciaTab() {
           ]}
         />
       ) : null}
-
-      {records.length > 1 ? <BestPhaseCard records={records} onSelect={selectExam} /> : null}
 
       {!hasComparison && hasRecords ? (
         <div className="rounded-2xl border border-primary/20 bg-primary/10 p-4 text-sm text-primary">
