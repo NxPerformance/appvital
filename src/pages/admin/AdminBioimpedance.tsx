@@ -217,24 +217,28 @@ export default function AdminBioimpedance() {
     try {
       const result = await anovatorLookup.mutateAsync(formData.anovator_exam_id);
       setRawLookupResult(result.raw);
-      const filled: string[] = [];
 
-      setFormData((prev) => {
-        const next = { ...prev };
-        for (const [key, value] of Object.entries(result.data)) {
-          if (value === null || value === undefined) continue;
-          if (key === 'date') {
-            next.date = String(value);
-            filled.push(key);
-            continue;
-          }
-          if (key in next) {
-            (next as Record<string, string>)[key] = String(value);
-            filled.push(key);
-          }
+      // Monta a contagem de campos preenchidos ANTES de chamar setFormData -
+      // o React não garante que a função passada pra setFormData rode de
+      // forma síncrona, então contar "filled" lá dentro podia fazer o toast
+      // ler o array ainda vazio (mostrando "0 campos" mesmo com os campos
+      // aparecendo certinho na tela um instante depois).
+      const filled: string[] = [];
+      const updates: Partial<FormData> = {};
+      for (const [key, value] of Object.entries(result.data)) {
+        if (value === null || value === undefined) continue;
+        if (key === 'date') {
+          updates.date = String(value);
+          filled.push(key);
+          continue;
         }
-        return next;
-      });
+        if (key in initialFormData) {
+          (updates as Record<string, string>)[key] = String(value);
+          filled.push(key);
+        }
+      }
+
+      setFormData((prev) => ({ ...prev, ...updates }));
 
       const manualLabels = result.unavailable_fields
         .map((field) => UNAVAILABLE_FIELD_LABELS[field] ?? field)
