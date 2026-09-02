@@ -53,9 +53,9 @@ export function MetricRow({
   };
 
   return (
-    <div className="grid grid-cols-3 gap-2 p-3">
+    <div className={cn('grid gap-2 p-3', standard ? 'grid-cols-3' : 'grid-cols-2')}>
       <span className="text-sm text-muted-foreground">{label}</span>
-      <div className="flex items-center justify-center gap-1">
+      <div className={cn('flex items-center gap-1', standard ? 'justify-center' : 'justify-end')}>
         <span className="text-sm font-medium text-foreground">{displayValue}</span>
         {difference !== null && (
           <span className={cn("flex items-center text-xs", getDifferenceColor())}>
@@ -64,7 +64,7 @@ export function MetricRow({
           </span>
         )}
       </div>
-      <span className="text-sm text-muted-foreground text-right">{standard || '--'}</span>
+      {standard ? <span className="text-sm text-muted-foreground text-right">{standard}</span> : null}
     </div>
   );
 }
