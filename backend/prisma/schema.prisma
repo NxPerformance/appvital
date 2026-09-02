@@ -344,6 +344,11 @@ model BioimpedanceRecord {
   // pública - a foto em si é buscada via proxy no backend (GET /bioimpedance/photo/:id/:side).
   bodyImageKey           String?
   sideImageKey           String?
+  // Coordenadas do esqueleto sobre a foto (JSON bruto da Anovator, string
+  // de pontos {label: {score, x, y}} em pixel, relativo ao tamanho original
+  // da foto) - usado pra desenhar o overlay igual ao laudo em PDF.
+  bodyDetect             String?
+  sideBodyDetect         String?
   bodyShape              Int?
   score                  Int?
   bodyAge                Int?

@@ -104,6 +104,10 @@ export interface BioimpedanceRecord {
   // via GET /bioimpedance/photo/:id/front|side (ver resolveBioimpedancePhotoUrl).
   body_image_key: string | null;
   side_image_key: string | null;
+  // JSON bruto (string) da Anovator com as coordenadas do esqueleto sobre a
+  // foto - parseado só onde é desenhado (ver PostureSkeletonOverlay).
+  body_detect: string | null;
+  side_body_detect: string | null;
   body_shape: number | null;
   score: number | null;
   body_age: number | null;
@@ -185,6 +189,8 @@ export function mapBioimpedanceRecord(record: any): BioimpedanceRecord {
     posture_risk_level: record.postureRiskLevel ?? null,
     body_image_key: record.bodyImageKey ?? null,
     side_image_key: record.sideImageKey ?? null,
+    body_detect: record.bodyDetect ?? null,
+    side_body_detect: record.sideBodyDetect ?? null,
     body_shape: record.bodyShape ?? null,
     score: record.score ?? null,
     body_age: record.bodyAge ?? null,

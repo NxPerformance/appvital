@@ -234,68 +234,163 @@ function SegmentalAnalysis({ record }: { record: BioimpedanceRecord }) {
   );
 }
 
-function ExamPhoto({ recordId, side, label }: { recordId: string; side: 'front' | 'side'; label: string }) {
+// Pares de pontos conectados pelo esqueleto sobreposto na foto - mesmo
+// conjunto de nomes tanto pra bodyDetect (frontal) quanto sideBodyDetect
+// (lateral), confirmado na documentação da Anovator.
+const SKELETON_BONES: [string, string][] = [
+  ['top_head', 'neck'],
+  ['neck', 'left_shoulder'],
+  ['neck', 'right_shoulder'],
+  ['left_shoulder', 'left_elbow'],
+  ['left_elbow', 'left_wrist'],
+  ['right_shoulder', 'right_elbow'],
+  ['right_elbow', 'right_wrist'],
+  ['left_shoulder', 'left_hip'],
+  ['right_shoulder', 'right_hip'],
+  ['left_hip', 'right_hip'],
+  ['left_hip', 'left_knee'],
+  ['left_knee', 'left_ankle'],
+  ['right_hip', 'right_knee'],
+  ['right_knee', 'right_ankle'],
+];
+
+interface SkeletonPoint {
+  x: number;
+  y: number;
+  score: number;
+}
+
+function parseSkeletonPoints(json: string | null): Record<string, SkeletonPoint> | null {
+  if (!json) return null;
+  try {
+    const parsed = JSON.parse(json);
+    return parsed && typeof parsed === 'object' ? (parsed as Record<string, SkeletonPoint>) : null;
+  } catch {
+    return null;
+  }
+}
+
+function ExamPhoto({
+  recordId,
+  side,
+  label,
+  detectJson,
+}: {
+  recordId: string;
+  side: 'front' | 'side';
+  label: string;
+  detectJson: string | null;
+}) {
   const [failed, setFailed] = useState(false);
+  // Guardamos o tamanho real da foto (naturalWidth/Height) pra desenhar o
+  // esqueleto na escala certa - as coordenadas da Anovator são em pixel,
+  // relativas ao tamanho original da imagem, não ao espaço exibido na tela.
+  const [dims, setDims] = useState<{ w: number; h: number } | null>(null);
+  const points = useMemo(() => parseSkeletonPoints(detectJson), [detectJson]);
+
   if (failed) return null;
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-white/5 bg-secondary/40">
+    <div
+      className="relative overflow-hidden rounded-2xl border border-white/5 bg-secondary/40"
+      style={{ aspectRatio: dims ? `${dims.w} / ${dims.h}` : '3 / 4' }}
+    >
       <img
         src={resolveBioimpedancePhotoUrl(recordId, side)}
         alt={label}
+        onLoad={(event) => {
+          const img = event.currentTarget;
+          setDims({ w: img.naturalWidth, h: img.naturalHeight });
+        }}
         onError={() => setFailed(true)}
-        className="aspect-[3/4] w-full object-cover"
+        className="absolute inset-0 h-full w-full object-cover"
       />
-      <p className="p-2 text-center text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+      {points && dims ? (
+        <svg
+          viewBox={`0 0 ${dims.w} ${dims.h}`}
+          preserveAspectRatio="none"
+          className="absolute inset-0 h-full w-full"
+          aria-hidden="true"
+        >
+          {SKELETON_BONES.map(([a, b]) => {
+            const pointA = points[a];
+            const pointB = points[b];
+            if (!pointA || !pointB) return null;
+            return (
+              <line
+                key={`${a}-${b}`}
+                x1={pointA.x}
+                y1={pointA.y}
+                x2={pointB.x}
+                y2={pointB.y}
+                stroke="white"
+                strokeWidth={Math.max(dims.w * 0.006, 1.5)}
+                strokeDasharray={`${dims.w * 0.012} ${dims.w * 0.01}`}
+                opacity={0.85}
+              />
+            );
+          })}
+          {Object.values(points).map((point, index) => (
+            <circle key={index} cx={point.x} cy={point.y} r={Math.max(dims.w * 0.011, 2.5)} fill="white" />
+          ))}
+        </svg>
+      ) : null}
+      <p className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-background/90 to-transparent p-2 text-center text-[11px] font-semibold uppercase tracking-wide text-white">
         {label}
       </p>
     </div>
   );
 }
 
-function ExamPhotosCard({ record }: { record: BioimpedanceRecord }) {
+function ExamPhotos({ record }: { record: BioimpedanceRecord }) {
   const hasPhoto = Boolean(record.body_image_key || record.side_image_key);
+  if (!hasPhoto) return null;
+
+  return (
+    <div className="grid grid-cols-2 gap-3">
+      {record.body_image_key ? (
+        <ExamPhoto recordId={record.id} side="front" label="Frontal" detectJson={record.body_detect} />
+      ) : null}
+      {record.side_image_key ? (
+        <ExamPhoto recordId={record.id} side="side" label="Lateral" detectJson={record.side_body_detect} />
+      ) : null}
+    </div>
+  );
+}
+
+function BodyStatsRow({ record }: { record: BioimpedanceRecord }) {
   const bodyShapeLabel = record.body_shape !== null ? BODY_SHAPE_LABELS[record.body_shape] : null;
   const hasStats = record.score !== null || record.body_age !== null || bodyShapeLabel;
-
-  if (!hasPhoto && !hasStats) return null;
+  if (!hasStats) return null;
 
   return (
     <section className="rounded-[2rem] border border-white/5 bg-card/85 p-5 shadow-elegant">
       <div className="mb-5">
-        <h2 className="text-xl font-semibold">Fotos do exame</h2>
-        <p className="text-sm text-muted-foreground">Registro visual capturado pelo scanner corporal.</p>
+        <h2 className="text-xl font-semibold">Classificação Corporal</h2>
+        <p className="text-sm text-muted-foreground">
+          Pontuação geral, idade corporal e tipo corporal do exame selecionado.
+        </p>
       </div>
-
-      {hasPhoto ? (
-        <div className="grid grid-cols-2 gap-3">
-          {record.body_image_key ? <ExamPhoto recordId={record.id} side="front" label="Frontal" /> : null}
-          {record.side_image_key ? <ExamPhoto recordId={record.id} side="side" label="Lateral" /> : null}
-        </div>
-      ) : null}
-
-      {hasStats ? (
-        <div className={cn('grid gap-3 text-center', hasPhoto && 'mt-4', 'grid-cols-3')}>
-          {record.score !== null ? (
-            <div className="rounded-2xl bg-secondary/40 p-3">
-              <p className="text-lg font-bold text-primary">{record.score}</p>
-              <p className="text-[11px] text-muted-foreground">Pontuação</p>
-            </div>
-          ) : null}
-          {record.body_age !== null ? (
-            <div className="rounded-2xl bg-secondary/40 p-3">
-              <p className="text-lg font-bold text-primary">{record.body_age}</p>
-              <p className="text-[11px] text-muted-foreground">Idade corporal</p>
-            </div>
-          ) : null}
-          {bodyShapeLabel ? (
-            <div className="rounded-2xl bg-secondary/40 p-3">
-              <p className="text-sm font-bold leading-tight text-primary">{bodyShapeLabel}</p>
-              <p className="text-[11px] text-muted-foreground">Tipo corporal</p>
-            </div>
-          ) : null}
-        </div>
-      ) : null}
+      <div className="grid grid-cols-3 gap-3 text-center">
+        {record.score !== null ? (
+          <div className="rounded-2xl bg-secondary/40 p-3">
+            <p className="text-lg font-bold text-primary">{record.score}</p>
+            <p className="text-[11px] text-muted-foreground">Pontuação</p>
+          </div>
+        ) : null}
+        {record.body_age !== null ? (
+          <div className="rounded-2xl bg-secondary/40 p-3">
+            <p className="text-lg font-bold text-primary">{record.body_age}</p>
+            <p className="text-[11px] text-muted-foreground">Idade corporal</p>
+          </div>
+        ) : null}
+        {bodyShapeLabel ? (
+          <div className="rounded-2xl bg-secondary/40 p-3">
+            <p className="text-sm font-bold leading-tight text-primary">{bodyShapeLabel}</p>
+            <p className="text-[11px] text-muted-foreground">Tipo corporal</p>
+          </div>
+        ) : null}
+      </div>
     </section>
   );
 }
@@ -832,16 +927,13 @@ export function BioimpedanciaTab() {
         </div>
       </section>
 
-      {hasRecords && selectedRecord ? <ExamPhotosCard record={selectedRecord} /> : null}
-
-      {records.length > 1 ? <BestPhaseCard records={records} onSelect={selectExam} /> : null}
+      {hasRecords && selectedRecord ? <BodyStatsRow record={selectedRecord} /> : null}
 
       {hasRecords && selectedRecord ? (
         <SimpleMetricsCard
           title="Composição Corporal"
           description="Detalhamento completo do exame selecionado."
           metrics={[
-            { label: 'Peso', value: selectedRecord.weight_kg, unit: 'kg' },
             { label: 'Gordura Corporal', value: selectedRecord.body_fat_percent, unit: '%' },
             { label: 'Massa Muscular', value: selectedRecord.muscle_percent, unit: '%' },
             { label: 'Água', value: selectedRecord.water_percent, unit: '%' },
@@ -854,6 +946,8 @@ export function BioimpedanciaTab() {
           ]}
         />
       ) : null}
+
+      {hasRecords && selectedRecord ? <SegmentalAnalysis record={selectedRecord} /> : null}
 
       {hasRecords && selectedRecord ? (
         <SimpleMetricsCard
@@ -869,32 +963,31 @@ export function BioimpedanciaTab() {
       ) : null}
 
       {hasRecords && selectedRecord ? (
+        <section className="rounded-[2rem] border border-white/5 bg-card/85 p-5 shadow-elegant">
+          <div className="mb-5">
+            <h2 className="text-xl font-semibold">Avaliação Postural</h2>
+            <p className="text-sm text-muted-foreground">
+              Foto com pontos de referência e indicadores de assimetria do exame selecionado.
+            </p>
+          </div>
+          <ExamPhotos record={selectedRecord} />
+          <div className={selectedRecord.body_image_key || selectedRecord.side_image_key ? 'mt-4' : undefined}>
+            <PostureAnalysis record={selectedRecord} previousRecord={selectedPreviousRecord} />
+          </div>
+        </section>
+      ) : null}
+
+      {hasRecords && selectedRecord ? (
         <SimpleMetricsCard
           title="Análise de Obesidade"
           description="Indicadores de risco calculados a partir do exame selecionado."
           metrics={[
-            { label: 'IMC', value: selectedRecord.bmi, unit: '' },
             { label: 'Peso da Gordura', value: selectedRecord.fat_weight_kg, unit: 'kg' },
             { label: 'Relação Cintura-Quadril', value: selectedRecord.waist_hip_ratio, unit: '' },
             { label: 'TMB', value: selectedRecord.bmr_kcal, unit: 'kcal' },
           ]}
         />
       ) : null}
-
-      {hasRecords && selectedRecord ? (
-        <SimpleMetricsCard
-          title="Controle Calórico"
-          description="Ingestão diária e metas de exercício por tipo, calculadas a partir do exame selecionado."
-          metrics={[
-            { label: 'Calorias Diárias', value: selectedRecord.daily_calories, unit: 'kcal' },
-            { label: 'Meta de Exercício Aeróbico', value: selectedRecord.aerobic_calories_kcal, unit: 'kcal' },
-            { label: 'Meta de Exercício de Resistência', value: selectedRecord.endurance_calories_kcal, unit: 'kcal' },
-            { label: 'Meta de Exercício Anaeróbico', value: selectedRecord.anaerobic_calories_kcal, unit: 'kcal' },
-          ]}
-        />
-      ) : null}
-
-      {hasRecords && selectedRecord ? <SegmentalAnalysis record={selectedRecord} /> : null}
 
       {hasRecords && selectedRecord ? (
         <SimpleMetricsCard
@@ -914,17 +1007,20 @@ export function BioimpedanciaTab() {
         />
       ) : null}
 
-      {hasRecords ? (
-        <section className="rounded-[2rem] border border-white/5 bg-card/85 p-5 shadow-elegant">
-          <div className="mb-5">
-            <h2 className="text-xl font-semibold">Análise postural</h2>
-            <p className="text-sm text-muted-foreground">
-              Indicadores de assimetria e postura do exame selecionado.
-            </p>
-          </div>
-          <PostureAnalysis record={selectedRecord} previousRecord={selectedPreviousRecord} />
-        </section>
+      {hasRecords && selectedRecord ? (
+        <SimpleMetricsCard
+          title="Controle Calórico"
+          description="Ingestão diária e metas de exercício por tipo, calculadas a partir do exame selecionado."
+          metrics={[
+            { label: 'Calorias Diárias', value: selectedRecord.daily_calories, unit: 'kcal' },
+            { label: 'Meta de Exercício Aeróbico', value: selectedRecord.aerobic_calories_kcal, unit: 'kcal' },
+            { label: 'Meta de Exercício de Resistência', value: selectedRecord.endurance_calories_kcal, unit: 'kcal' },
+            { label: 'Meta de Exercício Anaeróbico', value: selectedRecord.anaerobic_calories_kcal, unit: 'kcal' },
+          ]}
+        />
       ) : null}
+
+      {records.length > 1 ? <BestPhaseCard records={records} onSelect={selectExam} /> : null}
 
       {!hasComparison && hasRecords ? (
         <div className="rounded-2xl border border-primary/20 bg-primary/10 p-4 text-sm text-primary">

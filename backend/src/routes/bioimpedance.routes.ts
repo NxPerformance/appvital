@@ -95,6 +95,9 @@ const stringFields = {
   // Key de arquivo da foto na Anovator (não é URL - ver GET /photo/:id/:side)
   body_image_key: "bodyImageKey",
   side_image_key: "sideImageKey",
+  // JSON bruto (string) com as coordenadas do esqueleto sobre a foto
+  body_detect: "bodyDetect",
+  side_body_detect: "sideBodyDetect",
 } as const;
 
 const numericShape = Object.fromEntries(
