@@ -160,6 +160,10 @@ export async function fetchAnovatorExam(examId: string) {
     // (GET /bioimpedance/photo/:id/:side) usando a interface 6 (loadFile.msg).
     body_image_key: typeof d.bodyImage === "string" ? d.bodyImage : null,
     side_image_key: typeof d.sideImage === "string" ? d.sideImage : null,
+    // JSON bruto (string) com as coordenadas de cada ponto do esqueleto -
+    // repassado como veio, sem parsear aqui (o front decide o que desenhar).
+    body_detect: typeof d.bodyDetect === "string" ? d.bodyDetect : null,
+    side_body_detect: typeof d.sideBodyDetect === "string" ? d.sideBodyDetect : null,
     body_shape: typeof d.bodyShape === "number" ? d.bodyShape : null,
     score: typeof d.score === "number" ? d.score : null,
     body_age: typeof d.bodyAge === "number" ? d.bodyAge : null,

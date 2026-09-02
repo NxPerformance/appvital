@@ -101,6 +101,8 @@ interface FormData {
   // identificador de arquivo interno da Anovator, não algo editável à mão).
   body_image_key: string;
   side_image_key: string;
+  body_detect: string;
+  side_body_detect: string;
   body_shape: string;
   score: string;
   body_age: string;
@@ -178,6 +180,8 @@ const initialFormData: FormData = {
   posture_risk_level: '',
   body_image_key: '',
   side_image_key: '',
+  body_detect: '',
+  side_body_detect: '',
   body_shape: '',
   score: '',
   body_age: '',
@@ -356,6 +360,8 @@ export default function AdminBioimpedance() {
       posture_risk_level: parseLocaleInteger(formData.posture_risk_level),
       body_image_key: formData.body_image_key || null,
       side_image_key: formData.side_image_key || null,
+      body_detect: formData.body_detect || null,
+      side_body_detect: formData.side_body_detect || null,
       body_shape: parseLocaleInteger(formData.body_shape),
       score: parseLocaleInteger(formData.score),
       body_age: parseLocaleInteger(formData.body_age),
