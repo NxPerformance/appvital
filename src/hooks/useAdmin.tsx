@@ -223,10 +223,11 @@ export function useUpdateBioimpedance() {
 export function useAnovatorLookup() {
   return useMutation({
     mutationFn: async (examId: string) => {
-      const response = await api.post<{ data: Record<string, unknown>; unavailable_fields: string[] }>(
-        '/bioimpedance/admin/anovator-lookup',
-        { exam_id: examId },
-      );
+      const response = await api.post<{
+        data: Record<string, unknown>;
+        unavailable_fields: string[];
+        raw: Record<string, unknown>;
+      }>('/bioimpedance/admin/anovator-lookup', { exam_id: examId });
       return response;
     },
   });

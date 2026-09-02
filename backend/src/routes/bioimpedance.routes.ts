@@ -216,8 +216,8 @@ bioimpedanceRouter.post(
   requireAdmin,
   asyncHandler(async (req, res) => {
     const { exam_id } = anovatorLookupSchema.parse(req.body);
-    const { data, unavailableFields } = await fetchAnovatorExam(exam_id);
-    res.json({ data, unavailable_fields: unavailableFields });
+    const { data, unavailableFields, raw } = await fetchAnovatorExam(exam_id);
+    res.json({ data, unavailable_fields: unavailableFields, raw });
   }),
 );
 

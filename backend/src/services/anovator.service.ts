@@ -178,7 +178,11 @@ export async function fetchAnovatorExam(examId: string) {
       typeof d.gmtCreate === "number" ? new Date(d.gmtCreate).toISOString().slice(0, 10) : null,
   };
 
-  return { data, unavailableFields: UNAVAILABLE_FIELDS };
+  // "raw" devolve a resposta da Anovator sem nenhum mapeamento - diagnóstico
+  // temporário pra descobrir campos que a documentação da API não cobre
+  // (ex: um terceiro tipo de foto visto no relatório oficial, "frontal com
+  // braços abertos", que não tem campo nenhum documentado pra ele).
+  return { data, unavailableFields: UNAVAILABLE_FIELDS, raw: d };
 }
 
 // Interface 6 da documentação ("photo display path interface") - recebe o
