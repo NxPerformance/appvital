@@ -194,6 +194,9 @@ export default function AdminBioimpedance() {
 
   const [formData, setFormData] = useState<FormData>(initialFormData);
   const [reportFile, setReportFile] = useState<File | null>(null);
+  // Diagnóstico temporário: guarda a resposta crua da Anovator (sem nenhum
+  // mapeamento nosso) pra investigar campos que a documentação não cobre.
+  const [rawLookupResult, setRawLookupResult] = useState<Record<string, unknown> | null>(null);
 
   useEffect(() => {
     if (userId) {
@@ -213,6 +216,7 @@ export default function AdminBioimpedance() {
 
     try {
       const result = await anovatorLookup.mutateAsync(formData.anovator_exam_id);
+      setRawLookupResult(result.raw);
       const filled: string[] = [];
 
       setFormData((prev) => {
@@ -451,6 +455,17 @@ export default function AdminBioimpedance() {
               Preenche automaticamente os campos de composição corporal a partir do exame da balança Anovator.
             </p>
           </div>
+
+          {rawLookupResult ? (
+            <details className="rounded-lg border border-border p-3 text-xs">
+              <summary className="cursor-pointer font-medium text-muted-foreground">
+                Diagnóstico: resposta completa da Anovator (sem filtro nosso)
+              </summary>
+              <pre className="mt-2 max-h-96 overflow-auto whitespace-pre-wrap break-all">
+                {JSON.stringify(rawLookupResult, null, 2)}
+              </pre>
+            </details>
+          ) : null}
         </CardContent>
       </Card>
 
