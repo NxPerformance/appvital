@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { AlertTriangle, ArrowDown, ArrowUp, CalendarCheck, CalendarPlus, Droplets, ExternalLink, Flame, Flag, GitCompare, Gauge, Minus, PersonStanding, Scale, ThumbsUp, TrendingUp } from 'lucide-react';
+import { AlertTriangle, ArrowDown, ArrowUp, CalendarCheck, CalendarPlus, Droplets, ExternalLink, Flame, Flag, GitCompare, Gauge, Minus, Scale, ThumbsUp, TrendingUp } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { EvolutionChart } from '@/components/bioimpedance/EvolutionChart';
 import { MetricRow } from '@/components/bioimpedance/MetricRow';
@@ -414,11 +414,10 @@ function BodyStatsRow({ record }: { record: BioimpedanceRecord }) {
               <div
                 key={value}
                 className={cn(
-                  'flex flex-col items-center gap-1.5 rounded-xl border p-2.5 text-center',
+                  'flex items-center justify-center rounded-xl border p-3 text-center',
                   isActive ? 'border-transparent bg-gradient-primary' : 'border-white/5 bg-secondary/40',
                 )}
               >
-                <PersonStanding className={cn('h-6 w-6', isActive ? 'text-primary-foreground' : 'text-muted-foreground')} />
                 <p
                   className={cn(
                     'text-[10px] font-semibold leading-tight',
